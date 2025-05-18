@@ -1,6 +1,5 @@
 import { ethers } from "ethers";
-
-const abiCoder = new ethers.AbiCoder();
+import { abiCoder, encodeFunctionCall } from "./abi-utils";
 
 // https://bscscan.com/address/0x0000000000000000000000000000000000002002#readContract
 export function getValidatorsData(): string {
@@ -40,7 +39,7 @@ export function claimableUnbondRequestData(delegator: string): string {
    return encodeFunctionCall(
     "claimableUnbondRequest(address)",
     ["address"],
-    ["delegator"]
+    [delegator]
   );
 }
 
@@ -50,16 +49,4 @@ export function pendingUnbondRequestData(delegator: string): string {
     ["address"],
     [delegator]
   );
-}
-
-function encodeFunctionCall(
-  functionSignature: string,
-  types: string[] = [],
-  params: any[] = []
-): string {
-  const selector = ethers.id(functionSignature).slice(0, 10); // first 4 bytes (8 chars + '0x')
-  const encodedArgs = types.length
-    ? abiCoder.encode(types, params).slice(2)
-    : "";
-  return selector + encodedArgs;
 }

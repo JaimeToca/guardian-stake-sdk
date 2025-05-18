@@ -1,6 +1,6 @@
 import { AddressLike } from "ethers";
 
-interface Validator {
+export interface Validator {
   id: number;
   status: ValidatorStatus;
   name: string,

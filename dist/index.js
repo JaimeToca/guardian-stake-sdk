@@ -1,13 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const rpc_client_1 = require("./smartchain/rpc-client");
+const ethers_1 = require("ethers");
+const ethers_rpc_client_1 = require("./smartchain/rpc/ethers-rpc-client");
 console.log("Hello World");
 test();
 async function test() {
-    let client = new rpc_client_1.RpcClient();
-    let response = await client.getValidators();
-    response.forEach((validator) => {
-        console.log(validator);
-    });
+    let jsonProvider = new ethers_1.JsonRpcProvider("");
+    let client = new ethers_rpc_client_1.EthersRpcClient(jsonProvider);
+    let response = await client.getValidatorsCreditContracts("0x0000000000000000000000000000000000002002");
+    console.log(response);
 }
 //# sourceMappingURL=index.js.map

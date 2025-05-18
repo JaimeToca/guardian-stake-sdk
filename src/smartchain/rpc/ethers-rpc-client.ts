@@ -5,7 +5,9 @@ import {
   getSharesByPooledBNBData,
   getValidatorsData,
   pendingUnbondRequestData,
-} from "../abi/function-enconder";
+} from "../abi/staking-function-enconder";
+import { abiCoder } from "../abi/abi-utils";
+import { decodeGetValidators } from "../abi/staking-function-decoder";
 
 export class EthersRpcClient implements EthersRpcClientContract {
   constructor(private readonly ethersProvider: JsonRpcProvider) {}
@@ -13,12 +15,14 @@ export class EthersRpcClient implements EthersRpcClientContract {
   async getValidatorsCreditContracts(
     contract: string
   ): Promise<Map<string, string>> {
-    const validatorsResponse = this.ethersProvider.call({
+    const validatorsResponse = await this.ethersProvider.call({
       to: contract,
       data: getValidatorsData(),
     });
 
-    console.log(validatorsResponse);
+    const decodedResponse = decodeGetValidators(validatorsResponse)
+
+    console.log(decodedResponse);
 
     const map = new Map();
     return map;

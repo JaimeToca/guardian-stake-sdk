@@ -1,15 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildUrl = buildUrl;
-exports.perform = perform;
-function buildUrl(base, path, query) {
+exports.appendUrlParams = appendUrlParams;
+exports.fetchOrError = fetchOrError;
+function appendUrlParams(url, query = {}) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
         params.set(key, value.toString());
     }
-    return `${base}${path}?${params}`;
+    return `${url}?${params}`;
 }
-async function perform(request) {
+async function fetchOrError(request) {
     try {
         const res = await fetch(request);
         if (!res.ok) {

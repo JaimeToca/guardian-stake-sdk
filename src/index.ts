@@ -6,12 +6,9 @@ console.log("Hello World");
 test();
 
 async function test() {
-  let jsonProvider = new JsonRpcProvider("")
+  let jsonProvider = new JsonRpcProvider("https://bsc.twnodes.com/naas/session/ZjU0NmVkYTAtY2NhYS00MzU4LWJiZWYtMjU4N2Y4OTNhN2Vi")
   let client = new EthersRpcClient(jsonProvider);
   let response = await client.getValidatorsCreditContracts("0x0000000000000000000000000000000000002002");
 
-  response.forEach((validator) => {
-    console.log(validator)
-  });
   console.log(response);
 }

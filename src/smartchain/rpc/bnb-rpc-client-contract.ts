@@ -1,3 +1,3 @@
 interface RpcClientContract {
-    getValidators(): Promise<SmartChainValidator[]>
+  getValidators(): Promise<SmartChainValidator[]>;
 }
