@@ -1,16 +1,15 @@
-export function buildUrl(
-  base: string,
-  path: string,
-  query: Record<string, string>
+export function appendUrlParams(
+  url: string,
+  query: Record<string, string> = {}
 ): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     params.set(key, value.toString());
   }
-  return `${base}${path}?${params}`;
+  return `${url}?${params}`;
 }
 
-export async function performOrError<T>(request: Request): Promise<T> {
+export async function fetchOrError<T>(request: Request): Promise<T> {
   try {
     const res = await fetch(request);
 

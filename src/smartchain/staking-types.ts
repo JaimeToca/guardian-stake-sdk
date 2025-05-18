@@ -1,3 +1,5 @@
+import { AddressLike } from "ethers";
+
 interface Validator {
   id: number;
   status: ValidatorStatus;
@@ -6,10 +8,15 @@ interface Validator {
   image: string,
   apy: number,
   operatorAddress: string,
+  creditAddress: string,
 }
 
 enum ValidatorStatus {
   Active,
   Inactive,
   Jailed,
+}
+
+interface Delegation {
+  
 }
