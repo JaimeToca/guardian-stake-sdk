@@ -1,15 +1,19 @@
-import { ethers } from "ethers";
-
-export const abiCoder = new ethers.AbiCoder();
+import {
+  AbiParameter,
+  encodeAbiParameters,
+  Hex,
+  toFunctionSelector,
+} from "viem";
 
 export function encodeFunctionCall(
   functionSignature: string,
-  types: string[] = [],
-  params: any[] = []
-): string {
-  const selector = ethers.id(functionSignature).slice(0, 10); // first 4 bytes (8 chars + '0x')
+  types: AbiParameter[] = [],
+  params: unknown[] = []
+): Hex {
+  const selector = toFunctionSelector(functionSignature);
   const encodedArgs = types.length
-    ? abiCoder.encode(types, params).slice(2)
+    ? encodeAbiParameters(types, params).slice(2)
     : "";
-  return selector + encodedArgs;
+    
+  return (`${selector}${encodedArgs}`) as Hex;
 }
