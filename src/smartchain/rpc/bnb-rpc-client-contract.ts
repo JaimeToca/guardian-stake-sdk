@@ -1,3 +1,3 @@
-interface RpcClientContract {
+interface BNBRpcClientContract {
   getValidators(): Promise<SmartChainValidator[]>;
 }

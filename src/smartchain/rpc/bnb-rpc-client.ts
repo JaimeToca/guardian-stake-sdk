@@ -1,6 +1,6 @@
 import { appendUrlParams, fetchOrError } from "../../utils/rpc-utils";
 
-export class RpcClient implements RpcClientContract {
+export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly BASE_MAINNET_URL =
     "https://api.bnbchain.org/bnb-staking/v1";
   private static readonly VALIDATORS_LIMIT = "100";
@@ -8,10 +8,10 @@ export class RpcClient implements RpcClientContract {
 
   async getValidators(): Promise<SmartChainValidator[]> {
     const requestUrl = appendUrlParams(
-      RpcClient.BASE_MAINNET_URL + "/validator/all",
+      BNBRpcClient.BASE_MAINNET_URL + "/validator/all",
       {
-        limit: RpcClient.VALIDATORS_LIMIT,
-        offset: RpcClient.VALIDATORS_OFFSET,
+        limit: BNBRpcClient.VALIDATORS_LIMIT,
+        offset: BNBRpcClient.VALIDATORS_OFFSET,
       }
     );
 

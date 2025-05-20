@@ -1,6 +1,3 @@
 import { Address } from "viem";
 
-export interface DecodedValidators {
-    operatorAddresses: Address[],
-    creditAddresses: Address[]
-}
+export type DecodedValidators = Map<Address, Address>

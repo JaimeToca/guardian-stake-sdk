@@ -9,16 +9,15 @@ import { decodeGetValidators } from "../abi/staking-function-decoder";
 import { DecodedValidators } from "../abi/types";
 import { ViemRpcClientContract } from "./viem-rpc-client-contract";
 import { Address, Hex, PublicClient } from "viem";
+import { STAKING_CONTRACT } from "../abi/abi-utils";
 
 export class ViemRpcClient implements ViemRpcClientContract {
   constructor(private readonly client: PublicClient) {}
 
-  async getValidatorsCreditContracts(
-    contract: Address
-  ): Promise<DecodedValidators> {
+  async getValidatorsCreditContracts(): Promise<DecodedValidators> {
     const validatorsResponse = await this.client.call({
       data: getValidatorsData(),
-      to: contract,
+      to: STAKING_CONTRACT,
     });
 
     if (!validatorsResponse.data) {
@@ -28,13 +27,12 @@ export class ViemRpcClient implements ViemRpcClientContract {
     }
 
     const decodedReponse = decodeGetValidators(validatorsResponse.data);
-
-    const decodedValidators: DecodedValidators = {
-      operatorAddresses: decodedReponse[0] as Address[],
-      creditAddresses: decodedReponse[1] as Address[],
-    };
-
-    return decodedValidators;
+    const operatorAddresses = decodedReponse[0] as Address[]
+    const creditAddresses = decodedReponse[1] as Address[]
+    
+    return new Map(operatorAddresses.map((operatorAddress, index) => {
+      return [operatorAddress, creditAddresses[index]]
+    }))
   }
 
   async getClaimableUnbondDelegation(contract: Address, delegator: Address) {

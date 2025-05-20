@@ -1,22 +1,19 @@
-import { AddressLike } from "ethers";
+import { Address } from "viem";
 
 export interface Validator {
-  id: number;
+  id: string;
   status: ValidatorStatus;
   name: string,
   description: string,
   image: string,
   apy: number,
-  operatorAddress: string,
-  creditAddress: string,
+  delegators: number,
+  operatorAddress: Address,
+  creditAddress: Address,
 }
 
-enum ValidatorStatus {
+export enum ValidatorStatus {
   Active,
   Inactive,
   Jailed,
-}
-
-interface Delegation {
-  
 }

@@ -30,7 +30,6 @@ export function getPooledBNBData(delegator: Address): Hex {
   );
 }
 
-// TODO: Check index
 export function unbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
     "unbondRequest(address)",

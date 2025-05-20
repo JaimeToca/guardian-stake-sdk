@@ -1,6 +1,6 @@
 import { Validator } from "../staking-types";
 
-interface StakingServiceContract {
+export interface StakingServiceContract {
   getValidators(): Promise<Validator[]>;
   getDelegations(): Promise<Validator[]>;
 }

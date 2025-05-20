@@ -1,12 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RpcClient = void 0;
+exports.BNBRpcClient = void 0;
 const rpc_utils_1 = require("../../utils/rpc-utils");
-class RpcClient {
+class BNBRpcClient {
     async getValidators() {
-        const requestUrl = (0, rpc_utils_1.appendUrlParams)(RpcClient.BASE_MAINNET_URL + "/validator/all", {
-            limit: RpcClient.VALIDATORS_LIMIT,
-            offset: RpcClient.VALIDATORS_OFFSET,
+        const requestUrl = (0, rpc_utils_1.appendUrlParams)(BNBRpcClient.BASE_MAINNET_URL + "/validator/all", {
+            limit: BNBRpcClient.VALIDATORS_LIMIT,
+            offset: BNBRpcClient.VALIDATORS_OFFSET,
         });
         const request = new Request(requestUrl, {
             method: "GET",
@@ -19,8 +19,8 @@ class RpcClient {
         return validatorResponse.data.validators;
     }
 }
-exports.RpcClient = RpcClient;
-RpcClient.BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
-RpcClient.VALIDATORS_LIMIT = "100";
-RpcClient.VALIDATORS_OFFSET = "0";
+exports.BNBRpcClient = BNBRpcClient;
+BNBRpcClient.BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
+BNBRpcClient.VALIDATORS_LIMIT = "100";
+BNBRpcClient.VALIDATORS_OFFSET = "0";
 //# sourceMappingURL=bnb-rpc-client.js.map
