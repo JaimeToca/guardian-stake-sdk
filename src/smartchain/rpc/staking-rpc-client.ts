@@ -7,9 +7,9 @@ import {
 import { decodeGetValidators } from "../abi/staking-function-decoder";
 import { DecodedValidators } from "../abi/types";
 import { StakingRpcClientContract } from "./staking-rpc-client-contract";
-import { Address, parseAbi, PublicClient } from "viem";
+import { Address, PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/abi-utils";
-import { stakeCreditAbi } from "../abi/stake-abi";
+import { multicallStakeAbi } from "../abi/stake-abi";
 
 export class StakingRpcClient implements StakingRpcClientContract {
   constructor(private readonly client: PublicClient) {}
@@ -41,23 +41,16 @@ export class StakingRpcClient implements StakingRpcClientContract {
     const multicallContracts = creditContracts.map((creditContract) => {
       return {
         address: creditContract,
-        abi: stakeCreditAbi,
+        abi: multicallStakeAbi,
         functionName: "getPooledBNB",
         args: [delegator],
       };
     });
 
-    const multicallResult = await this.client.multicall({
+    return this.client.multicall({
       contracts: multicallContracts,
       allowFailure: true,
     });
-
-    console.log(multicallResult[0].status)
-    console.log(multicallResult[0].result)
-    console.log(multicallResult[0].error)
-
-
-    console.log(multicallResult)
   }
 
   async getPendingUnbondDelegation(

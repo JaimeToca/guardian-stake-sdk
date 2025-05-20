@@ -8,7 +8,7 @@ const bnb_rpc_client_1 = require("./smartchain/rpc/bnb-rpc-client");
 console.log("Hello World");
 test();
 async function test() {
-    const bscRpcUrl = 'https://bsc.twnodes.com/naas/session/ZjVhOWYwZjctYWQzNS00ODgxLTkzNDEtYjRhYTczYzIyMTNh';
+    const bscRpcUrl = '';
     const client = (0, viem_1.createPublicClient)({
         chain: chains_1.bsc,
         transport: (0, viem_1.http)(bscRpcUrl),

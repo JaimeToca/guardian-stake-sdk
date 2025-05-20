@@ -53,7 +53,7 @@ export class StakingService implements StakingServiceContract {
     // Set Cache
     const validatorsContract = (await this.stakingRpcClient.getValidatorsCreditContracts()).values()
 
-    const activeDelegations = this.stakingRpcClient.getPooledBNBData(Array.from(validatorsContract), address)
+    const activeDelegations = await this.stakingRpcClient.getPooledBNBData(Array.from(validatorsContract), address)
 
     console.log(activeDelegations)
 

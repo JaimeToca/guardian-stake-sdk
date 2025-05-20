@@ -28,7 +28,7 @@ class StakingRpcClient {
         const multicallContracts = creditContracts.map((creditContract) => {
             return {
                 address: creditContract,
-                abi: stake_abi_1.stakeCreditAbi,
+                abi: stake_abi_1.multicallStakeAbi,
                 functionName: "getPooledBNB",
                 args: [delegator],
             };
