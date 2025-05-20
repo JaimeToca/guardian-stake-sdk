@@ -3,7 +3,7 @@ import { Address, Hex } from "viem";
 
 // https://bscscan.com/address/0x0000000000000000000000000000000000002002#readContract
 // https://bscscan.com/address/0x4AFc633E7B6bEB8e552ccddbE06Cca3754991E9A#readProxyContract
-export function getValidatorsData(): Hex {
+export function encodeGetValidatorsData(): Hex {
   return encodeFunctionCall(
     "getValidators(uint256,uint256)",
     [
@@ -14,7 +14,7 @@ export function getValidatorsData(): Hex {
   );
 }
 
-export function getSharesByPooledBNBData(amount: bigint): Hex {
+export function encodeGetSharesByPooledBNBData(amount: bigint): Hex {
   return encodeFunctionCall(
     "getSharesByPooledBNB(uint256)",
     [{ name: "bnbAmount", type: "uint256" }],
@@ -22,7 +22,7 @@ export function getSharesByPooledBNBData(amount: bigint): Hex {
   );
 }
 
-export function getPooledBNBData(delegator: Address): Hex {
+export function encodeGetPooledBNBData(delegator: Address): Hex {
   return encodeFunctionCall(
     "getPooledBNB(address)",
     [{ name: "accout", type: "address" }],
@@ -30,7 +30,7 @@ export function getPooledBNBData(delegator: Address): Hex {
   );
 }
 
-export function unbondRequestData(delegator: Address): Hex {
+export function encodeUnbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
     "unbondRequest(address)",
     [
@@ -41,7 +41,7 @@ export function unbondRequestData(delegator: Address): Hex {
   );
 }
 
-export function claimableUnbondRequestData(delegator: Address): Hex {
+export function encodeClaimableUnbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
     "claimableUnbondRequest(address)",
     [{ name: "delegator", type: "address" }],
@@ -49,7 +49,7 @@ export function claimableUnbondRequestData(delegator: Address): Hex {
   );
 }
 
-export function pendingUnbondRequestData(delegator: Address): Hex {
+export function encodePendingUnbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
     "pendingUnbondRequest(address)",
     [{ name: "delegator", type: "address" }],

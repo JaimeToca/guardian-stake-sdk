@@ -6,7 +6,7 @@ export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly VALIDATORS_LIMIT = "100";
   private static readonly VALIDATORS_OFFSET = "0";
 
-  async getValidators(): Promise<SmartChainValidator[]> {
+  async getValidators(): Promise<BNBChainValidator[]> {
     const requestUrl = appendUrlParams(
       BNBRpcClient.BASE_MAINNET_URL + "/validator/all",
       {
@@ -23,7 +23,7 @@ export class BNBRpcClient implements BNBRpcClientContract {
       }),
     });
 
-    const validatorResponse = await fetchOrError<SmartChainValidatorsResponse>(
+    const validatorResponse = await fetchOrError<BNBValidatorsResponse>(
       request
     );
 

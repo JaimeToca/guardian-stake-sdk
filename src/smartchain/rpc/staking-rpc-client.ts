@@ -1,22 +1,22 @@
 import {
-  claimableUnbondRequestData,
-  getPooledBNBData,
-  getSharesByPooledBNBData,
-  getValidatorsData,
-  pendingUnbondRequestData,
+  encodeClaimableUnbondRequestData,
+  encodeGetPooledBNBData,
+  encodeGetSharesByPooledBNBData,
+  encodeGetValidatorsData,
+  encodePendingUnbondRequestData,
 } from "../abi/staking-function-enconder";
 import { decodeGetValidators } from "../abi/staking-function-decoder";
 import { DecodedValidators } from "../abi/types";
-import { ViemRpcClientContract } from "./viem-rpc-client-contract";
+import { StakingRpcClientContract } from "./staking-rpc-client-contract";
 import { Address, Hex, PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/abi-utils";
 
-export class ViemRpcClient implements ViemRpcClientContract {
+export class StakingRpcClient implements StakingRpcClientContract {
   constructor(private readonly client: PublicClient) {}
 
   async getValidatorsCreditContracts(): Promise<DecodedValidators> {
     const validatorsResponse = await this.client.call({
-      data: getValidatorsData(),
+      data: encodeGetValidatorsData(),
       to: STAKING_CONTRACT,
     });
 
@@ -38,7 +38,7 @@ export class ViemRpcClient implements ViemRpcClientContract {
   async getClaimableUnbondDelegation(contract: Address, delegator: Address) {
     const validatorsResponse = this.client.call({
       to: contract,
-      data: claimableUnbondRequestData(delegator),
+      data: encodeClaimableUnbondRequestData(delegator),
     });
 
     console.log(validatorsResponse);
@@ -47,7 +47,7 @@ export class ViemRpcClient implements ViemRpcClientContract {
   async getPendingUnbondDelegation(contract: Address, delegator: Address) {
     const validatorsResponse = this.client.call({
       to: contract,
-      data: pendingUnbondRequestData(delegator),
+      data: encodePendingUnbondRequestData(delegator),
     });
 
     console.log(validatorsResponse);
@@ -56,7 +56,7 @@ export class ViemRpcClient implements ViemRpcClientContract {
   async getPooledBNBData(contract: Address, delegator: Address) {
     const validatorsResponse = this.client.call({
       to: contract,
-      data: getPooledBNBData(delegator),
+      data: encodeGetPooledBNBData(delegator),
     });
     console.log(validatorsResponse);
   }
@@ -64,7 +64,7 @@ export class ViemRpcClient implements ViemRpcClientContract {
   async getSharesByPooledBNBData(contract: Address, amount: bigint) {
     const validatorsResponse = this.client.call({
       to: contract,
-      data: getSharesByPooledBNBData(amount),
+      data: encodeGetSharesByPooledBNBData(amount),
     });
     console.log(validatorsResponse);
   }

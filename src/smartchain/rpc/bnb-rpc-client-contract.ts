@@ -1,3 +1,3 @@
 interface BNBRpcClientContract {
-  getValidators(): Promise<SmartChainValidator[]>;
+  getValidators(): Promise<BNBChainValidator[]>;
 }

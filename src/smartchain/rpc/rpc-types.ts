@@ -1,4 +1,4 @@
-interface SmartChainValidator {
+interface BNBChainValidator {
   apy: number;
   bcOperatorAddress: string;
   commission: number;
@@ -11,12 +11,12 @@ interface SmartChainValidator {
   totalStaked: string;
 }
 
-interface SmartChainValidatorData {
+interface BNBValidatorData {
   total: number;
-  validators: SmartChainValidator[];
+  validators: BNBChainValidator[];
 }
 
-interface SmartChainValidatorsResponse {
+interface BNBValidatorsResponse {
   code: number;
-  data: SmartChainValidatorData;
+  data: BNBValidatorData;
 }

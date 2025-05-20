@@ -1,11 +1,11 @@
 import { Address, Hex } from "viem";
-import { ViemRpcClientContract } from "../rpc/viem-rpc-client-contract";
+import { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import { Validator, ValidatorStatus } from "../staking-types";
 import { StakingServiceContract } from "./staking-service-contract";
 
 export class StakingService implements StakingServiceContract {
   constructor(
-    private readonly viemRpcClient: ViemRpcClientContract,
+    private readonly viemRpcClient: StakingRpcClientContract,
     private readonly bnbRpcClient: BNBRpcClientContract
   ) {}
 
@@ -31,7 +31,7 @@ export class StakingService implements StakingServiceContract {
     });
   }
 
-  private getValidatorStatus(bnbValidator: SmartChainValidator) {
+  private getValidatorStatus(bnbValidator: BNBChainValidator) {
     switch (bnbValidator.status) {
       case "INACTIVE": return ValidatorStatus.Inactive;
       case "JAILED": return ValidatorStatus.Jailed;

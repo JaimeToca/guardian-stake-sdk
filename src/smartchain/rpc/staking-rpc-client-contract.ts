@@ -1,6 +1,6 @@
 import { DecodedValidators } from "../abi/types";
 
-export interface ViemRpcClientContract {
+export interface StakingRpcClientContract {
   getValidatorsCreditContracts(): Promise<DecodedValidators>;
   getClaimableUnbondDelegation(contract: string, address: string): void;
   getPendingUnbondDelegation(contract: string, address: string): void;

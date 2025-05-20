@@ -1,6 +1,6 @@
 import { createPublicClient, http } from "viem";
 import { bsc } from 'viem/chains'
-import { ViemRpcClient } from "./smartchain/rpc/viem-rpc-client";
+import { StakingRpcClient } from "./smartchain/rpc/staking-rpc-client";
 import { StakingService } from "./smartchain/services/staking-service";
 import { BNBRpcClient } from "./smartchain/rpc/bnb-rpc-client";
 
@@ -17,11 +17,14 @@ const client = createPublicClient({
   transport: http(bscRpcUrl),
 })
 
-let client2 = new ViemRpcClient(client);
+let client2 = new StakingRpcClient(client);
 let client3 = new BNBRpcClient()
 
 let stakingService = new StakingService(client2, client3)
 let validators = await stakingService.getValidators()
+validators.forEach(validator => {
+  console.log(validator)
+})
 console.log(validators)
 /*let jsonProvider = new JsonRpcProvider("https://bsc.twnodes.com/naas/session/ZjU0NmVkYTAtY2NhYS00MzU4LWJiZWYtMjU4N2Y4OTNhN2Vi")
 let client = new EthersRpcClient(jsonProvider);
