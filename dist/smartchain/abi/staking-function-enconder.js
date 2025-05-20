@@ -19,11 +19,11 @@ function encodeGetSharesByPooledBNBData(amount) {
 function encodeGetPooledBNBData(delegator) {
     return (0, abi_utils_1.encodeFunctionCall)("getPooledBNB(address)", [{ name: "accout", type: "address" }], [delegator]);
 }
-function encodeUnbondRequestData(delegator) {
+function encodeUnbondRequestData(delegator, index) {
     return (0, abi_utils_1.encodeFunctionCall)("unbondRequest(address)", [
         { name: "delegator", type: "address" },
         { name: "_index", type: "uint256" },
-    ], [delegator, 0]);
+    ], [delegator, index]);
 }
 function encodeClaimableUnbondRequestData(delegator) {
     return (0, abi_utils_1.encodeFunctionCall)("claimableUnbondRequest(address)", [{ name: "delegator", type: "address" }], [delegator]);

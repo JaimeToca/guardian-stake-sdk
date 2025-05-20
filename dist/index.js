@@ -8,19 +8,19 @@ const bnb_rpc_client_1 = require("./smartchain/rpc/bnb-rpc-client");
 console.log("Hello World");
 test();
 async function test() {
-    const bscRpcUrl = '';
+    const bscRpcUrl = 'https://bsc.twnodes.com/naas/session/ZjVhOWYwZjctYWQzNS00ODgxLTkzNDEtYjRhYTczYzIyMTNh';
     const client = (0, viem_1.createPublicClient)({
         chain: chains_1.bsc,
         transport: (0, viem_1.http)(bscRpcUrl),
+        batch: {
+            multicall: true,
+        },
     });
     let client2 = new staking_rpc_client_1.StakingRpcClient(client);
     let client3 = new bnb_rpc_client_1.BNBRpcClient();
     let stakingService = new staking_service_1.StakingService(client2, client3);
-    let validators = await stakingService.getValidators();
-    validators.forEach(validator => {
-        console.log(validator);
-    });
-    console.log(validators);
+    let delegations = await stakingService.getDelegations("0x70568C52A154718e7aEDF825fc35A941C2A81a39");
+    console.log(delegations);
     console.log("response");
 }
 //# sourceMappingURL=index.js.map

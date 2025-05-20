@@ -4,6 +4,7 @@ exports.StakingRpcClient = void 0;
 const staking_function_enconder_1 = require("../abi/staking-function-enconder");
 const staking_function_decoder_1 = require("../abi/staking-function-decoder");
 const abi_utils_1 = require("../abi/abi-utils");
+const stake_abi_1 = require("../abi/stake-abi");
 class StakingRpcClient {
     constructor(client) {
         this.client = client;
@@ -23,31 +24,42 @@ class StakingRpcClient {
             return [operatorAddress, creditAddresses[index]];
         }));
     }
-    async getClaimableUnbondDelegation(contract, delegator) {
-        const validatorsResponse = this.client.call({
-            to: contract,
-            data: (0, staking_function_enconder_1.encodeClaimableUnbondRequestData)(delegator),
+    async getPooledBNBData(creditContracts, delegator) {
+        const multicallContracts = creditContracts.map((creditContract) => {
+            return {
+                address: creditContract,
+                abi: stake_abi_1.stakeCreditAbi,
+                functionName: "getPooledBNB",
+                args: [delegator],
+            };
         });
-        console.log(validatorsResponse);
+        const multicallResult = await this.client.multicall({
+            contracts: multicallContracts,
+            allowFailure: true,
+        });
+        console.log(multicallResult[0].status);
+        console.log(multicallResult[0].result);
+        console.log(multicallResult[0].error);
+        console.log(multicallResult);
     }
-    async getPendingUnbondDelegation(contract, delegator) {
+    async getPendingUnbondDelegation(creditContract, delegator) {
         const validatorsResponse = this.client.call({
-            to: contract,
+            to: creditContract,
             data: (0, staking_function_enconder_1.encodePendingUnbondRequestData)(delegator),
         });
         console.log(validatorsResponse);
     }
-    async getPooledBNBData(contract, delegator) {
+    async getSharesByPooledBNBData(creditContract, amount) {
         const validatorsResponse = this.client.call({
-            to: contract,
-            data: (0, staking_function_enconder_1.encodeGetPooledBNBData)(delegator),
+            to: creditContract,
+            data: (0, staking_function_enconder_1.encodeGetSharesByPooledBNBData)(amount),
         });
         console.log(validatorsResponse);
     }
-    async getSharesByPooledBNBData(contract, amount) {
+    async getClaimableUnbondDelegation(creditContract, delegator) {
         const validatorsResponse = this.client.call({
-            to: contract,
-            data: (0, staking_function_enconder_1.encodeGetSharesByPooledBNBData)(amount),
+            to: creditContract,
+            data: (0, staking_function_enconder_1.encodeClaimableUnbondRequestData)(delegator),
         });
         console.log(validatorsResponse);
     }

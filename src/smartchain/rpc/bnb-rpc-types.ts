@@ -20,3 +20,19 @@ interface BNBValidatorsResponse {
   code: number;
   data: BNBValidatorData;
 }
+
+interface BNBStakingSummary {
+  activeValidators: number;
+  maxApy: number;
+  totalStaked: string;
+  totalValidators: number;
+}
+
+interface BNBStakingData {
+  summary: BNBStakingSummary;
+}
+
+interface StakingResponse {
+  code: number;
+  data: BNBStakingData;
+}

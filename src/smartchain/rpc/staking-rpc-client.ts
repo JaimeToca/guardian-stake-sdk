@@ -1,6 +1,5 @@
 import {
   encodeClaimableUnbondRequestData,
-  encodeGetPooledBNBData,
   encodeGetSharesByPooledBNBData,
   encodeGetValidatorsData,
   encodePendingUnbondRequestData,
@@ -8,8 +7,9 @@ import {
 import { decodeGetValidators } from "../abi/staking-function-decoder";
 import { DecodedValidators } from "../abi/types";
 import { StakingRpcClientContract } from "./staking-rpc-client-contract";
-import { Address, Hex, PublicClient } from "viem";
+import { Address, parseAbi, PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/abi-utils";
+import { stakeCreditAbi } from "../abi/stake-abi";
 
 export class StakingRpcClient implements StakingRpcClientContract {
   constructor(private readonly client: PublicClient) {}
@@ -27,45 +27,68 @@ export class StakingRpcClient implements StakingRpcClientContract {
     }
 
     const decodedReponse = decodeGetValidators(validatorsResponse.data);
-    const operatorAddresses = decodedReponse[0] as Address[]
-    const creditAddresses = decodedReponse[1] as Address[]
-    
-    return new Map(operatorAddresses.map((operatorAddress, index) => {
-      return [operatorAddress, creditAddresses[index]]
-    }))
+    const operatorAddresses = decodedReponse[0] as Address[];
+    const creditAddresses = decodedReponse[1] as Address[];
+
+    return new Map(
+      operatorAddresses.map((operatorAddress, index) => {
+        return [operatorAddress, creditAddresses[index]];
+      })
+    );
   }
 
-  async getClaimableUnbondDelegation(contract: Address, delegator: Address) {
-    const validatorsResponse = this.client.call({
-      to: contract,
-      data: encodeClaimableUnbondRequestData(delegator),
+  async getPooledBNBData(creditContracts: Address[], delegator: Address) {
+    const multicallContracts = creditContracts.map((creditContract) => {
+      return {
+        address: creditContract,
+        abi: stakeCreditAbi,
+        functionName: "getPooledBNB",
+        args: [delegator],
+      };
     });
 
-    console.log(validatorsResponse);
+    const multicallResult = await this.client.multicall({
+      contracts: multicallContracts,
+      allowFailure: true,
+    });
+
+    console.log(multicallResult[0].status)
+    console.log(multicallResult[0].result)
+    console.log(multicallResult[0].error)
+
+
+    console.log(multicallResult)
   }
 
-  async getPendingUnbondDelegation(contract: Address, delegator: Address) {
+  async getPendingUnbondDelegation(
+    creditContract: Address,
+    delegator: Address
+  ) {
     const validatorsResponse = this.client.call({
-      to: contract,
+      to: creditContract,
       data: encodePendingUnbondRequestData(delegator),
     });
 
     console.log(validatorsResponse);
   }
 
-  async getPooledBNBData(contract: Address, delegator: Address) {
+  async getSharesByPooledBNBData(creditContract: Address, amount: bigint) {
     const validatorsResponse = this.client.call({
-      to: contract,
-      data: encodeGetPooledBNBData(delegator),
+      to: creditContract,
+      data: encodeGetSharesByPooledBNBData(amount),
     });
     console.log(validatorsResponse);
   }
 
-  async getSharesByPooledBNBData(contract: Address, amount: bigint) {
+  async getClaimableUnbondDelegation(
+    creditContract: Address,
+    delegator: Address
+  ) {
     const validatorsResponse = this.client.call({
-      to: contract,
-      data: encodeGetSharesByPooledBNBData(amount),
+      to: creditContract,
+      data: encodeClaimableUnbondRequestData(delegator),
     });
+
     console.log(validatorsResponse);
   }
 }

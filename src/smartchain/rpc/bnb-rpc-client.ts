@@ -1,4 +1,4 @@
-import { appendUrlParams, fetchOrError } from "../../utils/rpc-utils";
+import { appendUrlParams, fetchOrError } from "./rpc-utils";
 
 export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly BASE_MAINNET_URL =
@@ -28,5 +28,23 @@ export class BNBRpcClient implements BNBRpcClientContract {
     );
 
     return validatorResponse.data.validators;
+  }
+
+  async getStakingSummary(): Promise<BNBStakingSummary> {
+    const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/summary`
+    
+    const request: RequestInfo = new Request(requestUrl, {
+      method: "GET",
+      headers: new Headers({
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      }),
+    });
+
+    const summaryResponse = await fetchOrError<StakingResponse>(
+      request
+    );
+
+    return summaryResponse.data.summary
   }
 }

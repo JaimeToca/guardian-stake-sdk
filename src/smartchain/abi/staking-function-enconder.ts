@@ -73,6 +73,10 @@ export function encodeClaimableUnbondRequestData(delegator: Address): Hex {
   );
 }
 
+/**
+ * @param delegator account address
+ * @returns the total length of delegator's pending unbond queue
+ */
 export function encodePendingUnbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
     "pendingUnbondRequest(address)",
