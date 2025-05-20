@@ -1,8 +1,16 @@
 import { encodeFunctionCall } from "./abi-utils";
 import { Address, Hex } from "viem";
 
-// https://bscscan.com/address/0x0000000000000000000000000000000000002002#readContract
-// https://bscscan.com/address/0x4AFc633E7B6bEB8e552ccddbE06Cca3754991E9A#readProxyContract
+/**
+ * @notice Encodes function calls for interacting with the BNB staking contracts
+ * This includes interactions with the StakeHubContract (0x0000000000000000000000000000000000002002)
+ * and the StakeCreditContract per validator (0x0000000000000000000000000000000000002003) on the BSC network.
+ * Typically used to fetch information related to validators, delegation and prepare transactions.
+ */
+
+/**
+ * @returns all validators addresses associated: Operator and Credit.
+ */
 export function encodeGetValidatorsData(): Hex {
   return encodeFunctionCall(
     "getValidators(uint256,uint256)",
@@ -14,6 +22,10 @@ export function encodeGetValidatorsData(): Hex {
   );
 }
 
+/**
+ * @param amount bnb in ethers unit
+ * @returns Amount of shares that corresponds to `_bnbAmount` protocol-controlled BNB
+ */
 export function encodeGetSharesByPooledBNBData(amount: bigint): Hex {
   return encodeFunctionCall(
     "getSharesByPooledBNB(uint256)",
@@ -22,6 +34,10 @@ export function encodeGetSharesByPooledBNBData(amount: bigint): Hex {
   );
 }
 
+/**
+ * @param delegator account address
+ * @returns Total amount of BNB staked and reward of the delegator
+ */
 export function encodeGetPooledBNBData(delegator: Address): Hex {
   return encodeFunctionCall(
     "getPooledBNB(address)",
@@ -30,17 +46,25 @@ export function encodeGetPooledBNBData(delegator: Address): Hex {
   );
 }
 
-export function encodeUnbondRequestData(delegator: Address): Hex {
+/**
+ * @param delegator account address
+ * @returns unbound request information by index
+ */
+export function encodeUnbondRequestData(delegator: Address, index: bigint): Hex {
   return encodeFunctionCall(
     "unbondRequest(address)",
     [
       { name: "delegator", type: "address" },
       { name: "_index", type: "uint256" },
     ],
-    [delegator, 0]
+    [delegator, index]
   );
 }
 
+/**
+ * @param delegator account address
+ * @returns total number of delegator's claimable unbond requests
+ */
 export function encodeClaimableUnbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
     "claimableUnbondRequest(address)",

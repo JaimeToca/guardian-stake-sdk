@@ -10,7 +10,7 @@ class StakingRpcClient {
     }
     async getValidatorsCreditContracts() {
         const validatorsResponse = await this.client.call({
-            data: (0, staking_function_enconder_1.getValidatorsData)(),
+            data: (0, staking_function_enconder_1.encodeGetValidatorsData)(),
             to: abi_utils_1.STAKING_CONTRACT,
         });
         if (!validatorsResponse.data) {
@@ -26,28 +26,28 @@ class StakingRpcClient {
     async getClaimableUnbondDelegation(contract, delegator) {
         const validatorsResponse = this.client.call({
             to: contract,
-            data: (0, staking_function_enconder_1.claimableUnbondRequestData)(delegator),
+            data: (0, staking_function_enconder_1.encodeClaimableUnbondRequestData)(delegator),
         });
         console.log(validatorsResponse);
     }
     async getPendingUnbondDelegation(contract, delegator) {
         const validatorsResponse = this.client.call({
             to: contract,
-            data: (0, staking_function_enconder_1.pendingUnbondRequestData)(delegator),
+            data: (0, staking_function_enconder_1.encodePendingUnbondRequestData)(delegator),
         });
         console.log(validatorsResponse);
     }
     async getPooledBNBData(contract, delegator) {
         const validatorsResponse = this.client.call({
             to: contract,
-            data: (0, staking_function_enconder_1.getPooledBNBData)(delegator),
+            data: (0, staking_function_enconder_1.encodeGetPooledBNBData)(delegator),
         });
         console.log(validatorsResponse);
     }
     async getSharesByPooledBNBData(contract, amount) {
         const validatorsResponse = this.client.call({
             to: contract,
-            data: (0, staking_function_enconder_1.getSharesByPooledBNBData)(amount),
+            data: (0, staking_function_enconder_1.encodeGetSharesByPooledBNBData)(amount),
         });
         console.log(validatorsResponse);
     }

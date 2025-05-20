@@ -17,3 +17,35 @@ export enum ValidatorStatus {
   Inactive,
   Jailed,
 }
+
+export interface Delegations {
+  delegations: Delegation[],
+  stakingSummary: StakingSummary
+}
+
+export interface Delegation {
+  id: string,
+  validator: Validator,
+  amount: bigint,
+  status: DelegationStatus,
+  pendingUntil: number, 
+}
+
+export enum DelegationStatus {
+  Active,
+  Pending,
+  Claimable,
+  Inactive,
+}
+
+export interface StakingSummary {
+  totalProtocolStake: number,
+  maxApy: number,
+  minAmountToStake: number,
+  unboundPeriod: number, 
+  redelegateFeeRate: number,
+  activeValidators: number,
+  inactiveValidators: number,
+  jailedValidators: number,
+  totalValidators: number,
+}
