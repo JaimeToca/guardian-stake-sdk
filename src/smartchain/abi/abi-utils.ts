@@ -5,8 +5,6 @@ import {
   toFunctionSelector,
 } from "viem";
 
-export const STAKING_CONTRACT = "0x0000000000000000000000000000000000002002"
-
 export function encodeFunctionCall(
   functionSignature: string,
   types: AbiParameter[] = [],

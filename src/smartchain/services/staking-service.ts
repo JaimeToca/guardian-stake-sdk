@@ -1,10 +1,12 @@
-import { Address, Hex } from "viem";
+import { Address, etherUnits, Hex, parseEther } from "viem";
 import { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import { Delegations, Validator, ValidatorStatus } from "./staking-types";
 import { StakingServiceContract } from "./staking-service-contract";
+import { DecodedValidators } from "../abi/types";
 
 export class StakingService implements StakingServiceContract {
   constructor(
+    private readonly cache: InMemoryCache<string, DecodedValidators>,
     private readonly stakingRpcClient: StakingRpcClientContract,
     private readonly bnbRpcClient: BNBRpcClientContract
   ) {}
@@ -12,7 +14,7 @@ export class StakingService implements StakingServiceContract {
   async getValidators(): Promise<Validator[]> {
     const [bnbValidators, contractCallValidators] = await Promise.all([
       this.bnbRpcClient.getValidators(),
-      this.stakingRpcClient.getValidatorsCreditContracts(), // TODO: Set cache
+      this.getCreditContractValidators(), // TODO: Set cache
     ]);
 
     return bnbValidators.map((bnbValidator, index) => {
@@ -50,25 +52,24 @@ export class StakingService implements StakingServiceContract {
   }
 
   async getDelegations(address: Address): Promise<Delegations> {
-    // Set Cache
-    const validatorsContract = (await this.stakingRpcClient.getValidatorsCreditContracts()).values()
+    const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary()
 
+    const validatorsContract = (await this.stakingRpcClient.getCreditContractValidators()).values()
     const activeDelegations = await this.stakingRpcClient.getPooledBNBData(Array.from(validatorsContract), address)
-
     console.log(activeDelegations)
+
+    const stakingSummary = await stakingSummaryPromise
 
     return {
       delegations: [],
       stakingSummary: {
-        totalProtocolStake: 0,
-        maxApy: 0,
-        minAmountToStake: 0,
-        unboundPeriod: 0, 
+        totalProtocolStake: Number(stakingSummary.totalStaked),
+        maxApy: stakingSummary.maxApy * 100,
+        minAmountToStake: parseEther("1.0"),
+        unboundPeriod: 7 * 24 * 60 * 60 * 1000, // 7 days
         redelegateFeeRate: 0,
-        activeValidators: 0,
-        inactiveValidators: 0,
-        jailedValidators: 0,
-        totalValidators: 0,
+        activeValidators: stakingSummary.activeValidators,
+        totalValidators: stakingSummary.totalValidators,
       }
     }
   }
@@ -81,5 +82,18 @@ export class StakingService implements StakingServiceContract {
   // TODO: Clasify between pending and
   private getPendingDelegations() {
 
+  }
+
+  private async getCreditContractValidators(): Promise<DecodedValidators> {
+    const cacheKey = "credit-contracts"
+
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey) as DecodedValidators
+    }
+
+    const creditContractValidators = await this.stakingRpcClient.getCreditContractValidators()
+    this.cache.set(cacheKey, creditContractValidators)
+
+    return creditContractValidators
   }
 }

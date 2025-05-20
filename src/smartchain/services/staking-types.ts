@@ -41,11 +41,9 @@ export enum DelegationStatus {
 export interface StakingSummary {
   totalProtocolStake: number,
   maxApy: number,
-  minAmountToStake: number,
+  minAmountToStake: bigint,
   unboundPeriod: number, 
   redelegateFeeRate: number,
   activeValidators: number,
-  inactiveValidators: number,
-  jailedValidators: number,
   totalValidators: number,
 }

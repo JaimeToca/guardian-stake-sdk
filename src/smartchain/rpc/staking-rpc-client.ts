@@ -8,16 +8,18 @@ import { decodeGetValidators } from "../abi/staking-function-decoder";
 import { DecodedValidators } from "../abi/types";
 import { StakingRpcClientContract } from "./staking-rpc-client-contract";
 import { Address, PublicClient } from "viem";
-import { STAKING_CONTRACT } from "../abi/abi-utils";
 import { multicallStakeAbi } from "../abi/stake-abi";
 
 export class StakingRpcClient implements StakingRpcClientContract {
+  static STAKING_CONTRACT: Address =
+    "0x0000000000000000000000000000000000002002";
+
   constructor(private readonly client: PublicClient) {}
 
-  async getValidatorsCreditContracts(): Promise<DecodedValidators> {
+  async getCreditContractValidators(): Promise<DecodedValidators> {
     const validatorsResponse = await this.client.call({
       data: encodeGetValidatorsData(),
-      to: STAKING_CONTRACT,
+      to: StakingRpcClient.STAKING_CONTRACT,
     });
 
     if (!validatorsResponse.data) {
