@@ -73,18 +73,24 @@ export class StakingService implements StakingServiceContract {
 
   async getDelegations(address: Address): Promise<Delegations> {
     const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
+    const validators = await this.getValidators();
     const activeDelegationsPromise = this.getActiveDelegations(
       address,
-      await this.getValidators()
+      validators
     );
+    const pendingDelegationsPromise = this.getPendingOrClaimbleDelegations(
+      address,
+      validators
+    )
 
-    const [stakingSummary, activeDelegations] = await Promise.all([
+    const [stakingSummary, activeDelegations, pendingDelegations] = await Promise.all([
       stakingSummaryPromise,
       activeDelegationsPromise,
+      pendingDelegationsPromise,
     ]);
 
     return {
-      delegations: activeDelegations,
+      delegations: activeDelegations.concat(pendingDelegations),
       stakingSummary: {
         totalProtocolStake: Number(stakingSummary.totalStaked),
         maxApy: stakingSummary.maxApy * 100,
@@ -128,7 +134,43 @@ export class StakingService implements StakingServiceContract {
       .filter((item) => item !== undefined);
   }
 
-  private getPendingOrClaimbleDelegations() {
-    
+  private async getPendingOrClaimbleDelegations(
+    address: Address,
+    validators: Validator[]
+  ) {
+    const creditContractValidators = validators.map(
+      (validator) => validator.creditAddress
+    );
+
+    const pendingUnbondDelegations =
+      await this.stakingRpcClient.getPendingUnbondDelegation(
+        creditContractValidators,
+        address
+      );
+
+    return pendingUnbondDelegations
+      .map((data, index) => {
+        const pendingRequestsResponse = processSingleMulticallResult(data);
+        if (pendingRequestsResponse === undefined) {
+          return undefined;
+        }
+        const validator = validators[index];
+        const maxPendingRequests = Number(pendingRequestsResponse);
+
+        for (
+          let requestIndex: number = 0;
+          requestIndex < maxPendingRequests;
+          requestIndex++
+        ) {
+          const validatorCreditAddress = validator.creditAddress;
+          this.stakingRpcClient.getUnbondRequestData(
+            address,
+            BigIn(requestIndex)
+          );
+          // Build Delegation
+          //
+        }
+      })
+      .filter((item) => item !== undefined);
   }
 }
