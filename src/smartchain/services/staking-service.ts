@@ -3,6 +3,7 @@ import { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import { Delegations, Validator, ValidatorStatus } from "./staking-types";
 import { StakingServiceContract } from "./staking-service-contract";
 import { DecodedValidators } from "../abi/types";
+import { InMemoryCache } from "../cache/in-memory-cache";
 
 export class StakingService implements StakingServiceContract {
   constructor(

@@ -3,6 +3,7 @@ import { bsc } from 'viem/chains'
 import { StakingRpcClient } from "./smartchain/rpc/staking-rpc-client";
 import { StakingService } from "./smartchain/services/staking-service";
 import { BNBRpcClient } from "./smartchain/rpc/bnb-rpc-client";
+import { InMemoryCache } from "./smartchain/cache/in-memory-cache";
 
 console.log("Hello World");
 
@@ -23,7 +24,7 @@ const client = createPublicClient({
 let client2 = new StakingRpcClient(client);
 let client3 = new BNBRpcClient()
 
-let stakingService = new StakingService(client2, client3)
+let stakingService = new StakingService(new InMemoryCache(), client2, client3)
 
 let delegations = await stakingService.getDelegations("0x70568C52A154718e7aEDF825fc35A941C2A81a39")
 

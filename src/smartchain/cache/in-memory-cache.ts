@@ -1,11 +1,13 @@
+import { CacheEntry } from "./cache-entry";
+
 /**
  * Simple implementation of in memory cache (not thread safe)
  */
-class InMemoryCache<K, V> {
+export class InMemoryCache<K, V> {
   private cache = new Map<K, CacheEntry<V>>();
   private defaultTtlMs: number;
 
-  constructor(defaultTtlMs: number = 120000) {
+  constructor(defaultTtlMs: number = 180000) {
     this.defaultTtlMs = defaultTtlMs;
   }
 
