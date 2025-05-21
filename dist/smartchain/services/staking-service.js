@@ -1,21 +1,27 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StakingService = void 0;
+const viem_1 = require("viem");
 const staking_types_1 = require("./staking-types");
+const abi_utils_1 = require("../abi/abi-utils");
 class StakingService {
-    constructor(stakingRpcClient, bnbRpcClient) {
+    constructor(cache, stakingRpcClient, bnbRpcClient) {
+        this.cache = cache;
         this.stakingRpcClient = stakingRpcClient;
         this.bnbRpcClient = bnbRpcClient;
     }
     async getValidators() {
+        if (this.cache.has(StakingService.VALIDATOR_CACHE_KEY)) {
+            return this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
+        }
         const [bnbValidators, contractCallValidators] = await Promise.all([
             this.bnbRpcClient.getValidators(),
-            this.stakingRpcClient.getValidatorsCreditContracts(),
+            this.stakingRpcClient.getCreditContractValidators(),
         ]);
-        return bnbValidators.map((bnbValidator, index) => {
+        const validators = bnbValidators.map((bnbValidator, index) => {
             const operatorAddress = bnbValidator.operatorAddress;
             return {
-                id: `${index}-${bnbValidator.moniker}`,
+                id: `$${bnbValidator.moniker}_${index}`,
                 status: this.getValidatorStatus(bnbValidator),
                 name: bnbValidator.moniker,
                 description: bnbValidator.miningStatus,
@@ -26,6 +32,8 @@ class StakingService {
                 creditAddress: contractCallValidators.get(operatorAddress),
             };
         });
+        this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
+        return validators;
     }
     getValidatorStatus(bnbValidator) {
         switch (bnbValidator.status) {
@@ -38,33 +46,55 @@ class StakingService {
         }
     }
     getValidatorImage(address) {
-        const BASE_VALIDATOR_IMAGE_URL = `https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/`;
-        const LOGO_FILE = `/logo.png`;
+        const BASE_VALIDATOR_IMAGE_URL = "https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/";
+        const LOGO_FILE = "/logo.png";
         return `${BASE_VALIDATOR_IMAGE_URL}${address}${LOGO_FILE}`;
     }
     async getDelegations(address) {
-        const validatorsContract = (await this.stakingRpcClient.getValidatorsCreditContracts()).values();
-        const activeDelegations = this.stakingRpcClient.getPooledBNBData(Array.from(validatorsContract), address);
-        console.log(activeDelegations);
+        const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
+        const activeDelegationsPromise = this.getActiveDelegations(address, await this.getValidators());
+        const [stakingSummary, activeDelegations] = await Promise.all([
+            stakingSummaryPromise,
+            activeDelegationsPromise,
+        ]);
         return {
-            delegations: [],
+            delegations: activeDelegations,
             stakingSummary: {
-                totalProtocolStake: 0,
-                maxApy: 0,
-                minAmountToStake: 0,
-                unboundPeriod: 0,
-                redelegateFeeRate: 0,
-                activeValidators: 0,
-                inactiveValidators: 0,
-                jailedValidators: 0,
-                totalValidators: 0,
-            }
+                totalProtocolStake: Number(stakingSummary.totalStaked),
+                maxApy: stakingSummary.maxApy * 100,
+                minAmountToStake: StakingService.MIN_AMOUNT_TO_STAKE,
+                unboundPeriodInMillis: StakingService.UNBOUND_PERIOD,
+                redelegateFeeRate: StakingService.REDELEGATION_FEE,
+                activeValidators: stakingSummary.activeValidators,
+                totalValidators: stakingSummary.totalValidators,
+            },
         };
     }
-    getActiveDelegations() {
+    async getActiveDelegations(address, validators) {
+        const creditContractValidators = validators.map((validator) => validator.creditAddress);
+        const pooledBNBData = await this.stakingRpcClient.getPooledBNBData(creditContractValidators, address);
+        return pooledBNBData
+            .map((data, index) => {
+            const stakedAmount = (0, abi_utils_1.processSingleMulticallResult)(data);
+            if (stakedAmount === undefined) {
+                return undefined;
+            }
+            return {
+                id: `delegation_${index}`,
+                validator: validators[index],
+                amount: stakedAmount,
+                status: staking_types_1.DelegationStatus.Active,
+                pendingUntil: 0,
+            };
+        })
+            .filter((item) => item !== undefined);
     }
-    getPendingDelegations() {
+    getPendingOrClaimbleDelegations() {
     }
 }
 exports.StakingService = StakingService;
+StakingService.UNBOUND_PERIOD = 604800;
+StakingService.REDELEGATION_FEE = 0.02;
+StakingService.MIN_AMOUNT_TO_STAKE = (0, viem_1.parseEther)("1.0");
+StakingService.VALIDATOR_CACHE_KEY = "bsc-validators";
 //# sourceMappingURL=staking-service.js.map

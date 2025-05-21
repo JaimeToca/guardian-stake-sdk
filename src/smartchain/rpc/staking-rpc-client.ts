@@ -5,14 +5,14 @@ import {
   encodePendingUnbondRequestData,
 } from "../abi/staking-function-enconder";
 import { decodeGetValidators } from "../abi/staking-function-decoder";
-import { DecodedValidators } from "../abi/types";
+import { DecodedValidators, MulticallResult } from "../abi/types";
 import { StakingRpcClientContract } from "./staking-rpc-client-contract";
 import { Address, PublicClient } from "viem";
 import { multicallStakeAbi } from "../abi/stake-abi";
 
 export class StakingRpcClient implements StakingRpcClientContract {
   static STAKING_CONTRACT: Address =
-    "0x0000000000000000000000000000000000002002";
+    '0x0000000000000000000000000000000000002002';
 
   constructor(private readonly client: PublicClient) {}
 
@@ -24,7 +24,7 @@ export class StakingRpcClient implements StakingRpcClientContract {
 
     if (!validatorsResponse.data) {
       throw new Error(
-        "Missing data for call getValidatorsCreditContracts(contract)"
+        'Missing data for call getValidatorsCreditContracts(contract)'
       );
     }
 
@@ -39,12 +39,12 @@ export class StakingRpcClient implements StakingRpcClientContract {
     );
   }
 
-  async getPooledBNBData(creditContracts: Address[], delegator: Address) {
+  async getPooledBNBData(creditContracts: Address[], delegator: Address): Promise<MulticallResult[]> {
     const multicallContracts = creditContracts.map((creditContract) => {
       return {
         address: creditContract,
         abi: multicallStakeAbi,
-        functionName: "getPooledBNB",
+        functionName: 'getPooledBNB',
         args: [delegator],
       };
     });

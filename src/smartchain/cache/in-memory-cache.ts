@@ -1,7 +1,8 @@
 import { CacheEntry } from "./cache-entry";
 
 /**
- * Simple implementation of in memory cache (not thread safe)
+ * Simple implementation of in memory cache (WARNING: Not thread safe)
+ * By default it has an expiration of 3 min
  */
 export class InMemoryCache<K, V> {
   private cache = new Map<K, CacheEntry<V>>();

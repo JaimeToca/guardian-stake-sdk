@@ -1,27 +1,42 @@
-import { Address, etherUnits, Hex, parseEther } from "viem";
+import { Address, Hex, parseEther } from "viem";
 import { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
-import { Delegations, Validator, ValidatorStatus } from "./staking-types";
+import {
+  Delegation,
+  Delegations,
+  DelegationStatus,
+  Validator,
+  ValidatorStatus,
+} from "./staking-types";
 import { StakingServiceContract } from "./staking-service-contract";
-import { DecodedValidators } from "../abi/types";
 import { InMemoryCache } from "../cache/in-memory-cache";
+import { processSingleMulticallResult } from "../abi/abi-utils";
 
 export class StakingService implements StakingServiceContract {
+  private static readonly UNBOUND_PERIOD = 604800;
+  private static readonly REDELEGATION_FEE = 0.02;
+  private static readonly MIN_AMOUNT_TO_STAKE = parseEther("1.0");
+  private static readonly VALIDATOR_CACHE_KEY = "bsc-validators";
+
   constructor(
-    private readonly cache: InMemoryCache<string, DecodedValidators>,
+    private readonly cache: InMemoryCache<string, Validator[]>,
     private readonly stakingRpcClient: StakingRpcClientContract,
     private readonly bnbRpcClient: BNBRpcClientContract
   ) {}
 
   async getValidators(): Promise<Validator[]> {
+    if (this.cache.has(StakingService.VALIDATOR_CACHE_KEY)) {
+      return this.cache.get(StakingService.VALIDATOR_CACHE_KEY) as Validator[];
+    }
+
     const [bnbValidators, contractCallValidators] = await Promise.all([
       this.bnbRpcClient.getValidators(),
-      this.getCreditContractValidators(), // TODO: Set cache
+      this.stakingRpcClient.getCreditContractValidators(),
     ]);
 
-    return bnbValidators.map((bnbValidator, index) => {
-      const operatorAddress = bnbValidator.operatorAddress as Hex;
+    const validators = bnbValidators.map((bnbValidator, index) => {
+      const operatorAddress = bnbValidator.operatorAddress as Address;
       return {
-        id: `${index}-${bnbValidator.moniker}`,
+        id: `$${bnbValidator.moniker}_${index}`,
         status: this.getValidatorStatus(bnbValidator),
         name: bnbValidator.moniker,
         description: bnbValidator.miningStatus,
@@ -29,9 +44,12 @@ export class StakingService implements StakingServiceContract {
         apy: bnbValidator.apy * 100,
         delegators: bnbValidator.delegatorCount,
         operatorAddress: operatorAddress,
-        creditAddress: contractCallValidators.get(operatorAddress) as Hex,
+        creditAddress: contractCallValidators.get(operatorAddress) as Address,
       };
     });
+    this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
+
+    return validators;
   }
 
   private getValidatorStatus(bnbValidator: BNBChainValidator) {
@@ -45,56 +63,72 @@ export class StakingService implements StakingServiceContract {
     }
   }
 
-  private getValidatorImage(address: string): string {
-    const BASE_VALIDATOR_IMAGE_URL = `https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/`;
-    const LOGO_FILE = `/logo.png`;
+  private getValidatorImage(address: Address): string {
+    const BASE_VALIDATOR_IMAGE_URL =
+      "https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/";
+    const LOGO_FILE = "/logo.png";
 
     return `${BASE_VALIDATOR_IMAGE_URL}${address}${LOGO_FILE}`;
   }
 
   async getDelegations(address: Address): Promise<Delegations> {
-    const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary()
+    const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
+    const activeDelegationsPromise = this.getActiveDelegations(
+      address,
+      await this.getValidators()
+    );
 
-    const validatorsContract = (await this.stakingRpcClient.getCreditContractValidators()).values()
-    const activeDelegations = await this.stakingRpcClient.getPooledBNBData(Array.from(validatorsContract), address)
-    console.log(activeDelegations)
-
-    const stakingSummary = await stakingSummaryPromise
+    const [stakingSummary, activeDelegations] = await Promise.all([
+      stakingSummaryPromise,
+      activeDelegationsPromise,
+    ]);
 
     return {
-      delegations: [],
+      delegations: activeDelegations,
       stakingSummary: {
         totalProtocolStake: Number(stakingSummary.totalStaked),
         maxApy: stakingSummary.maxApy * 100,
-        minAmountToStake: parseEther("1.0"),
-        unboundPeriod: 7 * 24 * 60 * 60 * 1000, // 7 days
-        redelegateFeeRate: 0,
+        minAmountToStake: StakingService.MIN_AMOUNT_TO_STAKE,
+        unboundPeriodInMillis: StakingService.UNBOUND_PERIOD,
+        redelegateFeeRate: StakingService.REDELEGATION_FEE,
         activeValidators: stakingSummary.activeValidators,
         totalValidators: stakingSummary.totalValidators,
-      }
-    }
+      },
+    };
   }
 
-  // getPooledBNB
-  private getActiveDelegations() {
+  private async getActiveDelegations(
+    address: Address,
+    validators: Validator[]
+  ): Promise<Delegation[]> {
+    const creditContractValidators = validators.map(
+      (validator) => validator.creditAddress
+    );
 
+    const pooledBNBData = await this.stakingRpcClient.getPooledBNBData(
+      creditContractValidators,
+      address
+    );
+
+    return pooledBNBData
+      .map((data, index) => {
+        const stakedAmount = processSingleMulticallResult(data);
+        if (stakedAmount === undefined) {
+          return undefined;
+        }
+
+        return {
+          id: `delegation_${index}`,
+          validator: validators[index],
+          amount: stakedAmount,
+          status: DelegationStatus.Active,
+          pendingUntil: 0,
+        };
+      })
+      .filter((item) => item !== undefined);
   }
 
-  // TODO: Clasify between pending and
-  private getPendingDelegations() {
-
-  }
-
-  private async getCreditContractValidators(): Promise<DecodedValidators> {
-    const cacheKey = "credit-contracts"
-
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey) as DecodedValidators
-    }
-
-    const creditContractValidators = await this.stakingRpcClient.getCreditContractValidators()
-    this.cache.set(cacheKey, creditContractValidators)
-
-    return creditContractValidators
+  private getPendingOrClaimbleDelegations() {
+    
   }
 }

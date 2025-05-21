@@ -42,7 +42,7 @@ export interface StakingSummary {
   totalProtocolStake: number,
   maxApy: number,
   minAmountToStake: bigint,
-  unboundPeriod: number, 
+  unboundPeriodInMillis: number, 
   redelegateFeeRate: number,
   activeValidators: number,
   totalValidators: number,
