@@ -47,6 +47,7 @@ export class StakingService implements StakingServiceContract {
         creditAddress: contractCallValidators.get(operatorAddress) as Address,
       };
     });
+    
     this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
 
     return validators;
@@ -156,7 +157,7 @@ export class StakingService implements StakingServiceContract {
         }
         const validator = validators[index];
         const maxPendingRequests = Number(pendingRequestsResponse);
-
+        
         for (
           let requestIndex: number = 0;
           requestIndex < maxPendingRequests;
@@ -165,7 +166,7 @@ export class StakingService implements StakingServiceContract {
           const validatorCreditAddress = validator.creditAddress;
           this.stakingRpcClient.getUnbondRequestData(
             address,
-            BigIn(requestIndex)
+            BigInt(requestIndex)
           );
           // Build Delegation
           //
