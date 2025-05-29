@@ -146,14 +146,16 @@ export class StakingService implements StakingServiceContract {
       (validator) => validator.creditAddress
     );
 
+    // Get validators with pending/claimable delegations
     const pendingUnbondDelegations =
       await this.stakingRpcClient.getPendingUnbondDelegation(
         creditContractValidators,
         address
       );
 
-    const result = pendingUnbondDelegations
-      .map(async (data, index) => {
+    // Get N pending/claimable delegations per validator
+    const delegationPromiseResults = pendingUnbondDelegations.map(
+      async (data, index) => {
         const pendingRequestsResponse = processSingleMulticallResult(data);
         if (pendingRequestsResponse === undefined) {
           return undefined;
@@ -173,20 +175,36 @@ export class StakingService implements StakingServiceContract {
 
         return unbondRequests.map((unbondRequest, unbondRequestIndex) => {
           const unlockTime = unbondRequest.unlockTime;
+          const currentTime = Date.now();
+
+          const delegationStatus =
+            currentTime > unlockTime
+              ? DelegationStatus.Claimable
+              : DelegationStatus.Pending;
+          const pendingUntil =
+            delegationStatus === DelegationStatus.Claimable
+              ? 0
+              : Number(unlockTime);
           const amount = unbondRequest.amount;
 
           return {
             id: `delegation_pending__${index}`,
             validator: validator,
             amount: amount,
-            status: DelegationStatus.Active,
+            status: delegationStatus,
             delegationIndex: unbondRequestIndex,
-            pendingUntil: 0,
+            pendingUntil: pendingUntil,
           };
         });
-      })
-      .filter((item) => item !== undefined);
+      }
+    );
 
-    return [];
+    const resolvedDelegationArrays = await Promise.all(
+      delegationPromiseResults
+    );
+
+    return resolvedDelegationArrays
+      .filter((item): item is Delegation[] => item !== undefined)
+      .flat();
   }
 }
