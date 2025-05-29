@@ -10,6 +10,7 @@ import {
 import { StakingServiceContract } from "./staking-service-contract";
 import { InMemoryCache } from "../cache/in-memory-cache";
 import { processSingleMulticallResult } from "../abi/abi-utils";
+import { DecodedUnbondRequest } from "../abi/types";
 
 export class StakingService implements StakingServiceContract {
   private static readonly UNBOUND_PERIOD = 604800;
@@ -47,7 +48,7 @@ export class StakingService implements StakingServiceContract {
         creditAddress: contractCallValidators.get(operatorAddress) as Address,
       };
     });
-    
+
     this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
 
     return validators;
@@ -82,13 +83,14 @@ export class StakingService implements StakingServiceContract {
     const pendingDelegationsPromise = this.getPendingOrClaimbleDelegations(
       address,
       validators
-    )
+    );
 
-    const [stakingSummary, activeDelegations, pendingDelegations] = await Promise.all([
-      stakingSummaryPromise,
-      activeDelegationsPromise,
-      pendingDelegationsPromise,
-    ]);
+    const [stakingSummary, activeDelegations, pendingDelegations] =
+      await Promise.all([
+        stakingSummaryPromise,
+        activeDelegationsPromise,
+        pendingDelegationsPromise,
+      ]);
 
     return {
       delegations: activeDelegations.concat(pendingDelegations),
@@ -125,10 +127,11 @@ export class StakingService implements StakingServiceContract {
         }
 
         return {
-          id: `delegation_${index}`,
+          id: `delegation_active_${index}`,
           validator: validators[index],
           amount: stakedAmount,
           status: DelegationStatus.Active,
+          delegationIndex: -1,
           pendingUntil: 0,
         };
       })
@@ -138,7 +141,7 @@ export class StakingService implements StakingServiceContract {
   private async getPendingOrClaimbleDelegations(
     address: Address,
     validators: Validator[]
-  ) {
+  ): Promise<Delegation[]> {
     const creditContractValidators = validators.map(
       (validator) => validator.creditAddress
     );
@@ -149,29 +152,41 @@ export class StakingService implements StakingServiceContract {
         address
       );
 
-    return pendingUnbondDelegations
-      .map((data, index) => {
+    const result = pendingUnbondDelegations
+      .map(async (data, index) => {
         const pendingRequestsResponse = processSingleMulticallResult(data);
         if (pendingRequestsResponse === undefined) {
           return undefined;
         }
         const validator = validators[index];
         const maxPendingRequests = Number(pendingRequestsResponse);
-        
-        for (
-          let requestIndex: number = 0;
-          requestIndex < maxPendingRequests;
-          requestIndex++
-        ) {
-          const validatorCreditAddress = validator.creditAddress;
-          this.stakingRpcClient.getUnbondRequestData(
-            address,
-            BigInt(requestIndex)
-          );
-          // Build Delegation
-          //
-        }
+
+        const unbondRequestsPromises: Promise<DecodedUnbondRequest>[] =
+          Array.from({ length: maxPendingRequests }, (_, requestIndex) => {
+            return this.stakingRpcClient.getUnbondRequestData(
+              address,
+              BigInt(requestIndex)
+            );
+          });
+
+        const unbondRequests = await Promise.all(unbondRequestsPromises);
+
+        return unbondRequests.map((unbondRequest, unbondRequestIndex) => {
+          const unlockTime = unbondRequest.unlockTime;
+          const amount = unbondRequest.amount;
+
+          return {
+            id: `delegation_pending__${index}`,
+            validator: validator,
+            amount: amount,
+            status: DelegationStatus.Active,
+            delegationIndex: unbondRequestIndex,
+            pendingUntil: 0,
+          };
+        });
       })
       .filter((item) => item !== undefined);
+
+    return [];
   }
 }

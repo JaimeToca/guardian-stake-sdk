@@ -28,6 +28,7 @@ export interface Delegation {
   validator: Validator,
   amount: bigint,
   status: DelegationStatus,
+  delegationIndex: number, // used for multiple undelegate/claims
   pendingUntil: number, 
 }
 
