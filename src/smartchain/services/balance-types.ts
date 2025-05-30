@@ -3,16 +3,16 @@ interface BalanceBase {
 }
 
 interface Available extends BalanceBase {
-    type: 'available';
+  type: "available";
 }
 interface Staked extends BalanceBase {
-    type: 'staked';
+  type: "staked";
 }
 interface Pending extends BalanceBase {
-    type: 'pending';
+  type: "pending";
 }
 interface Claimable extends BalanceBase {
-    type: 'claimable';
+  type: "claimable";
 }
 
 export type Balance = Available | Staked | Pending | Claimable;

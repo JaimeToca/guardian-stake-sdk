@@ -10,13 +10,11 @@ import { StakingService } from "./smartchain/services/staking-service";
 import { BNBRpcClient } from "./smartchain/rpc/bnb-rpc-client";
 import { InMemoryCache } from "./smartchain/cache/in-memory-cache";
 
-console.log("Hello World");
-
 test();
 
 async function test() {
   const bscRpcUrl =
-    "https://bsc.twnodes.com/naas/session/ZjVhOWYwZjctYWQzNS00ODgxLTkzNDEtYjRhYTczYzIyMTNh";
+    "https://bsc.twnodes.com/naas/session/ZmNiNDNiZmItNDRhYy00MTBhLTgwNTYtNGIyOWFmYjEwMzUz";
 
   const client = createPublicClient({
     chain: bsc,
@@ -37,18 +35,7 @@ async function test() {
 
   let validators = await stakingService.getValidators();
   let delegations = await stakingService.getDelegations(
-    "0x70568C52A154718e7aEDF825fc35A941C2A81a39"
+    "0xc1A4442Bfe4e9dd7072e3A4A213d5A767a899E53"
   );
   console.log(delegations);
-
-  /*validators.forEach(validator => {
-  console.log(validator)
-})
-console.log(validators) */
-
-  /*
-let jsonProvider = new JsonRpcProvider("https://bsc.twnodes.com/naas/session/ZjU0NmVkYTAtY2NhYS00MzU4LWJiZWYtMjU4N2Y4OTNhN2Vi")
-let client = new EthersRpcClient(jsonProvider);
-let response = await client.getValidatorsCreditContracts("0x0000000000000000000000000000000000002002"); 
-*/
 }

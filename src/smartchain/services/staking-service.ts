@@ -152,8 +152,9 @@ export class StakingService implements StakingServiceContract {
         address
       );
 
-    const delegationPromiseResults = pendingUnbondDelegations.map(
-      async (data, index) => {
+    // TODO: Refactor
+    const delegationPromiseResults = pendingUnbondDelegations
+      .map(async (data, index) => {
         const pendingRequestsResponse = processSingleMulticallResult(data);
         if (pendingRequestsResponse === undefined) {
           return undefined;
@@ -162,6 +163,7 @@ export class StakingService implements StakingServiceContract {
         const maxPendingRequests = Number(pendingRequestsResponse);
 
         const unbondRequests = await this.getUnbondRequests(
+          validator.creditAddress,
           address,
           maxPendingRequests
         );
@@ -171,8 +173,8 @@ export class StakingService implements StakingServiceContract {
           validator,
           index
         );
-      }
-    );
+      })
+      .filter((delegation) => delegation !== undefined);
 
     const resolvedDelegationArrays = await Promise.all(
       delegationPromiseResults
@@ -184,6 +186,7 @@ export class StakingService implements StakingServiceContract {
   }
 
   private async getUnbondRequests(
+    creditContract: Address,
     address: Address,
     maxPendingRequests: number
   ): Promise<DecodedUnbondRequest[]> {
@@ -191,6 +194,7 @@ export class StakingService implements StakingServiceContract {
       { length: maxPendingRequests },
       (_, requestIndex) =>
         this.stakingRpcClient.getUnbondRequestData(
+          creditContract,
           address,
           BigInt(requestIndex)
         )

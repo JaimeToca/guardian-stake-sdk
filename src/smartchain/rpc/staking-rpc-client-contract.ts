@@ -6,6 +6,6 @@ export interface StakingRpcClientContract {
   getClaimableUnbondDelegation(contract: Address, address: Address): void;
   getPendingUnbondDelegation(creditContracts: Address[], address: Address): Promise<MulticallResult[]>;
   getPooledBNBData(creditContracts: Address[], delegator: Address): Promise<MulticallResult[]>;
-  getUnbondRequestData(delegator: Address, index: bigint): Promise<DecodedUnbondRequest>;
+  getUnbondRequestData(creditContract: Address, delegator: Address, index: bigint): Promise<DecodedUnbondRequest>;
   getSharesByPooledBNBData(contract: Address, amount: bigint): void;
 }

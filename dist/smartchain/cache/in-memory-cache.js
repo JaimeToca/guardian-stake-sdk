@@ -7,7 +7,7 @@ class InMemoryCache {
         this.defaultTtlMs = defaultTtlMs;
     }
     set(key, value, ttlMs) {
-        const expiration = Date.now() + (ttlMs !== null && ttlMs !== void 0 ? ttlMs : this.defaultTtlMs);
+        const expiration = Date.now() + (ttlMs ?? this.defaultTtlMs);
         this.cache.set(key, { value, expiration });
         console.log(`Cache: Set key '${String(key)}', expires at ${new Date(expiration).toLocaleTimeString()}`);
     }

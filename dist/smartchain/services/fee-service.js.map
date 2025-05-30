@@ -1,1 +1,1 @@
-{"version":3,"file":"fee-service.js","sourceRoot":"","sources":["../../../src/smartchain/services/fee-service.ts"],"names":[],"mappings":";AAAA,MAAM,UAAU;CAEf"}
+{"version":3,"file":"fee-service.js","sourceRoot":"","sources":["../../../src/smartchain/services/fee-service.ts"],"names":[],"mappings":";;;AAIA,MAAa,UAAU;IACrB,WAAW,CAAC,WAAwB;QAClC,OAAO;YACL,QAAQ,EAAE,MAAM,CAAC,CAAC,CAAC;YACnB,QAAQ,EAAE,MAAM,CAAC,CAAC,CAAC;YACnB,KAAK,EAAE,MAAM,CAAC,CAAC,CAAC;SACjB,CAAC;IACJ,CAAC;CACF;AARD,gCAQC"}

@@ -52,7 +52,7 @@ export function encodeGetPooledBNBData(delegator: Address): Hex {
  */
 export function encodeUnbondRequestData(delegator: Address, index: bigint): Hex {
   return encodeFunctionCall(
-    "unbondRequest(address)",
+    "unbondRequest(address,uint256)",
     [
       { name: "delegator", type: "address" },
       { name: "_index", type: "uint256" },

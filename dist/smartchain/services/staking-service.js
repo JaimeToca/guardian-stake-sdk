@@ -52,13 +52,16 @@ class StakingService {
     }
     async getDelegations(address) {
         const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
-        const activeDelegationsPromise = this.getActiveDelegations(address, await this.getValidators());
-        const [stakingSummary, activeDelegations] = await Promise.all([
+        const validators = await this.getValidators();
+        const activeDelegationsPromise = this.getActiveDelegations(address, validators);
+        const pendingDelegationsPromise = this.getPendingOrClaimbleDelegations(address, validators);
+        const [stakingSummary, activeDelegations, pendingDelegations] = await Promise.all([
             stakingSummaryPromise,
             activeDelegationsPromise,
+            pendingDelegationsPromise,
         ]);
         return {
-            delegations: activeDelegations,
+            delegations: activeDelegations.concat(pendingDelegations),
             stakingSummary: {
                 totalProtocolStake: Number(stakingSummary.totalStaked),
                 maxApy: stakingSummary.maxApy * 100,
@@ -80,16 +83,54 @@ class StakingService {
                 return undefined;
             }
             return {
-                id: `delegation_${index}`,
+                id: `delegation_active_${index}`,
                 validator: validators[index],
                 amount: stakedAmount,
                 status: staking_types_1.DelegationStatus.Active,
+                delegationIndex: -1,
                 pendingUntil: 0,
             };
         })
             .filter((item) => item !== undefined);
     }
-    getPendingOrClaimbleDelegations() {
+    async getPendingOrClaimbleDelegations(address, validators) {
+        const creditContractValidators = validators.map((validator) => validator.creditAddress);
+        const pendingUnbondDelegations = await this.stakingRpcClient.getPendingUnbondDelegation(creditContractValidators, address);
+        const delegationPromiseResults = pendingUnbondDelegations.map(async (data, index) => {
+            const pendingRequestsResponse = (0, abi_utils_1.processSingleMulticallResult)(data);
+            if (pendingRequestsResponse === undefined) {
+                return undefined;
+            }
+            const validator = validators[index];
+            const maxPendingRequests = Number(pendingRequestsResponse);
+            const unbondRequests = await this.getUnbondRequests(validator.creditAddress, address, maxPendingRequests);
+            return this.mapUnbondRequestsToDelegations(unbondRequests, validator, index);
+        }).filter(delegation => delegation !== undefined);
+        const resolvedDelegationArrays = await Promise.all(delegationPromiseResults);
+        return resolvedDelegationArrays
+            .filter((item) => item !== undefined)
+            .flat();
+    }
+    async getUnbondRequests(creditContract, address, maxPendingRequests) {
+        const unbondRequestsPromises = Array.from({ length: maxPendingRequests }, (_, requestIndex) => this.stakingRpcClient.getUnbondRequestData(creditContract, address, BigInt(requestIndex)));
+        return Promise.all(unbondRequestsPromises);
+    }
+    mapUnbondRequestsToDelegations(unbondRequests, validator, delegationIndex) {
+        const currentTime = Date.now();
+        return unbondRequests.map((unbondRequest, unbondRequestIndex) => {
+            const unlockTime = unbondRequest.unlockTime;
+            const isClaimable = currentTime > unlockTime;
+            return {
+                id: `delegation_pending__${delegationIndex}`,
+                validator,
+                amount: unbondRequest.amount,
+                status: isClaimable
+                    ? staking_types_1.DelegationStatus.Claimable
+                    : staking_types_1.DelegationStatus.Pending,
+                delegationIndex: unbondRequestIndex,
+                pendingUntil: isClaimable ? 0 : Number(unlockTime),
+            };
+        });
     }
 }
 exports.StakingService = StakingService;

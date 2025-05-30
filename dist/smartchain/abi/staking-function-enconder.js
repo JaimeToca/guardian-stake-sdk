@@ -20,7 +20,7 @@ function encodeGetPooledBNBData(delegator) {
     return (0, abi_utils_1.encodeFunctionCall)("getPooledBNB(address)", [{ name: "accout", type: "address" }], [delegator]);
 }
 function encodeUnbondRequestData(delegator, index) {
-    return (0, abi_utils_1.encodeFunctionCall)("unbondRequest(address)", [
+    return (0, abi_utils_1.encodeFunctionCall)("unbondRequest(address,uint256)", [
         { name: "delegator", type: "address" },
         { name: "_index", type: "uint256" },
     ], [delegator, index]);

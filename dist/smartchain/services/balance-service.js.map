@@ -1,1 +1,1 @@
-{"version":3,"file":"balance-service.js","sourceRoot":"","sources":["../../../src/smartchain/services/balance-service.ts"],"names":[],"mappings":""}
+{"version":3,"file":"balance-service.js","sourceRoot":"","sources":["../../../src/smartchain/services/balance-service.ts"],"names":[],"mappings":";;;AAIA,MAAa,cAAc;IAEvB,gBAAc,CAAC;IAEf,WAAW,CAAC,KAAY;QACpB,OAAO,EAAE,CAAA;IACb,CAAC;CACJ;AAPD,wCAOC"}

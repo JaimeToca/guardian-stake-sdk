@@ -87,12 +87,13 @@ export class StakingRpcClient implements StakingRpcClientContract {
   }
 
   async getUnbondRequestData(
+    creditContract: Address,
     delegator: Address,
     index: bigint
   ): Promise<DecodedUnbondRequest> {
     const unbondRequestDataResponse = await this.client.call({
       data: encodeUnbondRequestData(delegator, index),
-      to: StakingRpcClient.STAKING_CONTRACT,
+      to: creditContract,
     });
 
     if (!unbondRequestDataResponse.data) {
