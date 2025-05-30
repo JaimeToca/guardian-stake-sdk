@@ -146,14 +146,12 @@ export class StakingService implements StakingServiceContract {
       (validator) => validator.creditAddress
     );
 
-    // Get validators with pending/claimable delegations
     const pendingUnbondDelegations =
       await this.stakingRpcClient.getPendingUnbondDelegation(
         creditContractValidators,
         address
       );
 
-    // Get N pending/claimable delegations per validator
     const delegationPromiseResults = pendingUnbondDelegations.map(
       async (data, index) => {
         const pendingRequestsResponse = processSingleMulticallResult(data);
@@ -163,39 +161,16 @@ export class StakingService implements StakingServiceContract {
         const validator = validators[index];
         const maxPendingRequests = Number(pendingRequestsResponse);
 
-        const unbondRequestsPromises: Promise<DecodedUnbondRequest>[] =
-          Array.from({ length: maxPendingRequests }, (_, requestIndex) => {
-            return this.stakingRpcClient.getUnbondRequestData(
-              address,
-              BigInt(requestIndex)
-            );
-          });
+        const unbondRequests = await this.getUnbondRequests(
+          address,
+          maxPendingRequests
+        );
 
-        const unbondRequests = await Promise.all(unbondRequestsPromises);
-
-        return unbondRequests.map((unbondRequest, unbondRequestIndex) => {
-          const unlockTime = unbondRequest.unlockTime;
-          const currentTime = Date.now();
-
-          const delegationStatus =
-            currentTime > unlockTime
-              ? DelegationStatus.Claimable
-              : DelegationStatus.Pending;
-          const pendingUntil =
-            delegationStatus === DelegationStatus.Claimable
-              ? 0
-              : Number(unlockTime);
-          const amount = unbondRequest.amount;
-
-          return {
-            id: `delegation_pending__${index}`,
-            validator: validator,
-            amount: amount,
-            status: delegationStatus,
-            delegationIndex: unbondRequestIndex,
-            pendingUntil: pendingUntil,
-          };
-        });
+        return this.mapUnbondRequestsToDelegations(
+          unbondRequests,
+          validator,
+          index
+        );
       }
     );
 
@@ -206,5 +181,45 @@ export class StakingService implements StakingServiceContract {
     return resolvedDelegationArrays
       .filter((item): item is Delegation[] => item !== undefined)
       .flat();
+  }
+
+  private async getUnbondRequests(
+    address: Address,
+    maxPendingRequests: number
+  ): Promise<DecodedUnbondRequest[]> {
+    const unbondRequestsPromises = Array.from(
+      { length: maxPendingRequests },
+      (_, requestIndex) =>
+        this.stakingRpcClient.getUnbondRequestData(
+          address,
+          BigInt(requestIndex)
+        )
+    );
+
+    return Promise.all(unbondRequestsPromises);
+  }
+
+  private mapUnbondRequestsToDelegations(
+    unbondRequests: DecodedUnbondRequest[],
+    validator: Validator,
+    delegationIndex: number
+  ): Delegation[] {
+    const currentTime = Date.now();
+
+    return unbondRequests.map((unbondRequest, unbondRequestIndex) => {
+      const unlockTime = unbondRequest.unlockTime;
+      const isClaimable = currentTime > unlockTime;
+
+      return {
+        id: `delegation_pending__${delegationIndex}`,
+        validator,
+        amount: unbondRequest.amount,
+        status: isClaimable
+          ? DelegationStatus.Claimable
+          : DelegationStatus.Pending,
+        delegationIndex: unbondRequestIndex,
+        pendingUntil: isClaimable ? 0 : Number(unlockTime),
+      };
+    });
   }
 }
