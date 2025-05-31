@@ -1,5 +1,5 @@
 interface BalanceBase {
-  amount: number;
+  amount: bigint;
 }
 
 interface Available extends BalanceBase {
