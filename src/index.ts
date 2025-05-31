@@ -9,6 +9,7 @@ import { StakingRpcClient } from "./smartchain/rpc/staking-rpc-client";
 import { StakingService } from "./smartchain/services/staking-service";
 import { BNBRpcClient } from "./smartchain/rpc/bnb-rpc-client";
 import { InMemoryCache } from "./smartchain/cache/in-memory-cache";
+import { DelegationStatus } from "./smartchain/services/staking-types";
 
 test();
 
@@ -37,5 +38,6 @@ async function test() {
   let delegations = await stakingService.getDelegations(
     "0xc1A4442Bfe4e9dd7072e3A4A213d5A767a899E53"
   );
+  console.log(delegations.delegations[0].status === DelegationStatus.Claimable)
   console.log(delegations);
 }

@@ -6,6 +6,7 @@ const staking_rpc_client_1 = require("./smartchain/rpc/staking-rpc-client");
 const staking_service_1 = require("./smartchain/services/staking-service");
 const bnb_rpc_client_1 = require("./smartchain/rpc/bnb-rpc-client");
 const in_memory_cache_1 = require("./smartchain/cache/in-memory-cache");
+const staking_types_1 = require("./smartchain/services/staking-types");
 test();
 async function test() {
     const bscRpcUrl = "https://bsc.twnodes.com/naas/session/ZmNiNDNiZmItNDRhYy00MTBhLTgwNTYtNGIyOWFmYjEwMzUz";
@@ -21,6 +22,7 @@ async function test() {
     let stakingService = new staking_service_1.StakingService(new in_memory_cache_1.InMemoryCache(), client2, client3);
     let validators = await stakingService.getValidators();
     let delegations = await stakingService.getDelegations("0xc1A4442Bfe4e9dd7072e3A4A213d5A767a899E53");
+    console.log(delegations.delegations[0].status === staking_types_1.DelegationStatus.Claimable);
     console.log(delegations);
 }
 //# sourceMappingURL=index.js.map

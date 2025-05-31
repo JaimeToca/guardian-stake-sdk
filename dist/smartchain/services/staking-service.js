@@ -54,7 +54,7 @@ class StakingService {
         const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
         const validators = await this.getValidators();
         const activeDelegationsPromise = this.getActiveDelegations(address, validators);
-        const pendingDelegationsPromise = this.getPendingOrClaimbleDelegations(address, validators);
+        const pendingDelegationsPromise = this.getPendingOrClaimableDelegations(address, validators);
         const [stakingSummary, activeDelegations, pendingDelegations] = await Promise.all([
             stakingSummaryPromise,
             activeDelegationsPromise,
@@ -93,44 +93,35 @@ class StakingService {
         })
             .filter((item) => item !== undefined);
     }
-    async getPendingOrClaimbleDelegations(address, validators) {
-        const creditContractValidators = validators.map((validator) => validator.creditAddress);
-        const pendingUnbondDelegations = await this.stakingRpcClient.getPendingUnbondDelegation(creditContractValidators, address);
-        const delegationPromiseResults = pendingUnbondDelegations.map(async (data, index) => {
-            const pendingRequestsResponse = (0, abi_utils_1.processSingleMulticallResult)(data);
-            if (pendingRequestsResponse === undefined) {
-                return undefined;
-            }
-            const validator = validators[index];
-            const maxPendingRequests = Number(pendingRequestsResponse);
-            const unbondRequests = await this.getUnbondRequests(validator.creditAddress, address, maxPendingRequests);
-            return this.mapUnbondRequestsToDelegations(unbondRequests, validator, index);
-        }).filter(delegation => delegation !== undefined);
-        const resolvedDelegationArrays = await Promise.all(delegationPromiseResults);
-        return resolvedDelegationArrays
-            .filter((item) => item !== undefined)
+    async getPendingOrClaimableDelegations(address, validators) {
+        const creditAddresses = validators.map((validator) => validator.creditAddress);
+        const pendingDelegations = await this.stakingRpcClient.getPendingUnbondDelegation(creditAddresses, address);
+        const delegationsPerValidator = await Promise.all(pendingDelegations.map((result, index) => this.getDelegationsForValidator(result, validators[index], address)));
+        return delegationsPerValidator
+            .filter((delegation) => delegation !== undefined)
             .flat();
     }
-    async getUnbondRequests(creditContract, address, maxPendingRequests) {
-        const unbondRequestsPromises = Array.from({ length: maxPendingRequests }, (_, requestIndex) => this.stakingRpcClient.getUnbondRequestData(creditContract, address, BigInt(requestIndex)));
-        return Promise.all(unbondRequestsPromises);
+    async getDelegationsForValidator(rawMulticallResult, validator, address) {
+        const pendingCountRaw = (0, abi_utils_1.processSingleMulticallResult)(rawMulticallResult);
+        if (pendingCountRaw === undefined)
+            return;
+        const pendingCount = Number(pendingCountRaw);
+        return await this.getUnbondDelegations(validator.creditAddress, address, pendingCount, validator);
     }
-    mapUnbondRequestsToDelegations(unbondRequests, validator, delegationIndex) {
-        const currentTime = Date.now();
-        return unbondRequests.map((unbondRequest, unbondRequestIndex) => {
-            const unlockTime = unbondRequest.unlockTime;
-            const isClaimable = currentTime > unlockTime;
-            return {
-                id: `delegation_pending__${delegationIndex}`,
-                validator,
-                amount: unbondRequest.amount,
-                status: isClaimable
-                    ? staking_types_1.DelegationStatus.Claimable
-                    : staking_types_1.DelegationStatus.Pending,
-                delegationIndex: unbondRequestIndex,
-                pendingUntil: isClaimable ? 0 : Number(unlockTime),
-            };
-        });
+    async getUnbondDelegations(creditAddress, address, count, validator) {
+        const unbondRequestPromises = Array.from({ length: count }, (_, index) => this.stakingRpcClient.getUnbondRequestData(creditAddress, address, BigInt(index)));
+        const unbondRequests = await Promise.all(unbondRequestPromises);
+        const now = Date.now();
+        return unbondRequests.map((req, index) => ({
+            id: `delegation_pending__${validator.creditAddress}_${index}`,
+            validator,
+            amount: req.amount,
+            status: now > req.unlockTime
+                ? staking_types_1.DelegationStatus.Claimable
+                : staking_types_1.DelegationStatus.Pending,
+            delegationIndex: index,
+            pendingUntil: now > req.unlockTime ? 0 : Number(req.unlockTime),
+        }));
     }
 }
 exports.StakingService = StakingService;
