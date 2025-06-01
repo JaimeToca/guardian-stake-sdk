@@ -1,18 +1,30 @@
 interface BalanceBase {
   amount: bigint;
+  type: BalanceType;
 }
 
-interface Available extends BalanceBase {
-  type: "available";
-}
-interface Staked extends BalanceBase {
-  type: "staked";
-}
-interface Pending extends BalanceBase {
-  type: "pending";
-}
-interface Claimable extends BalanceBase {
-  type: "claimable";
+export enum BalanceType {
+  Available,
+  Staked,
+  Pending,
+  Claimable,
 }
 
-export type Balance = Available | Staked | Pending | Claimable;
+interface AvailableBalance extends BalanceBase {
+  type: BalanceType.Available;
+}
+interface StakedBalance extends BalanceBase {
+  type: BalanceType.Staked;
+}
+interface PendingBalance extends BalanceBase {
+  type: BalanceType.Pending;
+}
+interface ClaimableBalance extends BalanceBase {
+  type: BalanceType.Claimable;
+}
+
+export type Balance =
+  | AvailableBalance
+  | StakedBalance
+  | PendingBalance
+  | ClaimableBalance;
