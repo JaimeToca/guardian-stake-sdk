@@ -2,5 +2,5 @@ import { Address, Chain } from "viem";
 import { Balance } from "./balance-types";
 
 export interface BalanceServiceContract {
-    getBalances(address: Address): Promise<Balance[]>
+  getBalances(address: Address): Promise<Balance[]>;
 }

@@ -43,4 +43,6 @@ export interface RedelegateTransaction extends BaseTransaction {
 
 export interface ClaimTransaction extends BaseTransaction {
   type: TransactionType.Claim;
+  validator: Validator;
+  index: bigint;
 }

@@ -50,7 +50,10 @@ export function encodeGetPooledBNBData(delegator: Address): Hex {
  * @param delegator account address
  * @returns unbound request information by index
  */
-export function encodeUnbondRequestData(delegator: Address, index: bigint): Hex {
+export function encodeUnbondRequestData(
+  delegator: Address,
+  index: bigint
+): Hex {
   return encodeFunctionCall(
     "unbondRequest(address,uint256)",
     [
@@ -82,5 +85,58 @@ export function encodePendingUnbondRequestData(delegator: Address): Hex {
     "pendingUnbondRequest(address)",
     [{ name: "delegator", type: "address" }],
     [delegator]
+  );
+}
+
+export function encodeDelegate(operatorAddress: Address): Hex {
+  return encodeFunctionCall(
+    "delegate(address,bool)",
+    [
+      { name: "operatorAddress", type: "address" },
+      { name: "delegateVotePower", type: "bool" },
+    ],
+    [operatorAddress, false]
+  );
+}
+
+export function encodeUndelegate(
+  operatorAddress: Address,
+  shares: bigint
+): Hex {
+  return encodeFunctionCall(
+    "undelegate(address,uint256)",
+    [
+      { name: "operatorAddress", type: "address" },
+      { name: "shares", type: "uint256" },
+    ],
+    [operatorAddress, shares]
+  );
+}
+
+export function encodeRedelegate(
+  fromOperatorAddress: Address,
+  toOperatorAddress: Address,
+  shares: bigint
+): Hex {
+  return encodeFunctionCall(
+    "redelegate(address,address,uint256,bool)",
+    [
+      { name: "srcValidator", type: "address" },
+      { name: "dstValidator", type: "address" },
+      { name: "shares", type: "uint256" },
+      { name: "delegateVotePower", type: "bool" },
+    ],
+    [fromOperatorAddress, toOperatorAddress, shares, false]
+  );
+}
+
+export function encodeClaim(operatorAddress: Address, index: bigint): Hex {
+  return encodeFunctionCall(
+    "claim(address,uint256)",
+    [
+      { name: "operatorAddress", type: "address" },
+      { name: "requestNumber", type: "uint256" },
+    ],
+    [operatorAddress, index]
   );
 }

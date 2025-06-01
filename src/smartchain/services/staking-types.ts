@@ -3,13 +3,13 @@ import { Address } from "viem";
 export interface Validator {
   id: string;
   status: ValidatorStatus;
-  name: string,
-  description: string,
-  image: string,
-  apy: number,
-  delegators: number,
-  operatorAddress: Address,
-  creditAddress: Address,
+  name: string;
+  description: string;
+  image: string;
+  apy: number;
+  delegators: number;
+  operatorAddress: Address;
+  creditAddress: Address;
 }
 
 export enum ValidatorStatus {
@@ -19,17 +19,17 @@ export enum ValidatorStatus {
 }
 
 export interface Delegations {
-  delegations: Delegation[],
-  stakingSummary: StakingSummary
+  delegations: Delegation[];
+  stakingSummary: StakingSummary;
 }
 
 export interface Delegation {
-  id: string,
-  validator: Validator,
-  amount: bigint,
-  status: DelegationStatus,
-  delegationIndex: number, // used for multiple undelegate/claims
-  pendingUntil: number, 
+  id: string;
+  validator: Validator;
+  amount: bigint;
+  status: DelegationStatus;
+  delegationIndex: number; // used for multiple undelegate/claims
+  pendingUntil: number;
 }
 
 export enum DelegationStatus {
@@ -40,11 +40,11 @@ export enum DelegationStatus {
 }
 
 export interface StakingSummary {
-  totalProtocolStake: number,
-  maxApy: number,
-  minAmountToStake: bigint,
-  unboundPeriodInMillis: number, 
-  redelegateFeeRate: number,
-  activeValidators: number,
-  totalValidators: number,
+  totalProtocolStake: number;
+  maxApy: number;
+  minAmountToStake: bigint;
+  unboundPeriodInMillis: number;
+  redelegateFeeRate: number;
+  activeValidators: number;
+  totalValidators: number;
 }
