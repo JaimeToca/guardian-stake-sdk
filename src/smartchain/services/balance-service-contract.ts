@@ -1,4 +1,4 @@
-import { Address, Chain } from "viem";
+import { Address } from "viem";
 import { Balance } from "./balance-types";
 
 export interface BalanceServiceContract {

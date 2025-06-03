@@ -25,6 +25,7 @@ import {
   encodeUndelegate,
 } from "../abi/staking-function-enconder";
 import { privateKeyToAccount } from "viem/accounts";
+import { STAKING_CONTRACT } from "../abi/stake-abi";
 
 export class SignService implements SignServiceContract {
   async sign(
@@ -99,103 +100,56 @@ export class SignService implements SignServiceContract {
     fee: Fee,
     nonce: number
   ): TransactionSerializable {
-    switch (transaction.type) {
-      case TransactionType.Delegate:
-        return this.buildDelegateTransaction(transaction, fee, nonce);
-      case TransactionType.Redelegate:
-        return this.buildRedelegateTransaction(transaction, fee, nonce);
-      case TransactionType.Undelegate:
-        return this.buildUndelegateTransaction(transaction, fee, nonce);
-      case TransactionType.Claim:
-        return this.buildClaimTransaction(transaction, fee, nonce);
-      default:
-        throw Error("Unsupported transaction type");
-    }
-  }
-
-  private buildDelegateTransaction(
-    transaction: DelegateTransaction,
-    fee: Fee,
-    nonce: number
-  ): TransactionSerializable {
-    const operatorAddress = transaction.validator.operatorAddress;
-    const delegateData = encodeDelegate(operatorAddress);
-    const amount = transaction.amount;
+    const { callData, amount } = this.buildCallData(transaction);
 
     return this.buildBaseTransaction(
       {
-        transaction: transaction,
-        fee: fee,
-        nonce: nonce,
+        transaction,
+        fee,
+        nonce,
       },
       amount,
-      delegateData
+      callData
     );
   }
 
-  private buildRedelegateTransaction(
-    transaction: RedelegateTransaction,
-    fee: Fee,
-    nonce: number
-  ): TransactionSerializable {
-    const fromOperatorAddress = transaction.fromValidator.operatorAddress;
-    const toOperatorAddress = transaction.toValidator.operatorAddress;
-    const amount = transaction.amount;
-    const redelegateData = encodeRedelegate(
-      fromOperatorAddress,
-      toOperatorAddress,
-      amount
-    );
-
-    return this.buildBaseTransaction(
-      {
-        transaction: transaction,
-        fee: fee,
-        nonce: nonce,
-      },
-      0n,
-      redelegateData
-    );
-  }
-
-  private buildUndelegateTransaction(
-    transaction: UndelegateTransaction,
-    fee: Fee,
-    nonce: number
-  ): TransactionSerializable {
-    const operatorAddress = transaction.validator.operatorAddress;
-    const amount = transaction.amount;
-    const undelegateData = encodeUndelegate(operatorAddress, amount);
-
-    return this.buildBaseTransaction(
-      {
-        transaction: transaction,
-        fee: fee,
-        nonce: nonce,
-      },
-      0n,
-      undelegateData
-    );
-  }
-
-  private buildClaimTransaction(
-    transaction: ClaimTransaction,
-    fee: Fee,
-    nonce: number
-  ): TransactionSerializable {
-    const operatorAddress = transaction.validator.operatorAddress;
-    const delegationIndex = transaction.index;
-    const claimData = encodeClaim(operatorAddress, delegationIndex);
-
-    return this.buildBaseTransaction(
-      {
-        transaction: transaction,
-        fee: fee,
-        nonce: nonce,
-      },
-      0n,
-      claimData
-    );
+  buildCallData(transaction: Transaction): {
+    data: Hex;
+    amount: bigint;
+  } {
+    switch (transaction.type) {
+      case TransactionType.Delegate: {
+        const { operatorAddress } = transaction.validator;
+        return {
+          data: encodeDelegate(operatorAddress),
+          amount: transaction.amount,
+        };
+      }
+      case TransactionType.Redelegate: {
+        const { operatorAddress: from } = transaction.fromValidator;
+        const { operatorAddress: to } = transaction.toValidator;
+        return {
+          data: encodeRedelegate(from, to, transaction.amount),
+          amount: 0n,
+        };
+      }
+      case TransactionType.Undelegate: {
+        const { operatorAddress } = transaction.validator;
+        return {
+          data: encodeUndelegate(operatorAddress, transaction.amount),
+          amount: 0n,
+        };
+      }
+      case TransactionType.Claim: {
+        const { operatorAddress } = transaction.validator;
+        return {
+          data: encodeClaim(operatorAddress, transaction.index),
+          amount: 0n,
+        };
+      }
+      default:
+        throw new Error("Unsupported transaction type");
+    }
   }
 
   private buildBaseTransaction(
@@ -208,7 +162,7 @@ export class SignService implements SignServiceContract {
     const nonce = signArgs.nonce;
 
     return {
-      to: transaction.to,
+      to: STAKING_CONTRACT,
       value: amount,
       data,
       chainId: transaction.chain.id,
@@ -217,4 +171,4 @@ export class SignService implements SignServiceContract {
       nonce: nonce,
     };
   }
-}
+ }

@@ -15,18 +15,15 @@ import {
 } from "../abi/types";
 import { StakingRpcClientContract } from "./staking-rpc-client-contract";
 import { Address, PublicClient } from "viem";
-import { multicallStakeAbi } from "../abi/stake-abi";
+import { multicallStakeAbi, STAKING_CONTRACT } from "../abi/stake-abi";
 
 export class StakingRpcClient implements StakingRpcClientContract {
-  static STAKING_CONTRACT: Address =
-    "0x0000000000000000000000000000000000002002";
-
   constructor(private readonly client: PublicClient) {}
 
   async getCreditContractValidators(): Promise<DecodedValidators> {
     const validatorsResponse = await this.client.call({
       data: encodeGetValidatorsData(),
-      to: StakingRpcClient.STAKING_CONTRACT,
+      to: STAKING_CONTRACT,
     });
 
     if (!validatorsResponse.data) {

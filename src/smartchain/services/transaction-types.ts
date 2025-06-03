@@ -1,6 +1,6 @@
 import { Chain } from "viem/_types/types/chain";
 import { Validator } from "./staking-types";
-import { Address } from "viem";
+import { Account, Address } from "viem";
 
 export type Transaction =
   | DelegateTransaction
@@ -11,8 +11,8 @@ export type Transaction =
 interface BaseTransaction {
   type: TransactionType;
   chain: Chain;
-  to: Address;
   amount: bigint;
+  account?: Account | Address | undefined
 }
 
 export enum TransactionType {
