@@ -12,10 +12,10 @@ import {
   DecodedUnbondRequest,
   DecodedValidators,
   MulticallResult,
-} from "../abi/types";
+} from "../abi/abi-types";
 import { StakingRpcClientContract } from "./staking-rpc-client-contract";
 import { Address, PublicClient } from "viem";
-import { multicallStakeAbi, STAKING_CONTRACT } from "../abi/stake-abi";
+import { multicallStakeAbi, STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 
 export class StakingRpcClient implements StakingRpcClientContract {
   constructor(private readonly client: PublicClient) {}

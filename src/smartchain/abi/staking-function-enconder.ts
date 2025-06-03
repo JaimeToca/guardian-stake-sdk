@@ -9,7 +9,11 @@ import { Address, Hex } from "viem";
  */
 
 /**
- * @returns all validators addresses associated: Operator and Credit.
+ * Encodes a call to fetch validator addresses.
+ * 
+ * @returns Encoded data to call `getValidators(uint256,uint256)` with an offset of 0 and a limit of 100.
+ * The result includes all validator operator and credit addresses.
+ * Note: At the moment BSC only has 50 validators 3 Jun 2025
  */
 export function encodeGetValidatorsData(): Hex {
   return encodeFunctionCall(
@@ -23,8 +27,11 @@ export function encodeGetValidatorsData(): Hex {
 }
 
 /**
- * @param amount bnb in ethers unit
- * @returns Amount of shares that corresponds to `_bnbAmount` protocol-controlled BNB
+ * Encodes a call to compute how many shares correspond to a given BNB amount.
+ * 
+ * @param amount - Amount of BNB in **wei** (not ether units).
+ * @returns Encoded data for `getSharesByPooledBNB(uint256)` which returns the amount of shares 
+ * corresponding to protocol-controlled BNB.
  */
 export function encodeGetSharesByPooledBNBData(amount: bigint): Hex {
   return encodeFunctionCall(
@@ -35,8 +42,10 @@ export function encodeGetSharesByPooledBNBData(amount: bigint): Hex {
 }
 
 /**
- * @param delegator account address
- * @returns Total amount of BNB staked and reward of the delegator
+ * Encodes a call to get the total staked BNB and rewards for a specific delegator.
+ * 
+ * @param delegator - Address of the delegator account.
+ * @returns Encoded data for `getPooledBNB(address)`, which returns the total BNB and rewards for the delegator.
  */
 export function encodeGetPooledBNBData(delegator: Address): Hex {
   return encodeFunctionCall(
@@ -47,8 +56,11 @@ export function encodeGetPooledBNBData(delegator: Address): Hex {
 }
 
 /**
- * @param delegator account address
- * @returns unbound request information by index
+ * Encodes a call to fetch details of a specific unbonding request.
+ * 
+ * @param delegator - Address of the delegator.
+ * @param index - Index of the unbonding request in the queue.
+ * @returns Encoded data for `unbondRequest(address,uint256)`, which returns request info at the given index.
  */
 export function encodeUnbondRequestData(
   delegator: Address,
@@ -65,8 +77,10 @@ export function encodeUnbondRequestData(
 }
 
 /**
- * @param delegator account address
- * @returns total number of delegator's claimable unbond requests
+ * Encodes a call to get the number of claimable unbonding requests for a delegator.
+ * 
+ * @param delegator - Address of the delegator.
+ * @returns Encoded data for `claimableUnbondRequest(address)`, returning the number of claimable requests.
  */
 export function encodeClaimableUnbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
@@ -77,8 +91,10 @@ export function encodeClaimableUnbondRequestData(delegator: Address): Hex {
 }
 
 /**
- * @param delegator account address
- * @returns the total length of delegator's pending unbond queue
+ * Encodes a call to get the number of pending unbonding requests in the delegator's queue.
+ * 
+ * @param delegator - Address of the delegator.
+ * @returns Encoded data for `pendingUnbondRequest(address)`, returning the total pending unbonding requests.
  */
 export function encodePendingUnbondRequestData(delegator: Address): Hex {
   return encodeFunctionCall(
@@ -88,6 +104,12 @@ export function encodePendingUnbondRequestData(delegator: Address): Hex {
   );
 }
 
+/**
+ * Encodes a `delegate` function call for staking.
+ *
+ * @param operatorAddress - The address of the validator/operator to delegate to.
+ * @returns Encoded hex string representing the `delegate(address,bool)` call with `delegateVotePower` set to false.
+ */
 export function encodeDelegate(operatorAddress: Address): Hex {
   return encodeFunctionCall(
     "delegate(address,bool)",
@@ -99,6 +121,13 @@ export function encodeDelegate(operatorAddress: Address): Hex {
   );
 }
 
+/**
+ * Encodes an `undelegate` function call to withdraw stake from a validator.
+ *
+ * @param operatorAddress - The address of the validator/operator to undelegate from.
+ * @param shares - The number of shares (stake amount) to undelegate.
+ * @returns Encoded hex string representing the `undelegate(address,uint256)` call.
+ */
 export function encodeUndelegate(
   operatorAddress: Address,
   shares: bigint
@@ -113,6 +142,14 @@ export function encodeUndelegate(
   );
 }
 
+/**
+ * Encodes a `redelegate` function call to move stake from one validator to another.
+ *
+ * @param fromOperatorAddress - The current validator's address.
+ * @param toOperatorAddress - The new validator's address.
+ * @param shares - The number of shares to redelegate.
+ * @returns Encoded hex string representing the `redelegate(address,address,uint256,bool)` call with `delegateVotePower` set to false.
+ */
 export function encodeRedelegate(
   fromOperatorAddress: Address,
   toOperatorAddress: Address,
@@ -130,6 +167,13 @@ export function encodeRedelegate(
   );
 }
 
+/**
+ * Encodes a `claim` function call to claim unbonded tokens.
+ * 
+ * @param operatorAddress - The validator address from which the user previously undelegated.
+ * @param index - The index (request number) of the unbonding request.
+ * @returns Encoded hex string representing the `claim(address,uint256)` call.
+ */
 export function encodeClaim(operatorAddress: Address, index: bigint): Hex {
   return encodeFunctionCall(
     "claim(address,uint256)",

@@ -1,5 +1,5 @@
 import { Address } from "viem";
-import { DecodedUnbondRequest, DecodedValidators, MulticallResult } from "../abi/types";
+import { DecodedUnbondRequest, DecodedValidators, MulticallResult } from "../abi/abi-types";
 
 export interface StakingRpcClientContract {
   getCreditContractValidators(): Promise<DecodedValidators>;

@@ -1,4 +1,4 @@
-import { appendUrlParams, fetchOrError } from "./rpc-utils";
+import { fetchOrError } from "./rpc-utils";
 
 export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly BASE_MAINNET_URL =
@@ -7,44 +7,28 @@ export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly VALIDATORS_OFFSET = "0";
 
   async getValidators(): Promise<BNBChainValidator[]> {
-    const requestUrl = appendUrlParams(
-      BNBRpcClient.BASE_MAINNET_URL + "/validator/all",
-      {
+    const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/validator/all`
+
+    const response = await fetchOrError<BNBValidatorsResponse>({
+      url: requestUrl,
+      method: "GET",
+      params: {
         limit: BNBRpcClient.VALIDATORS_LIMIT,
         offset: BNBRpcClient.VALIDATORS_OFFSET,
-      }
-    );
-
-    const request: RequestInfo = new Request(requestUrl, {
-      method: "GET",
-      headers: new Headers({
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      }),
+      },
     });
 
-    const validatorResponse = await fetchOrError<BNBValidatorsResponse>(
-      request
-    );
-
-    return validatorResponse.data.validators;
+    return response.data.validators;
   }
 
   async getStakingSummary(): Promise<BNBStakingSummary> {
-    const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/summary`
-    
-    const request: RequestInfo = new Request(requestUrl, {
+    const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/summary`;
+
+    const response = await fetchOrError<StakingResponse>({
+      url: requestUrl,
       method: "GET",
-      headers: new Headers({
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      }),
     });
 
-    const summaryResponse = await fetchOrError<StakingResponse>(
-      request
-    );
-
-    return summaryResponse.data.summary
+    return response.data.summary;
   }
 }

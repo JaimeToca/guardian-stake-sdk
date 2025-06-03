@@ -4,7 +4,7 @@ import {
   Hex,
   toFunctionSelector,
 } from "viem";
-import { MulticallResult } from "./types";
+import { MulticallResult } from "./abi-types";
 
 export function encodeFunctionCall(
   functionSignature: string,

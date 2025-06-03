@@ -2,12 +2,8 @@ import { Hex, serializeTransaction, TransactionSerializable } from "viem";
 import { Fee } from "./fee-types";
 import { SignServiceContract } from "./sign-service-contract";
 import {
-  ClaimTransaction,
-  DelegateTransaction,
-  RedelegateTransaction,
   Transaction,
   TransactionType,
-  UndelegateTransaction,
 } from "./transaction-types";
 import {
   SigningWithPrivateKey,
@@ -25,7 +21,7 @@ import {
   encodeUndelegate,
 } from "../abi/staking-function-enconder";
 import { privateKeyToAccount } from "viem/accounts";
-import { STAKING_CONTRACT } from "../abi/stake-abi";
+import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 
 export class SignService implements SignServiceContract {
   async sign(
@@ -100,7 +96,7 @@ export class SignService implements SignServiceContract {
     fee: Fee,
     nonce: number
   ): TransactionSerializable {
-    const { callData, amount } = this.buildCallData(transaction);
+    const { data, amount } = this.buildCallData(transaction);
 
     return this.buildBaseTransaction(
       {
@@ -109,7 +105,7 @@ export class SignService implements SignServiceContract {
         nonce,
       },
       amount,
-      callData
+      data
     );
   }
 
@@ -148,7 +144,7 @@ export class SignService implements SignServiceContract {
         };
       }
       default:
-        throw new Error("Unsupported transaction type");
+        throw new Error("Cannot build call data due to unsupported transaction type");
     }
   }
 

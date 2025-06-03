@@ -4,31 +4,24 @@ exports.BNBRpcClient = void 0;
 const rpc_utils_1 = require("./rpc-utils");
 class BNBRpcClient {
     async getValidators() {
-        const requestUrl = (0, rpc_utils_1.appendUrlParams)(BNBRpcClient.BASE_MAINNET_URL + "/validator/all", {
-            limit: BNBRpcClient.VALIDATORS_LIMIT,
-            offset: BNBRpcClient.VALIDATORS_OFFSET,
-        });
-        const request = new Request(requestUrl, {
+        const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/validator/all`;
+        const response = await (0, rpc_utils_1.fetchOrError)({
+            url: requestUrl,
             method: "GET",
-            headers: new Headers({
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            }),
+            params: {
+                limit: BNBRpcClient.VALIDATORS_LIMIT,
+                offset: BNBRpcClient.VALIDATORS_OFFSET,
+            },
         });
-        const validatorResponse = await (0, rpc_utils_1.fetchOrError)(request);
-        return validatorResponse.data.validators;
+        return response.data.validators;
     }
     async getStakingSummary() {
         const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/summary`;
-        const request = new Request(requestUrl, {
+        const response = await (0, rpc_utils_1.fetchOrError)({
+            url: requestUrl,
             method: "GET",
-            headers: new Headers({
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            }),
         });
-        const summaryResponse = await (0, rpc_utils_1.fetchOrError)(request);
-        return summaryResponse.data.summary;
+        return response.data.summary;
     }
 }
 exports.BNBRpcClient = BNBRpcClient;
