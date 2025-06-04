@@ -1,3 +1,5 @@
+import { BNBRpcClientContract } from "./bnb-rpc-client-contract";
+import { BNBChainValidator, BNBStakingSummary, BNBValidatorsResponse, StakingResponse } from "./bnb-rpc-types";
 import { fetchOrError } from "./rpc-utils";
 
 export class BNBRpcClient implements BNBRpcClientContract {

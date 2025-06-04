@@ -4,7 +4,6 @@ exports.encodeGetValidatorsData = encodeGetValidatorsData;
 exports.encodeGetSharesByPooledBNBData = encodeGetSharesByPooledBNBData;
 exports.encodeGetPooledBNBData = encodeGetPooledBNBData;
 exports.encodeUnbondRequestData = encodeUnbondRequestData;
-exports.encodeClaimableUnbondRequestData = encodeClaimableUnbondRequestData;
 exports.encodePendingUnbondRequestData = encodePendingUnbondRequestData;
 exports.encodeDelegate = encodeDelegate;
 exports.encodeUndelegate = encodeUndelegate;
@@ -28,9 +27,6 @@ function encodeUnbondRequestData(delegator, index) {
         { name: "delegator", type: "address" },
         { name: "_index", type: "uint256" },
     ], [delegator, index]);
-}
-function encodeClaimableUnbondRequestData(delegator) {
-    return (0, abi_utils_1.encodeFunctionCall)("claimableUnbondRequest(address)", [{ name: "delegator", type: "address" }], [delegator]);
 }
 function encodePendingUnbondRequestData(delegator) {
     return (0, abi_utils_1.encodeFunctionCall)("pendingUnbondRequest(address)", [{ name: "delegator", type: "address" }], [delegator]);

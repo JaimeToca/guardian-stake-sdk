@@ -77,20 +77,6 @@ export function encodeUnbondRequestData(
 }
 
 /**
- * Encodes a call to get the number of claimable unbonding requests for a delegator.
- * 
- * @param delegator - Address of the delegator.
- * @returns Encoded data for `claimableUnbondRequest(address)`, returning the number of claimable requests.
- */
-export function encodeClaimableUnbondRequestData(delegator: Address): Hex {
-  return encodeFunctionCall(
-    "claimableUnbondRequest(address)",
-    [{ name: "delegator", type: "address" }],
-    [delegator]
-  );
-}
-
-/**
  * Encodes a call to get the number of pending unbonding requests in the delegator's queue.
  * 
  * @param delegator - Address of the delegator.

@@ -1,21 +1,17 @@
+import { StakingRpcClientContract } from "./staking-rpc-client-contract";
+import { Address, PublicClient } from "viem";
 import {
-  encodeClaimableUnbondRequestData,
+  DecodedValidators,
+  MulticallResult,
+  DecodedUnbondRequest,
+  multicallStakeAbi,
+  STAKING_CONTRACT,
+  decodeGetValidators,
   encodeGetSharesByPooledBNBData,
   encodeGetValidatorsData,
   encodeUnbondRequestData,
-} from "../abi/staking-function-enconder";
-import {
-  decodeGetValidators,
-  decodeUnbond as decodeUnbondRequest,
-} from "../abi/staking-function-decoder";
-import {
-  DecodedUnbondRequest,
-  DecodedValidators,
-  MulticallResult,
-} from "../abi/abi-types";
-import { StakingRpcClientContract } from "./staking-rpc-client-contract";
-import { Address, PublicClient } from "viem";
-import { multicallStakeAbi, STAKING_CONTRACT } from "../abi/multicall-stake-abi";
+  decodeUnbond,
+} from "../abi";
 
 export class StakingRpcClient implements StakingRpcClientContract {
   constructor(private readonly client: PublicClient) {}
@@ -99,7 +95,7 @@ export class StakingRpcClient implements StakingRpcClientContract {
       );
     }
 
-    const decodedUnbondResponse = decodeUnbondRequest(
+    const decodedUnbondResponse = decodeUnbond(
       unbondRequestDataResponse.data
     );
 
@@ -115,18 +111,6 @@ export class StakingRpcClient implements StakingRpcClientContract {
       to: creditContract,
       data: encodeGetSharesByPooledBNBData(amount),
     });
-    console.log(validatorsResponse);
-  }
-
-  async getClaimableUnbondDelegation(
-    creditContract: Address,
-    delegator: Address
-  ) {
-    const validatorsResponse = this.client.call({
-      to: creditContract,
-      data: encodeClaimableUnbondRequestData(delegator),
-    });
-
     console.log(validatorsResponse);
   }
 }

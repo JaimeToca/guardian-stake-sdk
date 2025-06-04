@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from "axios";
-import { ApiError } from "./error";
+import { ApiError } from "./rpc-error";
 import { ApiErrorType } from "./error-types";
 
 export async function fetchOrError<T>(
@@ -53,3 +53,14 @@ export async function fetchOrError<T>(
     }
   }
 }
+
+axios.interceptors.request.use(
+  function (config) {
+    console.log("Axios Request:", config);
+    return config;
+  },
+  function (error) {
+    console.error("Axios Request Error:", error);
+    return Promise.reject(error);
+  }
+);

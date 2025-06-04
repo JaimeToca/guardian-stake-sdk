@@ -1,5 +1,16 @@
 import { Address, decodeAbiParameters, DecodeAbiParametersReturnType, Hex } from "viem";
 
+/**
+ * Decodes the result of a `getValidators(uint256,uint256)` call.
+ *
+ * The returned data includes:
+ * - A list of validator operator addresses
+ * - A list of credit contract addresses (linked to each validator)
+ * - The total number of validators returned
+ *
+ * @param data - Hex-encoded return data from the contract call.
+ * @returns A tuple of [operator addresses[], credit addresses[], total count]
+ */
 export function decodeGetValidators(data: Hex): [Address[], Address[], bigint]  {
    const decodedResult = decodeAbiParameters(
     [
@@ -17,6 +28,17 @@ export function decodeGetValidators(data: Hex): [Address[], Address[], bigint]  
   ];
 }
 
+/**
+ * Decodes the result of an `unbondRequest(address,uint256)` call.
+ *
+ * The returned data includes:
+ * - The number of shares being unbonded
+ * - The corresponding BNB amount
+ * - The unlock time (timestamp after which funds can be claimed)
+ *
+ * @param data - Hex-encoded return data from the contract call.
+ * @returns A tuple of [shares, BNB amount, unlock time]
+ */
 export function decodeUnbond(data: Hex): [bigint, bigint, bigint]  {
    const decodedResult = decodeAbiParameters(
     [

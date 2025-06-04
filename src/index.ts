@@ -36,10 +36,10 @@ async function test() {
 
   let validators = await stakingService.getValidators();
   console.log(validators)
-  
-  /*let delegations = await stakingService.getDelegations(
-    "0xc1A4442Bfe4e9dd7072e3A4A213d5A767a899E53"
-  );
-  console.log(delegations.delegations[0].status === DelegationStatus.Claimable)
-  console.log(delegations); */
+
+//  let delegations = await stakingService.getDelegations(
+//    "0xc1A4442Bfe4e9dd7072e3A4A213d5A767a899E53"
+//  );
+//  console.log(delegations.delegations[0].status === DelegationStatus.Claimable)
+//  console.log(delegations);
 }

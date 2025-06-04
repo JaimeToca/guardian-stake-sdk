@@ -1,5 +1,4 @@
-import { Address, Hex, parseEther } from "viem";
-import { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
+import { Address, parseEther } from "viem";
 import {
   Delegation,
   Delegations,
@@ -8,8 +7,9 @@ import {
   ValidatorStatus,
 } from "./staking-types";
 import { StakingServiceContract } from "./staking-service-contract";
-import { InMemoryCache } from "../cache/in-memory-cache";
-import { processSingleMulticallResult } from "../abi/abi-utils";
+import { InMemoryCache } from "../cache";
+import { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
+import { processSingleMulticallResult } from "../abi";
 
 export class StakingService implements StakingServiceContract {
   private static readonly UNBOUND_PERIOD = 604800;
@@ -152,7 +152,7 @@ export class StakingService implements StakingServiceContract {
         address
       );
 
-    // For each validator fetch the actual delegations
+    // Fetch the current delegations for each validator that has pending delegations
     const delegationsPerValidator = await Promise.all(
       pendingDelegations.map((result, index) =>
         this.getDelegationsForValidator(result, validators[index], address)

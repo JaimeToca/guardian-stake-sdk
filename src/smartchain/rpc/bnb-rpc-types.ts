@@ -1,4 +1,4 @@
-interface BNBChainValidator {
+export interface BNBChainValidator {
   apy: number;
   bcOperatorAddress: string;
   commission: number;
@@ -11,28 +11,28 @@ interface BNBChainValidator {
   totalStaked: string;
 }
 
-interface BNBValidatorData {
+export interface BNBValidatorData {
   total: number;
   validators: BNBChainValidator[];
 }
 
-interface BNBValidatorsResponse {
+export interface BNBValidatorsResponse {
   code: number;
   data: BNBValidatorData;
 }
 
-interface BNBStakingSummary {
+export interface BNBStakingSummary {
   activeValidators: number;
   maxApy: number;
   totalStaked: string;
   totalValidators: number;
 }
 
-interface BNBStakingData {
+export interface BNBStakingData {
   summary: BNBStakingSummary;
 }
 
-interface StakingResponse {
+export interface StakingResponse {
   code: number;
   data: BNBStakingData;
 }

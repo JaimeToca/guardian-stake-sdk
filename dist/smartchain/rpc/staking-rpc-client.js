@@ -73,13 +73,6 @@ class StakingRpcClient {
         });
         console.log(validatorsResponse);
     }
-    async getClaimableUnbondDelegation(creditContract, delegator) {
-        const validatorsResponse = this.client.call({
-            to: creditContract,
-            data: (0, staking_function_enconder_1.encodeClaimableUnbondRequestData)(delegator),
-        });
-        console.log(validatorsResponse);
-    }
 }
 exports.StakingRpcClient = StakingRpcClient;
 //# sourceMappingURL=staking-rpc-client.js.map

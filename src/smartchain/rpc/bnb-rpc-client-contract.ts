@@ -1,4 +1,6 @@
-interface BNBRpcClientContract {
+import { BNBChainValidator, BNBStakingSummary } from "./bnb-rpc-types";
+
+export interface BNBRpcClientContract {
   getValidators(): Promise<BNBChainValidator[]>;
   getStakingSummary(): Promise<BNBStakingSummary>;
 }
