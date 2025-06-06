@@ -8,8 +8,8 @@ import {
 import { fetchOrError } from "./rpc-utils";
 
 /**
- * A client class responsible for interacting with BNB (Binance Coin)
- * https://api.bnbchain.org API. It's assumed that BNBRpcClient.BASE_MAINNET_URL, VALIDATORS_LIMIT,
+ * A client class responsible for interacting with BNB Chain API
+ * https://api.bnbchain.org. It's assumed that BNBRpcClient.BASE_MAINNET_URL, VALIDATORS_LIMIT,
  * and VALIDATORS_OFFSET are static properties.
  */
 export class BNBRpcClient implements BNBRpcClientContract {

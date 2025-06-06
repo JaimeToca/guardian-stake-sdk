@@ -17,7 +17,7 @@ export async function fetchOrError<T>(
 ): Promise<T> {
   try {
     const response: AxiosResponse<T> = await axios({
-      timeout: 5000, // Sets a default timeout of 5 seconds for the request
+      timeout: 16000,
       ...requestConfig,
     });
     return response.data;

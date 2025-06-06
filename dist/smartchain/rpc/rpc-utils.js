@@ -10,7 +10,7 @@ const error_types_1 = require("./error-types");
 async function fetchOrError(requestConfig) {
     try {
         const response = await (0, axios_1.default)({
-            timeout: 5000,
+            timeout: 16000,
             ...requestConfig,
         });
         return response.data;

@@ -27,7 +27,7 @@ export interface Validator {
   /**
    * A URL to an image representing the validator (e.g., logo).
    */
-  image: string;
+  image: string | undefined;
 
   /**
    * The Annual Percentage Yield (APY) offered by this validator to delegators.

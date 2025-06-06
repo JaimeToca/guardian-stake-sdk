@@ -4,7 +4,7 @@
  * allows for easy expansion to other types like EIP-1559, UserOP etc.. fees in the future.
  */
 export enum FeeType {
-  GasFee,
+  GasFee = "GasFee",
 }
 
 /**

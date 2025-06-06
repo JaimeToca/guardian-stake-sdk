@@ -13,6 +13,12 @@ export type Transaction =
   | ClaimTransaction;
 
 /**
+ * Represents the on-chain address of a Validator Operator.
+ * This address is used for enconding data internally by the signer
+ */
+export type OperatorAddress = Address;
+
+/**
  * Defines the common properties shared by all transaction types.
  */
 interface BaseTransaction {
@@ -43,19 +49,19 @@ export enum TransactionType {
   /**
    * Represents a transaction to stake (delegate) tokens to a validator.
    */
-  Delegate,
+  Delegate = "Delegate",
   /**
    * Represents a transaction to un-stake (undelegate) tokens from a validator.
    */
-  Undelegate,
+  Undelegate = "Undelegate",
   /**
    * Represents a transaction to move staked tokens from one validator to another.
    */
-  Redelegate,
+  Redelegate = "Redelegate",
   /**
    * Represents a transaction to claim unbonded or earned tokens.
    */
-  Claim,
+  Claim = "Claim",
 }
 
 /**
@@ -71,7 +77,7 @@ export interface DelegateTransaction extends BaseTransaction {
   /**
    * The validator to whom the tokens are being delegated.
    */
-  validator: Validator;
+  validator: Validator | OperatorAddress;
 }
 
 /**
@@ -87,7 +93,7 @@ export interface UndelegateTransaction extends BaseTransaction {
   /**
    * The validator from whom the tokens are being undelegated.
    */
-  validator: Validator;
+  validator: Validator | OperatorAddress;
 }
 
 /**
@@ -103,11 +109,11 @@ export interface RedelegateTransaction extends BaseTransaction {
   /**
    * The validator from which the tokens are being moved.
    */
-  fromValidator: Validator;
+  fromValidator: Validator | OperatorAddress;
   /**
    * The validator to which the tokens are being moved.
    */
-  toValidator: Validator;
+  toValidator: Validator | OperatorAddress;
 }
 
 /**
@@ -119,7 +125,7 @@ export interface ClaimTransaction extends BaseTransaction {
   /**
    * The validator associated with the tokens being claimed (e.g., from an unbonding request).
    */
-  validator: Validator;
+  validator: Validator | OperatorAddress;
   /**
    * The specific index of the unbond request or claimable item, especially when
    * a delegator has multiple pending claims. Represented as a `bigint`.

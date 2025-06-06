@@ -19,19 +19,19 @@ export enum BalanceType {
   /**
    * Represents funds that are immediately accessible and usable.
    */
-  Available,
+  Available = "Available",
   /**
    * Represents funds that are currently locked or committed, for example, in a staking contract.
    */
-  Staked,
+  Staked = "Staked",
   /**
    * Represents funds that are in a transitional state, such as awaiting an unbonding period to complete.
    */
-  Pending,
+  Pending = "Pending",
   /**
    * Represents funds that have completed a pending period (e.g., unbonding) and are now ready to be withdrawn or claimed.
    */
-  Claimable,
+  Claimable = "Claimable",
 }
 
 /**
