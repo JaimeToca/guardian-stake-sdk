@@ -1,22 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StakingRpcClient = void 0;
-const staking_function_enconder_1 = require("../abi/staking-function-enconder");
-const staking_function_decoder_1 = require("../abi/staking-function-decoder");
-const multicall_stake_abi_1 = require("../abi/multicall-stake-abi");
+const abi_1 = require("../abi");
 class StakingRpcClient {
     constructor(client) {
         this.client = client;
     }
     async getCreditContractValidators() {
         const validatorsResponse = await this.client.call({
-            data: (0, staking_function_enconder_1.encodeGetValidatorsData)(),
-            to: multicall_stake_abi_1.STAKING_CONTRACT,
+            data: (0, abi_1.encodeGetValidatorsData)(),
+            to: abi_1.STAKING_CONTRACT,
         });
         if (!validatorsResponse.data) {
             throw new Error("Missing data for call getValidatorsCreditContracts(contract)");
         }
-        const decodedValidatorResponse = (0, staking_function_decoder_1.decodeGetValidators)(validatorsResponse.data);
+        const decodedValidatorResponse = (0, abi_1.decodeGetValidators)(validatorsResponse.data);
         const operatorAddresses = decodedValidatorResponse[0];
         const creditAddresses = decodedValidatorResponse[1];
         return new Map(operatorAddresses.map((operatorAddress, index) => {
@@ -27,7 +25,7 @@ class StakingRpcClient {
         const multicallContracts = creditContracts.map((creditContract) => {
             return {
                 address: creditContract,
-                abi: multicall_stake_abi_1.multicallStakeAbi,
+                abi: abi_1.multicallStakeAbi,
                 functionName: "getPooledBNB",
                 args: [delegator],
             };
@@ -41,7 +39,7 @@ class StakingRpcClient {
         const multicallContracts = creditContracts.map((creditContract) => {
             return {
                 address: creditContract,
-                abi: multicall_stake_abi_1.multicallStakeAbi,
+                abi: abi_1.multicallStakeAbi,
                 functionName: "pendingUnbondRequest",
                 args: [delegator],
             };
@@ -53,13 +51,13 @@ class StakingRpcClient {
     }
     async getUnbondRequestData(creditContract, delegator, index) {
         const unbondRequestDataResponse = await this.client.call({
-            data: (0, staking_function_enconder_1.encodeUnbondRequestData)(delegator, index),
+            data: (0, abi_1.encodeUnbondRequestData)(delegator, index),
             to: creditContract,
         });
         if (!unbondRequestDataResponse.data) {
             throw new Error("Missing data for call getUnbondRequestData(delegator, index)");
         }
-        const decodedUnbondResponse = (0, staking_function_decoder_1.decodeUnbond)(unbondRequestDataResponse.data);
+        const decodedUnbondResponse = (0, abi_1.decodeUnbond)(unbondRequestDataResponse.data);
         return {
             shares: decodedUnbondResponse[0],
             amount: decodedUnbondResponse[1],
@@ -69,7 +67,7 @@ class StakingRpcClient {
     async getSharesByPooledBNBData(creditContract, amount) {
         const validatorsResponse = this.client.call({
             to: creditContract,
-            data: (0, staking_function_enconder_1.encodeGetSharesByPooledBNBData)(amount),
+            data: (0, abi_1.encodeGetSharesByPooledBNBData)(amount),
         });
         console.log(validatorsResponse);
     }

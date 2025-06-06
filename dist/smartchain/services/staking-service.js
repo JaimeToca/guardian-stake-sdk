@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StakingService = void 0;
 const viem_1 = require("viem");
 const staking_types_1 = require("./staking-types");
-const abi_utils_1 = require("../abi/abi-utils");
+const abi_1 = require("../abi");
 class StakingService {
     constructor(cache, stakingRpcClient, bnbRpcClient) {
         this.cache = cache;
@@ -78,7 +78,7 @@ class StakingService {
         const pooledBNBData = await this.stakingRpcClient.getPooledBNBData(creditContractValidators, address);
         return pooledBNBData
             .map((data, index) => {
-            const stakedAmount = (0, abi_utils_1.processSingleMulticallResult)(data);
+            const stakedAmount = (0, abi_1.processSingleMulticallResult)(data);
             if (stakedAmount === undefined) {
                 return undefined;
             }
@@ -102,7 +102,7 @@ class StakingService {
             .flat();
     }
     async getDelegationsForValidator(rawMulticallResult, validator, address) {
-        const pendingCountRaw = (0, abi_utils_1.processSingleMulticallResult)(rawMulticallResult);
+        const pendingCountRaw = (0, abi_1.processSingleMulticallResult)(rawMulticallResult);
         if (pendingCountRaw === undefined)
             return;
         const pendingCount = Number(pendingCountRaw);
@@ -116,7 +116,7 @@ class StakingService {
             id: `delegation_pending__${validator.creditAddress}_${index}`,
             validator,
             amount: req.amount,
-            status: now > req.unlockTime
+            status: now > (req.unlockTime * 1000n)
                 ? staking_types_1.DelegationStatus.Claimable
                 : staking_types_1.DelegationStatus.Pending,
             delegationIndex: index,

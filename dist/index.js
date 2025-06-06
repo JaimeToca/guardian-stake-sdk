@@ -21,5 +21,7 @@ async function test() {
     let stakingService = new staking_service_1.StakingService(new in_memory_cache_1.InMemoryCache(), client2, client3);
     let validators = await stakingService.getValidators();
     console.log(validators);
+    let delegations = await stakingService.getDelegations("0xB137d0B9bE423952a70A275bc8f2357038901CB2");
+    console.log(delegations);
 }
 //# sourceMappingURL=index.js.map

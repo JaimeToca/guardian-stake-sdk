@@ -45,10 +45,6 @@ function handleAxiosError(error: unknown): never {
   } else {
     handleUnknownError(error);
   }
-  // type safety if a path somehow doesn't throw
-  throw new ApiError("An unhandled error occurred during API call.", {
-    type: ApiErrorType.UnknownError,
-  });
 }
 
 /**

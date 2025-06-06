@@ -8,7 +8,11 @@ import {
 } from "./staking-types";
 import { StakingServiceContract } from "./staking-service-contract";
 import { InMemoryCache } from "../cache";
-import { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
+import {
+  BNBChainValidator,
+  BNBRpcClientContract,
+  StakingRpcClientContract,
+} from "../rpc";
 import { processSingleMulticallResult } from "../abi";
 
 export class StakingService implements StakingServiceContract {
@@ -200,16 +204,20 @@ export class StakingService implements StakingServiceContract {
     const unbondRequests = await Promise.all(unbondRequestPromises);
     const now = Date.now();
 
-    return unbondRequests.map((req, index) => ({
-      id: `delegation_pending__${validator.creditAddress}_${index}`,
-      validator,
-      amount: req.amount,
-      status:
-        now > req.unlockTime
-          ? DelegationStatus.Claimable
-          : DelegationStatus.Pending,
-      delegationIndex: index,
-      pendingUntil: now > req.unlockTime ? 0 : Number(req.unlockTime),
-    }));
+    return unbondRequests.map((req, index) => {
+      const unlockTimeInMillis = req.unlockTime * 1000n;
+
+      return {
+        id: `delegation_pending__${validator.creditAddress}_${index}`,
+        validator,
+        amount: req.amount,
+        status:
+          now > unlockTimeInMillis
+            ? DelegationStatus.Claimable
+            : DelegationStatus.Pending,
+        delegationIndex: index,
+        pendingUntil: now > unlockTimeInMillis ? 0 : Number(unlockTimeInMillis),
+      };
+    });
   }
 }
