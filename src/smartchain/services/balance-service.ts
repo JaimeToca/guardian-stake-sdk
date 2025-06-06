@@ -4,12 +4,31 @@ import { BalanceServiceContract } from "./balance-service-contract";
 import { StakingServiceContract } from "./staking-service-contract";
 import { DelegationStatus } from "./staking-types";
 
+/**
+ * Service class responsible for fetching and categorizing different types of token balances
+ * for a given bnb address, including available, staked, pending, and claimable amounts.
+ */
 export class BalanceService implements BalanceServiceContract {
+  /**
+   * Constructs an instance of the BalanceService.
+   * @param client The `PublicClient` instance used for interacting with 
+   * the blockchain node (e.g., fetching native token balance).
+   * @param stakingService The `StakingServiceContract` instance used for retrieving detailed staking information,
+   * which is necessary to determine staked, pending, and claimable balances.
+   */
   constructor(
     private readonly client: PublicClient,
     private readonly stakingService: StakingServiceContract
   ) {}
 
+  /**
+   * Asynchronously retrieves a comprehensive list of all relevant token balances for a specific address.
+   * This includes the available (unlocked) balance, as well as balances related to staking activities
+   * such as staked, pending, and claimable tokens.
+   *
+   * @param address The BNB `Address` for which to fetch the balances.
+   * @returns A Promise that resolves to an array of `Balance` objects, each representing a different type of balance.
+   */
   async getBalances(address: Address): Promise<Balance[]> {
     const availableBalanceRequest = this.client.getBalance({
       address: address,
@@ -43,6 +62,14 @@ export class BalanceService implements BalanceServiceContract {
     ];
   }
 
+  /**
+   * Private helper method to calculate the total staked, pending, and claimable balances
+   * by iterating through the user's delegations.
+   *
+   * @param address The blockchain `Address` of the delegator.
+   * @returns A Promise that resolves to an object containing the aggregated `stakedBalance`,
+   * `pendingBalance`, and `claimableBalance` as `bigint` values.
+   */
   private async getPendingAndClaimableBalances(address: Address): Promise<{
     stakedBalance: bigint;
     pendingBalance: bigint;

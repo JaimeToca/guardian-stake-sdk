@@ -15,7 +15,7 @@ import { fetchOrError } from "./rpc-utils";
 export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly BASE_MAINNET_URL =
     "https://api.bnbchain.org/bnb-staking/v1";
-  private static readonly VALIDATORS_LIMIT = "100"; // It's okay, 50 validators at the moment
+  private static readonly VALIDATORS_LIMIT = "100"; // Max value. It's okay, 50 validators at the moment
   private static readonly VALIDATORS_OFFSET = "0";
 
   /**
