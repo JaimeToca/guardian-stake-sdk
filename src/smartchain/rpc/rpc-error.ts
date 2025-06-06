@@ -1,9 +1,32 @@
 import { ApiErrorDetails, ApiErrorType } from "./error-types";
 
+/**
+ * Custom error class for representing API-related errors.
+ * Extends the built-in `Error` class to include additional properties relevant to API responses.
+ */
 export class ApiError extends Error {
+  /**
+   * The HTTP status code of the API response, if available.
+   * For example, 404 for Not Found, 500 for Internal Server Error.
+   */
   public status?: number;
+
+  /**
+   * The HTTP status text of the API response, if available.
+   * For example, "Not Found", "Internal Server Error".
+   */
   public statusText?: string;
+
+  /**
+   * The data returned in the API response body, if any.
+   * This could be an error message, validation errors, or other relevant information from the server.
+   */
   public data?: any;
+
+  /**
+   * The type of API error, categorized by the `ApiErrorType` enum.
+   * This helps in distinguishing between different causes of API errors (e.g., network issue, server error).
+   */
   public type: ApiErrorType;
 
   /**
@@ -12,7 +35,7 @@ export class ApiError extends Error {
    */
   constructor(message: string, details: Partial<ApiErrorDetails> = {}) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = details.status;
     this.statusText = details.statusText;
     this.data = details.data;
