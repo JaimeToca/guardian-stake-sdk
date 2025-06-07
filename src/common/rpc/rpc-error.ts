@@ -1,4 +1,4 @@
-import { ApiErrorDetails, ApiErrorType } from "./error-types";
+import { ApiErrorDetails, ApiErrorType } from "../../common/rpc/error-types";
 
 /**
  * Custom error class for representing API-related errors.

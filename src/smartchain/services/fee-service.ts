@@ -1,10 +1,7 @@
 import { Hex, PublicClient } from "viem";
-import { FeeServiceContract } from "./fee-service-contract";
-import { Fee } from "./fee-types";
-import { Transaction } from "./transaction-types";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 import { parseAccount } from "viem/utils";
-import { SignServiceContract } from "./sign-service-contract";
+import { FeeServiceContract, SignServiceContract, Fee, Transaction } from "../../common";
 
 /**
  * Service class responsible for estimating transaction fees on the BNB chain.

@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BNBRpcClient = void 0;
-const rpc_utils_1 = require("./rpc-utils");
+const rpc_1 = require("../../common/rpc");
 class BNBRpcClient {
     async getValidators() {
         const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/validator/all`;
-        const response = await (0, rpc_utils_1.fetchOrError)({
+        const response = await (0, rpc_1.fetchOrError)({
             url: requestUrl,
             method: "GET",
             params: {
@@ -17,7 +17,7 @@ class BNBRpcClient {
     }
     async getStakingSummary() {
         const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/summary`;
-        const response = await (0, rpc_utils_1.fetchOrError)({
+        const response = await (0, rpc_1.fetchOrError)({
             url: requestUrl,
             method: "GET",
         });

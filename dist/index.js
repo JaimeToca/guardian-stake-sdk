@@ -5,10 +5,10 @@ const chains_1 = require("viem/chains");
 const staking_rpc_client_1 = require("./smartchain/rpc/staking-rpc-client");
 const staking_service_1 = require("./smartchain/services/staking-service");
 const bnb_rpc_client_1 = require("./smartchain/rpc/bnb-rpc-client");
-const in_memory_cache_1 = require("./smartchain/cache/in-memory-cache");
+const in_memory_cache_1 = require("./common/cache/in-memory-cache");
 const fee_service_1 = require("./smartchain/services/fee-service");
 const sign_service_1 = require("./smartchain/services/sign-service");
-const transaction_types_1 = require("./smartchain/services/transaction-types");
+const common_1 = require("./common");
 test();
 async function test() {
     const bscRpcUrl = "https://bsc.twnodes.com";
@@ -27,7 +27,7 @@ async function test() {
     let validators = await stakingService.getValidators();
     console.log(validators);
     const feeResult = await feeService.estimateFee({
-        type: transaction_types_1.TransactionType.Delegate,
+        type: common_1.TransactionType.Delegate,
         chain: chains_1.bsc,
         amount: (0, viem_1.parseUnits)("1.0", 18),
         account: "0xf8eb1dbab94aa705e2aaf734d7140ee3bb49cf0d",

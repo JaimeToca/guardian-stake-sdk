@@ -1,8 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BalanceService = void 0;
-const balance_types_1 = require("./balance-types");
-const staking_types_1 = require("./staking-types");
+const common_1 = require("../../common");
 class BalanceService {
     constructor(client, stakingService) {
         this.client = client;
@@ -19,19 +18,19 @@ class BalanceService {
         ]);
         return [
             {
-                type: balance_types_1.BalanceType.Available,
+                type: common_1.BalanceType.Available,
                 amount: availableBalance,
             },
             {
-                type: balance_types_1.BalanceType.Staked,
+                type: common_1.BalanceType.Staked,
                 amount: pendingDelegations.stakedBalance,
             },
             {
-                type: balance_types_1.BalanceType.Pending,
+                type: common_1.BalanceType.Pending,
                 amount: pendingDelegations.pendingBalance,
             },
             {
-                type: balance_types_1.BalanceType.Claimable,
+                type: common_1.BalanceType.Claimable,
                 amount: pendingDelegations.claimableBalance,
             },
         ];
@@ -39,14 +38,14 @@ class BalanceService {
     async getPendingAndClaimableBalances(address) {
         const delegationsInfo = await this.stakingService.getDelegations(address);
         return delegationsInfo.delegations.reduce((acc, delegation) => {
-            if (delegation.status === staking_types_1.DelegationStatus.Pending) {
+            if (delegation.status === common_1.DelegationStatus.Pending) {
                 acc.pendingBalance += delegation.amount;
             }
-            else if (delegation.status === staking_types_1.DelegationStatus.Claimable) {
+            else if (delegation.status === common_1.DelegationStatus.Claimable) {
                 acc.claimableBalance += delegation.amount;
             }
-            else if (delegation.status === staking_types_1.DelegationStatus.Active ||
-                delegation.status === staking_types_1.DelegationStatus.Inactive) {
+            else if (delegation.status === common_1.DelegationStatus.Active ||
+                delegation.status === common_1.DelegationStatus.Inactive) {
                 acc.stakedBalance += delegation.amount;
             }
             return acc;

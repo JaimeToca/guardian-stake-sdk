@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from "axios";
 import { ApiError } from "./rpc-error";
-import { ApiErrorType } from "./error-types";
+import { ApiErrorType } from "../../common/rpc/error-types";
 
 /**
  * Asynchronously fetches data using Axios and throws an error if the request fails.

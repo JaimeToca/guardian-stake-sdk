@@ -1,19 +1,19 @@
 import { Address, parseEther } from "viem";
-import {
-  Delegation,
-  Delegations,
-  DelegationStatus,
-  Validator,
-  ValidatorStatus,
-} from "./staking-types";
-import { StakingServiceContract } from "./staking-service-contract";
-import { InMemoryCache } from "../cache";
+import { InMemoryCache } from "../../common/cache";
 import {
   BNBChainValidator,
   BNBRpcClientContract,
   StakingRpcClientContract,
 } from "../rpc";
 import { processSingleMulticallResult } from "../abi";
+import {
+  Delegation,
+  Delegations,
+  DelegationStatus,
+  StakingServiceContract,
+  Validator,
+  ValidatorStatus,
+} from "../../common";
 
 export class StakingService implements StakingServiceContract {
   private static readonly UNBOUND_PERIOD = 604800;

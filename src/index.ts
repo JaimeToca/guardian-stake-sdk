@@ -10,13 +10,11 @@ import { bsc } from "viem/chains";
 import { StakingRpcClient } from "./smartchain/rpc/staking-rpc-client";
 import { StakingService } from "./smartchain/services/staking-service";
 import { BNBRpcClient } from "./smartchain/rpc/bnb-rpc-client";
-import { InMemoryCache } from "./smartchain/cache/in-memory-cache";
+import { InMemoryCache } from "./common/cache/in-memory-cache";
 import { BalanceService } from "./smartchain/services/balance-service";
-import { BalanceType } from "./smartchain/services/balance-types";
 import { FeeService } from "./smartchain/services/fee-service";
 import { SignService } from "./smartchain/services/sign-service";
-import { TransactionType } from "./smartchain/services/transaction-types";
-import { ValidatorStatus } from "./smartchain/services/staking-types";
+import { TransactionType } from "./common";
 
 test();
 

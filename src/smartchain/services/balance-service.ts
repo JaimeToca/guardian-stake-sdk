@@ -1,8 +1,11 @@
 import { Address, Chain, PublicClient } from "viem";
-import { Balance, BalanceType } from "./balance-types";
-import { BalanceServiceContract } from "./balance-service-contract";
-import { StakingServiceContract } from "./staking-service-contract";
-import { DelegationStatus } from "./staking-types";
+import {
+  Balance,
+  BalanceServiceContract,
+  BalanceType,
+  DelegationStatus,
+  StakingServiceContract,
+} from "../../common";
 
 /**
  * Service class responsible for fetching and categorizing different types of token balances
@@ -11,7 +14,7 @@ import { DelegationStatus } from "./staking-types";
 export class BalanceService implements BalanceServiceContract {
   /**
    * Constructs an instance of the BalanceService.
-   * @param client The `PublicClient` instance used for interacting with 
+   * @param client The `PublicClient` instance used for interacting with
    * the blockchain node (e.g., fetching native token balance).
    * @param stakingService The `StakingServiceContract` instance used for retrieving detailed staking information,
    * which is necessary to determine staked, pending, and claimable balances.

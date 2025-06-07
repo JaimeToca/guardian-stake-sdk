@@ -1,3 +1,4 @@
+import { fetchOrError } from "../../common/rpc";
 import { BNBRpcClientContract } from "./bnb-rpc-client-contract";
 import {
   BNBChainValidator,
@@ -5,7 +6,6 @@ import {
   BNBValidatorsResponse,
   StakingResponse,
 } from "./bnb-rpc-types";
-import { fetchOrError } from "./rpc-utils";
 
 /**
  * A client class responsible for interacting with BNB Chain API

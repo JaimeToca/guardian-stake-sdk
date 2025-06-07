@@ -1,16 +1,9 @@
-import { Address, Hex, serializeTransaction, TransactionSerializable } from "viem";
-import { Fee } from "./fee-types";
-import { SignServiceContract } from "./sign-service-contract";
-import { OperatorAddress, Transaction, TransactionType } from "./transaction-types";
 import {
-  SigningWithPrivateKey,
-  SigningWithAccount,
-  BaseSignArgs,
-  CompileArgs,
-  PrehashResult,
-  isSigningWithAccount,
-  isSigningWithPrivateKey,
-} from "./sign-types";
+  Address,
+  Hex,
+  serializeTransaction,
+  TransactionSerializable,
+} from "viem";
 import {
   encodeClaim,
   encodeDelegate,
@@ -19,7 +12,21 @@ import {
 } from "../abi/staking-function-enconder";
 import { privateKeyToAccount } from "viem/accounts";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
-import { Validator } from "./staking-types";
+import {
+  SignServiceContract,
+  Fee,
+  TransactionType,
+  Validator,
+  OperatorAddress,
+  BaseSignArgs,
+  CompileArgs,
+  isSigningWithAccount,
+  isSigningWithPrivateKey,
+  PrehashResult,
+  SigningWithAccount,
+  SigningWithPrivateKey,
+  Transaction,
+} from "../../common";
 
 export class SignService implements SignServiceContract {
   async sign(
@@ -133,29 +140,29 @@ export class SignService implements SignServiceContract {
   } {
     switch (transaction.type) {
       case TransactionType.Delegate: {
-        const operatorAddress = this.getValidatorAddress(transaction.validator)
+        const operatorAddress = this.getValidatorAddress(transaction.validator);
         return {
           data: encodeDelegate(operatorAddress),
           amount: transaction.amount,
         };
       }
       case TransactionType.Redelegate: {
-        const from = this.getValidatorAddress(transaction.fromValidator)
-        const to = this.getValidatorAddress(transaction.toValidator)
+        const from = this.getValidatorAddress(transaction.fromValidator);
+        const to = this.getValidatorAddress(transaction.toValidator);
         return {
           data: encodeRedelegate(from, to, transaction.amount),
           amount: 0n,
         };
       }
       case TransactionType.Undelegate: {
-        const operatorAddress = this.getValidatorAddress(transaction.validator)
+        const operatorAddress = this.getValidatorAddress(transaction.validator);
         return {
           data: encodeUndelegate(operatorAddress, transaction.amount),
           amount: 0n,
         };
       }
       case TransactionType.Claim: {
-        const operatorAddress = this.getValidatorAddress(transaction.validator)
+        const operatorAddress = this.getValidatorAddress(transaction.validator);
         return {
           data: encodeClaim(operatorAddress, transaction.index),
           amount: 0n,
@@ -169,10 +176,10 @@ export class SignService implements SignServiceContract {
   }
 
   getValidatorAddress(validator: Validator | OperatorAddress): Address {
-    if (typeof validator === 'string') {
-      return validator
+    if (typeof validator === "string") {
+      return validator;
     } else {
-      return validator.operatorAddress
+      return validator.operatorAddress;
     }
   }
 }

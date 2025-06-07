@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StakingService = void 0;
 const viem_1 = require("viem");
-const staking_types_1 = require("./staking-types");
 const abi_1 = require("../abi");
+const common_1 = require("../../common");
 class StakingService {
     constructor(cache, stakingRpcClient, bnbRpcClient) {
         this.cache = cache;
@@ -38,11 +38,11 @@ class StakingService {
     getValidatorStatus(bnbValidator) {
         switch (bnbValidator.status) {
             case "INACTIVE":
-                return staking_types_1.ValidatorStatus.Inactive;
+                return common_1.ValidatorStatus.Inactive;
             case "JAILED":
-                return staking_types_1.ValidatorStatus.Jailed;
+                return common_1.ValidatorStatus.Jailed;
             default:
-                return staking_types_1.ValidatorStatus.Active;
+                return common_1.ValidatorStatus.Active;
         }
     }
     getValidatorImage(address) {
@@ -86,7 +86,7 @@ class StakingService {
                 id: `delegation_active_${index}`,
                 validator: validators[index],
                 amount: stakedAmount,
-                status: staking_types_1.DelegationStatus.Active,
+                status: common_1.DelegationStatus.Active,
                 delegationIndex: -1,
                 pendingUntil: 0,
             };
@@ -119,8 +119,8 @@ class StakingService {
                 validator,
                 amount: req.amount,
                 status: now > unlockTimeInMillis
-                    ? staking_types_1.DelegationStatus.Claimable
-                    : staking_types_1.DelegationStatus.Pending,
+                    ? common_1.DelegationStatus.Claimable
+                    : common_1.DelegationStatus.Pending,
                 delegationIndex: index,
                 pendingUntil: now > unlockTimeInMillis ? 0 : Number(unlockTimeInMillis),
             };
