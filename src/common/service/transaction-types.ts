@@ -1,6 +1,7 @@
 import { Chain } from "viem/_types/types/chain";
 import { Validator } from "./staking-types";
 import { Account, Address } from "viem";
+import { GuardianChain } from "../chain";
 
 /**
  * A union type representing all possible staking-related transaction types.
@@ -29,7 +30,7 @@ interface BaseTransaction {
   /**
    * The blockchain network on which the transaction is intended to occur.
    */
-  chain: Chain;
+  chain: GuardianChain;
   /**
    * The amount of tokens involved in the transaction, represented as a `bigint`
    * to ensure precision for large values.

@@ -127,7 +127,7 @@ export class SignService implements SignServiceContract {
       to: STAKING_CONTRACT,
       value: amount,
       data,
-      chainId: transaction.chain.id,
+      chainId: Number(transaction.chain.chainId),
       gas: fee.gasLimit,
       gasPrice: fee.gasPrice,
       nonce: nonce,

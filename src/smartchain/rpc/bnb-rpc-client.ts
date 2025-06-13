@@ -9,8 +9,7 @@ import {
 
 /**
  * A client class responsible for interacting with BNB Chain API
- * https://api.bnbchain.org. It's assumed that BNBRpcClient.BASE_MAINNET_URL, VALIDATORS_LIMIT,
- * and VALIDATORS_OFFSET are static properties.
+ * https://api.bnbchain.org
  */
 export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly BASE_MAINNET_URL =

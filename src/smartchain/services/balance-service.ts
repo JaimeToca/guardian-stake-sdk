@@ -25,7 +25,7 @@ export class BalanceService implements BalanceServiceContract {
   ) {}
 
   /**
-   * Asynchronously retrieves a comprehensive list of all relevant token balances for a specific address.
+   * Retrieves a comprehensive list of all relevant token balances for a specific address.
    * This includes the available (unlocked) balance, as well as balances related to staking activities
    * such as staked, pending, and claimable tokens.
    *
