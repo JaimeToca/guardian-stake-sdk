@@ -8,8 +8,8 @@ import {
 } from "./bnb-rpc-types";
 
 /**
- * A client class responsible for interacting with BNB Chain API
- * https://api.bnbchain.org
+ * A client class responsible for interacting with BNB Chain 
+ * indexing API for validators https://api.bnbchain.org
  */
 export class BNBRpcClient implements BNBRpcClientContract {
   private static readonly BASE_MAINNET_URL =
