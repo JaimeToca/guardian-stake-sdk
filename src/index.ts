@@ -15,6 +15,7 @@ import { BalanceService } from "./smartchain/services/balance-service";
 import { FeeService } from "./smartchain/services/fee-service";
 import { SignService } from "./smartchain/services/sign-service";
 import { TransactionType } from "./common";
+import { BSC_CHAIN } from "./common/chain";
 
 test();
 
@@ -46,7 +47,7 @@ async function test() {
 
   const feeResult = await feeService.estimateFee({
     type: TransactionType.Delegate,
-    chain: bsc,
+    chain: BSC_CHAIN,
     amount: parseUnits("1.0", 18),
     account: "0xf8eb1dbab94aa705e2aaf734d7140ee3bb49cf0d",
     isMaxAmount: false,

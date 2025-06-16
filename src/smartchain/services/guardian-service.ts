@@ -20,12 +20,15 @@ import { NonceServiceContract } from "../../common/service/nonce-service-contrac
 
 export class GuardianService implements GuardianServiceContract {
   constructor(
+    private chain: GuardianChain,
     private balanceService: BalanceServiceContract,
     private nonceService: NonceServiceContract,
     private feeService: FeeServiceContract,
     private signService: SignServiceContract
   ) {}
-
+  getChainInfo(): GuardianChain {
+    return this.chain;
+  }
   getBalances(chain: GuardianChain, address: Address): Promise<Balance[]> {
     return this.balanceService.getBalances(address);
   }
@@ -38,10 +41,10 @@ export class GuardianService implements GuardianServiceContract {
   sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex> {
     return this.signService.sign(signingArgs);
   }
-  prehash(preHasArgs: BaseSignArgs): PrehashResult {
+  prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult> {
     return this.signService.prehash(preHasArgs);
   }
-  compile(compileArgs: CompileArgs): Hex {
+  compile(compileArgs: CompileArgs): Promise<Hex> {
     return this.signService.compile(compileArgs);
   }
   buildCallData(transaction: Transaction): { data: Hex; amount: bigint } {

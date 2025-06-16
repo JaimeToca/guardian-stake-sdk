@@ -1,9 +1,12 @@
+export type GuardianChainIdentifier = string;
+
 /**
  * Enum representing the types of Guardian chains.
  * Currently, only Smartchain is supported.
  */
 export enum GuardianChainType {
   Smartchain = "Smartchain",
+  EVM = "EVM",
 }
 
 /**
@@ -19,7 +22,7 @@ export enum ChainEcosystemType {
  * This interface provides detailed information about a blockchain integrated into the Guardian SDK.
  */
 export interface GuardianChain {
-  id: string; // A unique identifier for the chain (e.g., "bsc-mainnet").
+  id: GuardianChainIdentifier; // A unique identifier for the chain (e.g., "bsc-mainnet").
   type: GuardianChainType; // The specific type of Guardian chain, as defined in GuardianChainType enum.
   symbol: string; // The native currency symbol of the chain (e.g., "BNB" for Smartchain).
   decimals: number; // The number of decimal places for the chain's native currency.

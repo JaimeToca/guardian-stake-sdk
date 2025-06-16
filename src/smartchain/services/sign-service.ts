@@ -58,7 +58,7 @@ export class SignService implements SignServiceContract {
     return signedTransaction;
   }
 
-  prehash(preHasArgs: BaseSignArgs): PrehashResult {
+  async prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult> {
     const transaction = preHasArgs.transaction;
     const fee = preHasArgs.fee;
     const nonce = preHasArgs.nonce;
@@ -79,7 +79,7 @@ export class SignService implements SignServiceContract {
     };
   }
 
-  compile(compileArgs: CompileArgs): Hex {
+  async compile(compileArgs: CompileArgs): Promise<Hex> {
     const transaction = compileArgs.signArgs.transaction;
     const fee = compileArgs.signArgs.fee;
     const nonce = compileArgs.signArgs.nonce;
