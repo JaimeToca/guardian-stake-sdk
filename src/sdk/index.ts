@@ -1,4 +1,4 @@
-import { isAddress, isHex } from "viem";
+import { Hex, isAddress, isHex } from "viem";
 import { getChainById, GuardianChain, SUPPORTED_CHAINS } from "../common/chain";
 import { GuardianServiceContract } from "../common/service/guardian-service-contract";
 import { provideGuarService } from "../smartchain";
@@ -11,10 +11,15 @@ import {
   SigningWithAccount,
   SigningWithPrivateKey,
   Transaction,
+  Validator,
 } from "../common";
 import { SdkConfig } from "./sdk-config-types";
 
 export * from "./sdk-config-types";
+
+export function getSupportedChains(): GuardianChain[] {
+  return SUPPORTED_CHAINS;
+}
 
 export class GuardianSDK {
   private initializedServices: Map<string, GuardianServiceContract> = new Map();
@@ -24,8 +29,15 @@ export class GuardianSDK {
     this.config = config;
   }
 
-  getSupportedChains(): GuardianChain[] {
-    return SUPPORTED_CHAINS;
+  getValidators(chain: GuardianChain): Promise<Validator[]> {
+    return this.getInternalService(chain).getValidators();
+  }
+
+  getDelegations(chain: GuardianChain, address: string) {
+    if (!isAddress(address)) {
+      throw Error("Invalid Address parameter");
+    }
+    return this.getInternalService(chain).getDelegations(address);
   }
 
   getBalances(chain: GuardianChain, address: string): Promise<Balance[]> {
@@ -33,7 +45,7 @@ export class GuardianSDK {
       throw Error("Invalid Address parameter");
     }
 
-    return this.getInternalService(chain).getBalances(chain, address);
+    return this.getInternalService(chain).getBalances(address);
   }
 
   getNonce(chain: GuardianChain, address: string): Promise<number> {
@@ -64,7 +76,7 @@ export class GuardianSDK {
     return this.getInternalService(chain).prehash(preHasArgs);
   }
 
-  compile(compileArgs: CompileArgs): Promise<string> {
+  compile(compileArgs: CompileArgs): Promise<Hex> {
     const chain = compileArgs.signArgs.transaction.chain;
 
     return this.getInternalService(chain).compile(compileArgs);
@@ -85,7 +97,7 @@ export class GuardianSDK {
     const chain = getChainById(chainId);
     if (!chain) {
       throw new Error(
-        `Chain with ID "${chainId}" is not supported by the Guardian SDK. Please check 'SUPPORTED_CHAINS'.`
+        `Chain with ID "${chainId}" is not supported by the Guardian SDK. Please check 'getSupportedChains()'.`
       );
     }
 

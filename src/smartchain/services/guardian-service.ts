@@ -13,8 +13,11 @@ import {
 import { Transaction } from "../../common/service/transaction-types";
 import {
   BalanceServiceContract,
+  Delegations,
   FeeServiceContract,
   SignServiceContract,
+  StakingServiceContract,
+  Validator,
 } from "../../common";
 import { NonceServiceContract } from "../../common/service/nonce-service-contract";
 
@@ -24,12 +27,19 @@ export class GuardianService implements GuardianServiceContract {
     private balanceService: BalanceServiceContract,
     private nonceService: NonceServiceContract,
     private feeService: FeeServiceContract,
-    private signService: SignServiceContract
+    private signService: SignServiceContract,
+    private stakingService: StakingServiceContract
   ) {}
+  getValidators(): Promise<Validator[]> {
+    return this.stakingService.getValidators();
+  }
+  getDelegations(address: Address): Promise<Delegations> {
+    return this.stakingService.getDelegations(address);
+  }
   getChainInfo(): GuardianChain {
     return this.chain;
   }
-  getBalances(chain: GuardianChain, address: Address): Promise<Balance[]> {
+  getBalances(address: Address): Promise<Balance[]> {
     return this.balanceService.getBalances(address);
   }
   getNonce(address: Address): Promise<number> {

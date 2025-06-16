@@ -6,61 +6,57 @@ import {
   http,
   parseUnits,
 } from "viem";
-import { bsc } from "viem/chains";
-import { StakingRpcClient } from "./smartchain/rpc/staking-rpc-client";
-import { StakingService } from "./smartchain/services/staking-service";
-import { BNBRpcClient } from "./smartchain/rpc/bnb-rpc-client";
-import { InMemoryCache } from "./common/cache/in-memory-cache";
-import { BalanceService } from "./smartchain/services/balance-service";
-import { FeeService } from "./smartchain/services/fee-service";
-import { SignService } from "./smartchain/services/sign-service";
 import { TransactionType } from "./common";
-import { BSC_CHAIN } from "./common/chain";
+import { getSupportedChains, GuardianSDK } from "./sdk";
+import { DelegateTransaction } from "./common/service/transaction-types";
 
-test();
+sample();
 
-async function test() {
-  const bscRpcUrl = "https://bsc.twnodes.com";
+async function sample() {
+  const accountAddress = "0xB137d0B9bE423952a70A275bc8f2357038901CB2";
+  console.log(accountAddress);
 
-  const client = createPublicClient({
-    chain: bsc,
-    transport: http(bscRpcUrl),
-    batch: {
-      multicall: true,
+  // get supported chains by SDK
+  const supportedChains = getSupportedChains();
+  console.log(supportedChains);
+
+  // BSC Chain
+  const bscChain = supportedChains[0];
+  console.log(bscChain);
+
+  // Init SDK
+  const guardianSDK = new GuardianSDK({
+    chains: {
+      [bscChain.id]: {
+        rpcUrl: "https://bsc.twnodes.com",
+      },
     },
   });
 
-  let client2 = new StakingRpcClient(client);
-  let client3 = new BNBRpcClient();
+  // Get validators for staking
+  const validators = await guardianSDK.getValidators(bscChain);
+  console.log(validators);
 
-  let stakingService = new StakingService(
-    new InMemoryCache(),
-    client2,
-    client3
+  // Get all delegations (active, pending, claimable, inactive)
+  const delegations = await guardianSDK.getDelegations(
+    bscChain,
+    accountAddress
   );
+  console.log(delegations);
 
-  let signService = new SignService();
-  let feeService = new FeeService(client, signService);
+  // Fetch all types of balances
+  const balances = await guardianSDK.getBalances(bscChain, accountAddress);
+  console.log(balances);
 
-  let validators = await stakingService.getValidators();
-  console.log(validators)
-
-  const feeResult = await feeService.estimateFee({
+  // Calculate fees for staking to first validator
+  const delegateTransaction: DelegateTransaction = {
     type: TransactionType.Delegate,
-    chain: BSC_CHAIN,
+    chain: bscChain,
     amount: parseUnits("1.0", 18),
-    account: "0xf8eb1dbab94aa705e2aaf734d7140ee3bb49cf0d",
+    account: accountAddress,
     isMaxAmount: false,
     validator: validators[0],
-  });
-
-  console.log(feeResult)
-
-  //let delegations = await stakingService.getDelegations(
-  //  "0xB137d0B9bE423952a70A275bc8f2357038901CB2"
-  //);
-
-  //console.log(delegations)
-  //  console.log(delegations.delegations[0].status === DelegationStatus.Claimable)
-  //  console.log(delegations);
+  };
+  const fees = await guardianSDK.estimateFee(delegateTransaction);
+  console.log(fees);
 }

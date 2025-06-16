@@ -10,9 +10,12 @@ import {
   SigningWithAccount,
   SigningWithPrivateKey,
 } from "./sign-types";
+import { Delegations, Validator } from "./staking-types";
 
 export interface GuardianServiceContract {
-  getBalances(chain: GuardianChain, address: Address): Promise<Balance[]>;
+  getValidators(): Promise<Validator[]>;
+  getDelegations(address: Address): Promise<Delegations>;
+  getBalances(address: Address): Promise<Balance[]>;
   getNonce(address: Address): Promise<number>;
   estimateFee(transaction: Transaction): Promise<Fee>;
   sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex>;
@@ -22,5 +25,5 @@ export interface GuardianServiceContract {
     data: Hex;
     amount: bigint;
   };
-  getChainInfo(): GuardianChain
+  getChainInfo(): GuardianChain;
 }

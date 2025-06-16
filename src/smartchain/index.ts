@@ -33,7 +33,8 @@ export function provideGuarService(
     balanceService,
     nonceService,
     feeService,
-    signService
+    signService,
+    stakingService
   );
 }
 
