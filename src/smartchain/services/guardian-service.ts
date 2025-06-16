@@ -11,27 +11,40 @@ import {
   CompileArgs,
 } from "../../common/service/sign-types";
 import { Transaction } from "../../common/service/transaction-types";
-import { FeeServiceContract, SignServiceContract } from "../../common";
+import {
+  BalanceServiceContract,
+  FeeServiceContract,
+  SignServiceContract,
+} from "../../common";
+import { NonceServiceContract } from "../../common/service/nonce-service-contract";
 
 export class GuardianService implements GuardianServiceContract {
-  constructor(private feeService: FeeServiceContract, private signService: SignServiceContract, ) {}
+  constructor(
+    private balanceService: BalanceServiceContract,
+    private nonceService: NonceServiceContract,
+    private feeService: FeeServiceContract,
+    private signService: SignServiceContract
+  ) {}
 
   getBalances(chain: GuardianChain, address: Address): Promise<Balance[]> {
-    throw new Error("Method not implemented.");
+    return this.balanceService.getBalances(address);
+  }
+  getNonce(address: Address): Promise<number> {
+    return this.nonceService.getNonce(address);
   }
   estimateFee(transaction: Transaction): Promise<Fee> {
-    throw new Error("Method not implemented.");
+    return this.feeService.estimateFee(transaction);
   }
   sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex> {
-    throw new Error("Method not implemented.");
+    return this.signService.sign(signingArgs);
   }
   prehash(preHasArgs: BaseSignArgs): PrehashResult {
-    throw new Error("Method not implemented.");
+    return this.signService.prehash(preHasArgs);
   }
   compile(compileArgs: CompileArgs): Hex {
-    throw new Error("Method not implemented.");
+    return this.signService.compile(compileArgs);
   }
   buildCallData(transaction: Transaction): { data: Hex; amount: bigint } {
-    throw new Error("Method not implemented.");
+    return this.signService.buildCallData(transaction);
   }
 }

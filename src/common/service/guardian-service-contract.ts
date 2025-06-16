@@ -13,6 +13,7 @@ import {
 
 export interface GuardianServiceContract {
   getBalances(chain: GuardianChain, address: Address): Promise<Balance[]>;
+  getNonce(address: Address): Promise<number>;
   estimateFee(transaction: Transaction): Promise<Fee>;
   sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex>;
   prehash(preHasArgs: BaseSignArgs): PrehashResult;
