@@ -1,4 +1,3 @@
-import { Chain } from "viem/_types/types/chain";
 import { Validator } from "./staking-types";
 import { Account, Address } from "viem";
 import { GuardianChain } from "../chain";

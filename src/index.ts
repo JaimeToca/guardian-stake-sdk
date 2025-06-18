@@ -58,5 +58,6 @@ async function sample() {
     validator: validators[0],
   };
   const fees = await guardianSDK.estimateFee(delegateTransaction);
+
   console.log(fees);
 }
