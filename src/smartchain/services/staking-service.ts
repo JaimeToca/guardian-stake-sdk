@@ -16,17 +16,45 @@ import {
 } from "../../common";
 
 export class StakingService implements StakingServiceContract {
-  private static readonly UNBOUND_PERIOD = 604800;
+  /**
+   * The duration in seconds after which unbound (unstaked) funds become claimable.
+   */
+  private static readonly UNBOUND_PERIOD = 604800000; // 7 days in millis
+
+  /**
+   * The fee rate applied for redelegation operations.
+   */
   private static readonly REDELEGATION_FEE = 0.02;
+
+  /**
+   * The minimum amount of BNB required to initiate a new staking delegation.
+   */
   private static readonly MIN_AMOUNT_TO_STAKE = parseEther("1.0");
+
+  /**
+   * Cache key for storing validator data to avoid redundant RPC calls.
+   */
   private static readonly VALIDATOR_CACHE_KEY = "bsc-validators";
 
+  /**
+   * Constructs an instance of StakingService.
+   * @param cache An in-memory cache instance for storing frequently accessed data like validators.
+   * @param stakingRpcClient An RPC client for interacting with the staking smart contracts.
+   * @param bnbRpcClient An RPC client for interacting with the BNB Chain's native RPC for validator and staking summary data.
+   */
   constructor(
     private readonly cache: InMemoryCache<string, Validator[]>,
     private readonly stakingRpcClient: StakingRpcClientContract,
     private readonly bnbRpcClient: BNBRpcClientContract
   ) {}
 
+  /**
+   * Retrieves a list of all active and inactive validators.
+   * This method first checks the cache for existing validator data. If not found,
+   * it fetches validator information from both the BNB Chain's native RPC and the credit contract,
+   * combines the data, and then caches it for future use.
+   * @returns A promise that resolves to an array of Validator objects.
+   */
   async getValidators(): Promise<Validator[]> {
     if (this.cache.has(StakingService.VALIDATOR_CACHE_KEY)) {
       return this.cache.get(StakingService.VALIDATOR_CACHE_KEY) as Validator[];
@@ -57,6 +85,11 @@ export class StakingService implements StakingServiceContract {
     return validators;
   }
 
+  /**
+   * Determines the normalized ValidatorStatus based on the raw status from BNB Chain RPC.
+   * @param bnbValidator The raw BNBChainValidator object.
+   * @returns The corresponding ValidatorStatus enum value.
+   */
   private getValidatorStatus(bnbValidator: BNBChainValidator) {
     switch (bnbValidator.status) {
       case "INACTIVE":
@@ -68,6 +101,11 @@ export class StakingService implements StakingServiceContract {
     }
   }
 
+  /**
+   * Constructs the URL for a validator's image based on their operator address.
+   * @param address The operator address of the validator.
+   * @returns The URL of the validator's image.
+   */
   private getValidatorImage(address: Address): string {
     const BASE_VALIDATOR_IMAGE_URL =
       "https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/";
@@ -76,6 +114,12 @@ export class StakingService implements StakingServiceContract {
     return `${BASE_VALIDATOR_IMAGE_URL}${address}${LOGO_FILE}`;
   }
 
+  /**
+   * Retrieves all staking delegations for a given address, including active, pending, and claimable delegations,
+   * along with a summary of the overall staking protocol.
+   * @param address The blockchain address of the delegator.
+   * @returns A promise that resolves to a Delegations object containing a list of delegations and staking summary.
+   */
   async getDelegations(address: Address): Promise<Delegations> {
     const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
     const validators = await this.getValidators();
@@ -109,6 +153,13 @@ export class StakingService implements StakingServiceContract {
     };
   }
 
+  /**
+   * Fetches active staking delegations for a given address.
+   * This involves querying the `getPooledBNBData` method on the staking smart contract for each validator.
+   * @param address The delegator's blockchain address.
+   * @param validators An array of Validator objects to check for active delegations.
+   * @returns A promise that resolves to an array of active Delegation objects.
+   */
   private async getActiveDelegations(
     address: Address,
     validators: Validator[]
@@ -141,6 +192,14 @@ export class StakingService implements StakingServiceContract {
       .filter((item) => item !== undefined);
   }
 
+  /**
+   * Fetches pending and claimable staking delegations for a given address.
+   * This involves querying the `getPendingUnbondDelegation` method to get counts of pending requests,
+   * and then `getUnbondRequestData` for detailed information on each request.
+   * @param address The delegator's blockchain address.
+   * @param validators An array of Validator objects.
+   * @returns A promise that resolves to an array of pending or claimable Delegation objects.
+   */
   private async getPendingOrClaimableDelegations(
     address: Address,
     validators: Validator[]
@@ -170,6 +229,15 @@ export class StakingService implements StakingServiceContract {
       .flat();
   }
 
+  /**
+   * Processes a single multicall result to determine if there are pending unbond delegations
+   * for a specific validator and then fetches the details of those delegations.
+   * @param rawMulticallResult The raw result from a multicall for pending unbond delegations.
+   * @param validator The Validator object associated with this result.
+   * @param address The delegator's blockchain address.
+   * @returns A promise that resolves to an array of Delegation objects (pending or claimable) for the validator, 
+   * or undefined if no pending delegations.
+   */
   private async getDelegationsForValidator(
     rawMulticallResult: any,
     validator: Validator,
@@ -187,6 +255,16 @@ export class StakingService implements StakingServiceContract {
     );
   }
 
+  /**
+   * Fetches the detailed information for unbond requests for a specific validator and delegator.
+   * This involves iterating through each unbond request index and calling `getUnbondRequestData`.
+   * It then determines if the unbonded funds are pending or claimable.
+   * @param creditAddress The credit contract address of the validator.
+   * @param address The delegator's blockchain address.
+   * @param count The number of unbond requests to fetch.
+   * @param validator The Validator object associated with these requests.
+   * @returns A promise that resolves to an array of Delegation objects with status Pending or Claimable.
+   */
   private async getUnbondDelegations(
     creditAddress: Address,
     address: Address,
