@@ -1,6 +1,5 @@
-import { Hex, isAddress, isHex } from "viem";
+import { Hex, isAddress } from "viem";
 import { getChainById, GuardianChain, SUPPORTED_CHAINS } from "../common/chain";
-import { GuardianServiceContract } from "../common/service/guardian-service-contract";
 import { provideGuarService } from "../smartchain";
 import {
   Balance,
@@ -8,6 +7,7 @@ import {
   CompileArgs,
   Delegations,
   Fee,
+  GuardianServiceContract,
   PrehashResult,
   SigningWithAccount,
   SigningWithPrivateKey,
