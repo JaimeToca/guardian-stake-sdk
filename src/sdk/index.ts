@@ -24,7 +24,7 @@ export function getSupportedChains(): GuardianChain[] {
 
 /**
  * @fileoverview This file defines the `GuardianSDK` class, which serves as the primary
- * interface for interacting with the Guardian ecosystem. It abstracts away the complexities
+ * interface for interacting with different blockchain. It abstracts away the complexities
  * of blockchain interactions, providing a consistent API for various operations
  * across supported chains.
  *
