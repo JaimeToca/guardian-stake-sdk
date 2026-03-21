@@ -9,7 +9,9 @@
   ],
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "peerDependencies": {
     "viem": "^2.47.5"
@@ -18,7 +20,8 @@
     "axios": "^1.13.6"
   },
   "devDependencies": {
-    "viem": "^2.47.4"
+    "viem": "^2.47.4",
+    "vitest": "^3.0.0"
   },
   "engines": {
     "node": ">=18"
