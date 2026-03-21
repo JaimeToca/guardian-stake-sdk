@@ -11,9 +11,36 @@
     "build": "tsc",
     "prepublishOnly": "npm run build"
   },
+  "peerDependencies": {
+    "viem": "^2.47.5"
+  },
   "dependencies": {
-    "axios": "^1.13.6",
+    "axios": "^1.13.6"
+  },
+  "devDependencies": {
     "viem": "^2.47.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "bnb",
+    "bsc",
+    "binance",
+    "staking",
+    "web3",
+    "blockchain",
+    "sdk",
+    "native-staking",
+    "crypto",
+    "bnbstaking",
+    "bnb-smart-chain",
+    "bnb-native-staking"
+  ],
+  "author": "JaimeToca",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaimeToca/bnb-native-staking.git"
   },
   "license": "MIT"
 }

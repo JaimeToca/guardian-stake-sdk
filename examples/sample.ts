@@ -1,5 +1,5 @@
 import { parseUnits } from "viem";
-import { GuardianSDK, BSC_CHAIN, TransactionType } from ".";
+import { GuardianSDK, BSC_CHAIN, TransactionType } from "../src";
 
 const sdk = new GuardianSDK({
   chains: {

@@ -7,7 +7,6 @@ const common_1 = require("../../common");
 class FeeService {
     client;
     signService;
-    static GAS_BUFFER_PERCENT = 15n;
     constructor(client, signService) {
         this.client = client;
         this.signService = signService;
@@ -30,10 +29,10 @@ class FeeService {
             gasPricePromise,
             gasLimitPromise,
         ]);
-        const increasedLimit = (gasLimit * (100n + FeeService.GAS_BUFFER_PERCENT)) / 100n;
+        const increasedLimit = (gasLimit * BigInt(100 + 15)) / 100n;
         return {
             type: common_1.FeeType.GasFee,
-            gasPrice,
+            gasPrice: gasPrice,
             gasLimit: increasedLimit,
             total: gasPrice * increasedLimit,
         };
