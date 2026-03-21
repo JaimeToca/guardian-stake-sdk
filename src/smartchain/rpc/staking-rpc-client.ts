@@ -1,5 +1,5 @@
 import { StakingRpcClientContract } from "./staking-rpc-client-contract";
-import { Address, PublicClient } from "viem";
+import { Address, decodeAbiParameters, PublicClient } from "viem";
 import {
   DecodedValidators,
   MulticallResult,
@@ -165,11 +165,13 @@ export class StakingRpcClient implements StakingRpcClientContract {
    * @param creditContract The **address** of the credit contract to query.
    * @param amount The **amount** of pooled BNB (as a `bigint`) for which to calculate the corresponding shares.
    */
-  async getSharesByPooledBNBData(creditContract: Address, amount: bigint) {
-    const validatorsResponse = this.client.call({
+  async getSharesByPooledBNBData(creditContract: Address, amount: bigint): Promise<bigint | undefined> {
+    const response = await this.client.call({
       to: creditContract,
       data: encodeGetSharesByPooledBNBData(amount),
     });
-    console.log(validatorsResponse);
+    if (!response.data) return undefined;
+    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data);
+    return decoded[0];
   }
 }

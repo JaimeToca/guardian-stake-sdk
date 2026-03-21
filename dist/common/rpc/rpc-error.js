@@ -3,6 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApiError = void 0;
 const error_types_1 = require("../../common/rpc/error-types");
 class ApiError extends Error {
+    status;
+    statusText;
+    data;
+    type;
     constructor(message, details = {}) {
         super(message);
         this.name = "ApiError";

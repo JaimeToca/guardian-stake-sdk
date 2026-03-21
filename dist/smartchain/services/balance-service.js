@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BalanceService = void 0;
 const common_1 = require("../../common");
 class BalanceService {
+    client;
+    stakingService;
     constructor(client, stakingService) {
         this.client = client;
         this.stakingService = stakingService;

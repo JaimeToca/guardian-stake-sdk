@@ -1,7 +1,7 @@
 import { Hex, PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 import { parseAccount } from "viem/utils";
-import { FeeServiceContract, SignServiceContract, Fee, Transaction } from "../../common";
+import { FeeServiceContract, SignServiceContract, Fee, FeeType, Transaction } from "../../common";
 
 /**
  * Service class responsible for estimating transaction fees on the BNB chain.
@@ -11,7 +11,7 @@ import { FeeServiceContract, SignServiceContract, Fee, Transaction } from "../..
 export class FeeService implements FeeServiceContract {
    /**
    * Constructs an instance of FeeService.
-   * @param client The PublicClient instance used for interacting 
+   * @param client The PublicClient instance used for interacting
    * with the blockchain (e.g., getting gas price, estimating gas).
    * @param signService The SignServiceContract instance used for building transaction call data.
    */
@@ -52,9 +52,10 @@ export class FeeService implements FeeServiceContract {
     const increasedLimit = (gasLimit * BigInt(100 + 15)) / 100n; // increase by 15% for safety
 
     return {
+      type: FeeType.GasFee,
       gasPrice: gasPrice,
       gasLimit: increasedLimit,
-      total: gasPrice * gasLimit,
+      total: gasPrice * increasedLimit,
     } as Fee;
   }
 }

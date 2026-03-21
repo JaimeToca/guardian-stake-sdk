@@ -3,7 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FeeService = void 0;
 const multicall_stake_abi_1 = require("../abi/multicall-stake-abi");
 const utils_1 = require("viem/utils");
+const common_1 = require("../../common");
 class FeeService {
+    client;
+    signService;
+    static GAS_BUFFER_PERCENT = 15n;
     constructor(client, signService) {
         this.client = client;
         this.signService = signService;
@@ -26,11 +30,12 @@ class FeeService {
             gasPricePromise,
             gasLimitPromise,
         ]);
-        const increasedLimit = (gasLimit * BigInt(100 + 15)) / 100n;
+        const increasedLimit = (gasLimit * (100n + FeeService.GAS_BUFFER_PERCENT)) / 100n;
         return {
-            gasPrice: gasPrice,
+            type: common_1.FeeType.GasFee,
+            gasPrice,
             gasLimit: increasedLimit,
-            total: gasPrice * gasLimit,
+            total: gasPrice * increasedLimit,
         };
     }
 }

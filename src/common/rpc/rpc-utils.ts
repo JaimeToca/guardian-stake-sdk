@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from "axios";
+import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 import { ApiError } from "./rpc-error";
 import { ApiErrorType } from "../../common/rpc/error-types";
 
@@ -33,18 +33,15 @@ export async function fetchOrError<T>(
  */
 function handleAxiosError(error: unknown): never {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError;
-
-    if (axiosError.response) {
-      handleServerResponseError(axiosError.response);
-    } else if (axiosError.request) {
+    if (error.response) {
+      handleServerResponseError(error.response);
+    } else if (error.request) {
       handleNetworkError();
     } else {
-      handleRequestSetupError(axiosError.message);
+      handleRequestSetupError(error.message);
     }
-  } else {
-    handleUnknownError(error);
   }
+  handleUnknownError(error);
 }
 
 /**
@@ -102,14 +99,3 @@ function handleUnknownError(error: unknown): never {
   });
 }
 
-// Only for debugging purposes
-axios.interceptors.request.use(
-  function (config) {
-    console.log("Axios Request:", config);
-    return config;
-  },
-  function (error) {
-    console.error("Axios Request Error:", error);
-    return Promise.reject(error);
-  }
-);

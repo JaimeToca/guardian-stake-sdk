@@ -7,7 +7,7 @@ export interface BNBChainValidator {
   miningStatus: string;
   moniker: string;
   operatorAddress: string;
-  status: string;
+  status: "ACTIVE" | "INACTIVE" | "JAILED";
   totalStaked: string;
 }
 

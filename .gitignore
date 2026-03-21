@@ -1,11 +1,33 @@
-node_modules/**
-output/**
+# Dependencies
+node_modules/
 
-**/*.save
-**/*.swp
-**/*.tgz
-dist/*.gz
+# Build output
+dist/
 
-**/.DS_Store
+# npm pack output
+*.tgz
 
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.save
+.vscode/
+.idea/
+
+# Source maps
+*.js.map
+
+# Misc
 .iterm2-project

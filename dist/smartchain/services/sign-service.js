@@ -27,7 +27,7 @@ class SignService {
         }
         return signedTransaction;
     }
-    prehash(preHasArgs) {
+    async prehash(preHasArgs) {
         const transaction = preHasArgs.transaction;
         const fee = preHasArgs.fee;
         const nonce = preHasArgs.nonce;
@@ -41,7 +41,7 @@ class SignService {
             },
         };
     }
-    compile(compileArgs) {
+    async compile(compileArgs) {
         const transaction = compileArgs.signArgs.transaction;
         const fee = compileArgs.signArgs.fee;
         const nonce = compileArgs.signArgs.nonce;
@@ -49,7 +49,7 @@ class SignService {
         const s = compileArgs.s;
         const v = compileArgs.v;
         const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
-        return (0, viem_1.serializeTransaction)({ unsignedTransaction, r, s, v });
+        return (0, viem_1.serializeTransaction)(unsignedTransaction, { r, s, v });
     }
     buildUnsignedTransaction(transaction, fee, nonce) {
         const { data, amount } = this.buildCallData(transaction);
@@ -67,7 +67,7 @@ class SignService {
             to: multicall_stake_abi_1.STAKING_CONTRACT,
             value: amount,
             data,
-            chainId: transaction.chain.id,
+            chainId: Number(transaction.chain.chainId),
             gas: fee.gasLimit,
             gasPrice: fee.gasPrice,
             nonce: nonce,

@@ -6,7 +6,6 @@ export type GuardianChainIdentifier = string;
  */
 export enum GuardianChainType {
   Smartchain = "Smartchain",
-  EVM = "EVM",
 }
 
 /**

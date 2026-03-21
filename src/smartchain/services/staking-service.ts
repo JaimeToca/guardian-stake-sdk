@@ -1,11 +1,11 @@
 import { Address, parseEther } from "viem";
-import { InMemoryCache } from "../../common/cache";
+import { CacheContract } from "../../common/cache";
 import {
   BNBChainValidator,
   BNBRpcClientContract,
   StakingRpcClientContract,
 } from "../rpc";
-import { processSingleMulticallResult } from "../abi";
+import { MulticallResult, processSingleMulticallResult } from "../abi";
 import {
   Delegation,
   Delegations,
@@ -43,7 +43,7 @@ export class StakingService implements StakingServiceContract {
    * @param bnbRpcClient An RPC client for interacting with the BNB Chain's native RPC for validator and staking summary data.
    */
   constructor(
-    private readonly cache: InMemoryCache<string, Validator[]>,
+    private readonly cache: CacheContract<string, Validator[]>,
     private readonly stakingRpcClient: StakingRpcClientContract,
     private readonly bnbRpcClient: BNBRpcClientContract
   ) {}
@@ -56,9 +56,8 @@ export class StakingService implements StakingServiceContract {
    * @returns A promise that resolves to an array of Validator objects.
    */
   async getValidators(): Promise<Validator[]> {
-    if (this.cache.has(StakingService.VALIDATOR_CACHE_KEY)) {
-      return this.cache.get(StakingService.VALIDATOR_CACHE_KEY) as Validator[];
-    }
+    const cached = this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
+    if (cached) return cached;
 
     const [bnbValidators, contractCallValidators] = await Promise.all([
       this.bnbRpcClient.getValidators(),
@@ -68,7 +67,7 @@ export class StakingService implements StakingServiceContract {
     const validators = bnbValidators.map((bnbValidator, index) => {
       const operatorAddress = bnbValidator.operatorAddress as Address;
       return {
-        id: `$${bnbValidator.moniker}_${index}`,
+        id: `${bnbValidator.moniker}_${index}`,
         status: this.getValidatorStatus(bnbValidator),
         name: bnbValidator.moniker,
         description: bnbValidator.miningStatus,
@@ -239,7 +238,7 @@ export class StakingService implements StakingServiceContract {
    * or undefined if no pending delegations.
    */
   private async getDelegationsForValidator(
-    rawMulticallResult: any,
+    rawMulticallResult: MulticallResult,
     validator: Validator,
     address: Address
   ): Promise<Delegation[] | undefined> {

@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StakingRpcClient = void 0;
+const viem_1 = require("viem");
 const abi_1 = require("../abi");
 class StakingRpcClient {
+    client;
     constructor(client) {
         this.client = client;
     }
@@ -65,11 +67,14 @@ class StakingRpcClient {
         };
     }
     async getSharesByPooledBNBData(creditContract, amount) {
-        const validatorsResponse = this.client.call({
+        const response = await this.client.call({
             to: creditContract,
             data: (0, abi_1.encodeGetSharesByPooledBNBData)(amount),
         });
-        console.log(validatorsResponse);
+        if (!response.data)
+            return undefined;
+        const decoded = (0, viem_1.decodeAbiParameters)([{ name: "shares", type: "uint256" }], response.data);
+        return decoded[0];
     }
 }
 exports.StakingRpcClient = StakingRpcClient;

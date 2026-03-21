@@ -1,6 +1,19 @@
 {
+  "name": "bnb-native-staking",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for BNB Smart Chain native staking",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
-    "axios": "^1.9.0",
-    "viem": "^2.29.4"
-  }
+    "axios": "^1.13.6",
+    "viem": "^2.47.4"
+  },
+  "license": "MIT"
 }

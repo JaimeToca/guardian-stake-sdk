@@ -21,20 +21,17 @@ async function fetchOrError(requestConfig) {
 }
 function handleAxiosError(error) {
     if (axios_1.default.isAxiosError(error)) {
-        const axiosError = error;
-        if (axiosError.response) {
-            handleServerResponseError(axiosError.response);
+        if (error.response) {
+            handleServerResponseError(error.response);
         }
-        else if (axiosError.request) {
+        else if (error.request) {
             handleNetworkError();
         }
         else {
-            handleRequestSetupError(axiosError.message);
+            handleRequestSetupError(error.message);
         }
     }
-    else {
-        handleUnknownError(error);
-    }
+    handleUnknownError(error);
 }
 function handleServerResponseError(response) {
     const { status, statusText, data: errorData } = response;
@@ -61,11 +58,4 @@ function handleUnknownError(error) {
         type: error_types_1.ApiErrorType.UnknownError,
     });
 }
-axios_1.default.interceptors.request.use(function (config) {
-    console.log("Axios Request:", config);
-    return config;
-}, function (error) {
-    console.error("Axios Request Error:", error);
-    return Promise.reject(error);
-});
 //# sourceMappingURL=rpc-utils.js.map

@@ -38,15 +38,8 @@ export function encodeFunctionCall(
 export function processSingleMulticallResult(
   item: MulticallResult
 ): bigint | undefined {
-  if (
-    item.status === `success` &&
-    item.result !== undefined &&
-    item.result > 0
-  ) {
+  if (item.status === "success" && item.result !== undefined && item.result > 0n) {
     return item.result;
-  } else if (item.status === `failure`) {
-    return undefined;
-  } else {
-    return undefined;
   }
+  return undefined;
 }

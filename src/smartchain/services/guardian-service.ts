@@ -36,7 +36,7 @@ export class GuardianService implements GuardianServiceContract {
    * @param {StakingServiceContract} stakingService - Manages interactions related to staking, like validators and delegations.
    */
   constructor(
-    private chain: GuardianChain,
+    private readonly chain: GuardianChain,
     private balanceService: BalanceServiceContract,
     private nonceService: NonceServiceContract,
     private feeService: FeeServiceContract,

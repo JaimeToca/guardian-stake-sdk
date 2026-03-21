@@ -5,15 +5,22 @@ const viem_1 = require("viem");
 const abi_1 = require("../abi");
 const common_1 = require("../../common");
 class StakingService {
+    cache;
+    stakingRpcClient;
+    bnbRpcClient;
+    static UNBOUND_PERIOD = 604800000;
+    static REDELEGATION_FEE = 0.02;
+    static MIN_AMOUNT_TO_STAKE = (0, viem_1.parseEther)("1.0");
+    static VALIDATOR_CACHE_KEY = "bsc-validators";
     constructor(cache, stakingRpcClient, bnbRpcClient) {
         this.cache = cache;
         this.stakingRpcClient = stakingRpcClient;
         this.bnbRpcClient = bnbRpcClient;
     }
     async getValidators() {
-        if (this.cache.has(StakingService.VALIDATOR_CACHE_KEY)) {
-            return this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
-        }
+        const cached = this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
+        if (cached)
+            return cached;
         const [bnbValidators, contractCallValidators] = await Promise.all([
             this.bnbRpcClient.getValidators(),
             this.stakingRpcClient.getCreditContractValidators(),
@@ -21,7 +28,7 @@ class StakingService {
         const validators = bnbValidators.map((bnbValidator, index) => {
             const operatorAddress = bnbValidator.operatorAddress;
             return {
-                id: `$${bnbValidator.moniker}_${index}`,
+                id: `${bnbValidator.moniker}_${index}`,
                 status: this.getValidatorStatus(bnbValidator),
                 name: bnbValidator.moniker,
                 description: bnbValidator.miningStatus,
@@ -128,8 +135,4 @@ class StakingService {
     }
 }
 exports.StakingService = StakingService;
-StakingService.UNBOUND_PERIOD = 604800;
-StakingService.REDELEGATION_FEE = 0.02;
-StakingService.MIN_AMOUNT_TO_STAKE = (0, viem_1.parseEther)("1.0");
-StakingService.VALIDATOR_CACHE_KEY = "bsc-validators";
 //# sourceMappingURL=staking-service.js.map

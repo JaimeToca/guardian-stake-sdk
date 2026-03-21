@@ -21,7 +21,7 @@ export class ApiError extends Error {
    * The data returned in the API response body, if any.
    * This could be an error message, validation errors, or other relevant information from the server.
    */
-  public data?: any;
+  public data?: unknown;
 
   /**
    * The type of API error, categorized by the `ApiErrorType` enum.

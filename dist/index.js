@@ -1,39 +1,20 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const viem_1 = require("viem");
-const chains_1 = require("viem/chains");
-const staking_rpc_client_1 = require("./smartchain/rpc/staking-rpc-client");
-const staking_service_1 = require("./smartchain/services/staking-service");
-const bnb_rpc_client_1 = require("./smartchain/rpc/bnb-rpc-client");
-const in_memory_cache_1 = require("./common/cache/in-memory-cache");
-const fee_service_1 = require("./smartchain/services/fee-service");
-const sign_service_1 = require("./smartchain/services/sign-service");
-const common_1 = require("./common");
-test();
-async function test() {
-    const bscRpcUrl = "https://bsc.twnodes.com";
-    const client = (0, viem_1.createPublicClient)({
-        chain: chains_1.bsc,
-        transport: (0, viem_1.http)(bscRpcUrl),
-        batch: {
-            multicall: true,
-        },
-    });
-    let client2 = new staking_rpc_client_1.StakingRpcClient(client);
-    let client3 = new bnb_rpc_client_1.BNBRpcClient();
-    let stakingService = new staking_service_1.StakingService(new in_memory_cache_1.InMemoryCache(), client2, client3);
-    let signService = new sign_service_1.SignService();
-    let feeService = new fee_service_1.FeeService(client, signService);
-    let validators = await stakingService.getValidators();
-    console.log(validators);
-    const feeResult = await feeService.estimateFee({
-        type: common_1.TransactionType.Delegate,
-        chain: chains_1.bsc,
-        amount: (0, viem_1.parseUnits)("1.0", 18),
-        account: "0xf8eb1dbab94aa705e2aaf734d7140ee3bb49cf0d",
-        isMaxAmount: false,
-        validator: validators[0],
-    });
-    console.log(feeResult);
-}
+exports.isSigningWithPrivateKey = exports.isSigningWithAccount = exports.FeeType = exports.DelegationStatus = exports.ValidatorStatus = exports.TransactionType = exports.BalanceType = exports.ChainEcosystemType = exports.GuardianChainType = exports.BSC_CHAIN = exports.getSupportedChains = exports.GuardianSDK = void 0;
+var sdk_1 = require("./sdk");
+Object.defineProperty(exports, "GuardianSDK", { enumerable: true, get: function () { return sdk_1.GuardianSDK; } });
+Object.defineProperty(exports, "getSupportedChains", { enumerable: true, get: function () { return sdk_1.getSupportedChains; } });
+var chain_1 = require("./common/chain");
+Object.defineProperty(exports, "BSC_CHAIN", { enumerable: true, get: function () { return chain_1.BSC_CHAIN; } });
+Object.defineProperty(exports, "GuardianChainType", { enumerable: true, get: function () { return chain_1.GuardianChainType; } });
+Object.defineProperty(exports, "ChainEcosystemType", { enumerable: true, get: function () { return chain_1.ChainEcosystemType; } });
+var common_1 = require("./common");
+Object.defineProperty(exports, "BalanceType", { enumerable: true, get: function () { return common_1.BalanceType; } });
+Object.defineProperty(exports, "TransactionType", { enumerable: true, get: function () { return common_1.TransactionType; } });
+Object.defineProperty(exports, "ValidatorStatus", { enumerable: true, get: function () { return common_1.ValidatorStatus; } });
+Object.defineProperty(exports, "DelegationStatus", { enumerable: true, get: function () { return common_1.DelegationStatus; } });
+Object.defineProperty(exports, "FeeType", { enumerable: true, get: function () { return common_1.FeeType; } });
+var common_2 = require("./common");
+Object.defineProperty(exports, "isSigningWithAccount", { enumerable: true, get: function () { return common_2.isSigningWithAccount; } });
+Object.defineProperty(exports, "isSigningWithPrivateKey", { enumerable: true, get: function () { return common_2.isSigningWithPrivateKey; } });
 //# sourceMappingURL=index.js.map

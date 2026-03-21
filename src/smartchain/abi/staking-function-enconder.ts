@@ -50,7 +50,7 @@ export function encodeGetSharesByPooledBNBData(amount: bigint): Hex {
 export function encodeGetPooledBNBData(delegator: Address): Hex {
   return encodeFunctionCall(
     "getPooledBNB(address)",
-    [{ name: "accout", type: "address" }],
+    [{ name: "account", type: "address" }],
     [delegator]
   );
 }

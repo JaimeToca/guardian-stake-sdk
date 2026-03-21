@@ -124,7 +124,7 @@ export class SignService implements SignServiceContract {
       nonce
     );
 
-    return serializeTransaction({ unsignedTransaction, r, s, v });
+    return serializeTransaction(unsignedTransaction, { r, s, v });
   }
 
   /**
@@ -239,7 +239,7 @@ export class SignService implements SignServiceContract {
    * @param validator The validator input, which can be an `Address` string or a `Validator` object.
    * @returns The blockchain address (of type `Address`) of the validator.
    */
-  getValidatorAddress(validator: Validator | OperatorAddress): Address {
+  private getValidatorAddress(validator: Validator | OperatorAddress): Address {
     if (typeof validator === "string") {
       return validator;
     } else {

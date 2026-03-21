@@ -3,6 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BNBRpcClient = void 0;
 const rpc_1 = require("../../common/rpc");
 class BNBRpcClient {
+    static BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
+    static VALIDATORS_LIMIT = "100";
+    static VALIDATORS_OFFSET = "0";
     async getValidators() {
         const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/validator/all`;
         const response = await (0, rpc_1.fetchOrError)({
@@ -25,7 +28,4 @@ class BNBRpcClient {
     }
 }
 exports.BNBRpcClient = BNBRpcClient;
-BNBRpcClient.BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
-BNBRpcClient.VALIDATORS_LIMIT = "100";
-BNBRpcClient.VALIDATORS_OFFSET = "0";
 //# sourceMappingURL=bnb-rpc-client.js.map

@@ -17,6 +17,6 @@ export enum ApiErrorType {
 export interface ApiErrorDetails {
   status?: number; // The HTTP status code of the response (e.g., 404, 500)
   statusText?: string; // The HTTP status message (e.g., "Not Found", "Internal Server Error").
-  data?: any; // The error payload received from the server, if any
+  data?: unknown; // The error payload received from the server, if any
   type: ApiErrorType; // The categorized type of the API error.
 }
