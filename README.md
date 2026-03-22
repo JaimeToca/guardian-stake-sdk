@@ -1,4 +1,4 @@
-# bnb-native-staking
+# BSC Staking
 
 A TypeScript SDK for interacting with **BNB Smart Chain native staking**. It abstracts the low-level contract calls and RPC interactions behind a clean, type-safe API so you can build staking features without dealing with ABI encoding, multicall batching, or BSC-specifics.
 
