@@ -110,7 +110,7 @@ npm install bnb-native-staking viem
 
 ```typescript
 import { GuardianSDK, BSC_CHAIN, TransactionType } from "bnb-native-staking";
-import { parseEther } from "viem";
+import { formatEther, parseEther } from "viem";
 
 const sdk = new GuardianSDK({
   chains: {
@@ -118,23 +118,40 @@ const sdk = new GuardianSDK({
   },
 });
 
+const ADDRESS = "0xYourAddress";
+
 // 1. Fetch all validators
 const validators = await sdk.getValidators(BSC_CHAIN);
+console.log(`${validators.length} validators found`);
 
-// 2. Estimate fee
+// 2. Fetch delegations for an address
+const { delegations, stakingSummary } = await sdk.getDelegations(BSC_CHAIN, ADDRESS);
+console.log(`${delegations.length} delegations, max APY: ${stakingSummary.maxApy}%`);
+
+// 3. Fetch balances
+const balances = await sdk.getBalances(BSC_CHAIN, ADDRESS);
+for (const balance of balances) {
+  console.log(balance.type, formatEther(balance.amount), "BNB");
+}
+// Available  1.5 BNB
+// Staked     10.0 BNB
+// Pending    2.0 BNB
+// Claimable  0.5 BNB
+
+// 4. Estimate fee for a delegation
 const fee = await sdk.estimateFee({
   type: TransactionType.Delegate,
   chain: BSC_CHAIN,
   amount: parseEther("1"),
-  account: "0xYourAddress",
+  account: ADDRESS,
   isMaxAmount: false,
   validator: validators[0],
 });
 
-// 3. Get nonce
-const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
+// 5. Get nonce
+const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
 
-// 4. Sign and broadcast
+// 6. Sign and broadcast
 const rawTx = await sdk.sign({
   transaction: {
     type: TransactionType.Delegate,
