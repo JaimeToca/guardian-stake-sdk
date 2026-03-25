@@ -459,14 +459,23 @@ estimateFee() ──► getNonce() ──► preHash() ──► [external signe
 
 ## Supported Chains
 
-| Chain | ID | Constant |
-|---|---|---|
-| BNB Smart Chain Mainnet | 56 | `BSC_CHAIN` |
+Import the chain constant for the network you want to interact with:
+
+```typescript
+import { BSC_CHAIN } from "bnb-native-staking";
+```
+
+| Constant | Chain | Chain ID | Explorer |
+|---|---|---|---|
+| `BSC_CHAIN` | BNB Smart Chain Mainnet | 56 | https://bscscan.com |
+
+You can also retrieve all supported chains at runtime:
 
 ```typescript
 import { getSupportedChains } from "bnb-native-staking";
 
 const chains = getSupportedChains();
+// [{ id: "bsc-mainnet", symbol: "BNB", chainId: "56", ... }]
 ```
 
 Adding support for additional chains follows the pattern described in the [architecture guide](./CLAUDE.md).
