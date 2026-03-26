@@ -8,6 +8,7 @@ const sdk = new GuardianSDK({
 });
 
 async function main() {
+  
   // Fetch validators
   const validators = await sdk.getValidators(BSC_CHAIN);
   console.log("Validators:", validators);

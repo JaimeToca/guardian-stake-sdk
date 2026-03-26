@@ -15,18 +15,22 @@ import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 import {
   SignServiceContract,
   Fee,
+  SigningError,
+  SigningErrorCode,
   TransactionType,
   Validator,
   OperatorAddress,
   BaseSignArgs,
   CompileArgs,
-  isSigningWithAccount,
-  isSigningWithPrivateKey,
   PrehashResult,
-  SigningWithAccount,
   SigningWithPrivateKey,
   Transaction,
 } from "../../common";
+import {
+  SigningWithAccount,
+  isSigningWithAccount,
+  isSigningWithPrivateKey,
+} from "../sign-types";
 
 /**
  * Service responsible for handling various aspects of transaction signing,
@@ -61,11 +65,13 @@ export class SignService implements SignServiceContract {
       const account = signingArgs.account;
       signedTransaction = await account.signTransaction(unsignedTransaction);
     } else if (isSigningWithPrivateKey(signingArgs)) {
-      const privateKey = signingArgs.privateKey;
-      const account = privateKeyToAccount(privateKey);
+      const account = privateKeyToAccount(signingArgs.privateKey.toHex());
       signedTransaction = await account.signTransaction(unsignedTransaction);
     } else {
-      throw Error("Invalid Arguments for signing");
+      throw new SigningError(
+        SigningErrorCode.INVALID_SIGNING_ARGS,
+        "signingArgs must contain either a privateKey (SigningWithPrivateKey) or an account (SigningWithAccount)."
+      );
     }
 
     return signedTransaction;
@@ -226,8 +232,9 @@ export class SignService implements SignServiceContract {
         };
       }
       default:
-        throw new Error(
-          "Cannot build call data due to unsupported transaction type"
+        throw new SigningError(
+          SigningErrorCode.UNSUPPORTED_TRANSACTION_TYPE,
+          `Cannot build call data: unsupported transaction type "${(transaction as Transaction).type}".`
         );
     }
   }

@@ -1,29 +1,26 @@
-import { Hex } from "viem";
+import { HexString } from "../entity/types";
 import {
   BaseSignArgs,
   CompileArgs,
   PrehashResult,
-  SigningWithAccount,
   SigningWithPrivateKey,
 } from "./sign-types";
 import { Transaction } from "./transaction-types";
 
 /**
  * @interface SignServiceContract
- * @description Defines the contract for a service dedicated to cryptographic signing operations
- * and related transaction preparation functionalities. This interface standardizes how
- * transactions are signed, pre-hashed, compiled, and how call data is built.
+ * @description Defines the chain-agnostic contract for cryptographic signing operations.
+ * Chain-specific implementations (e.g., BSC, TRON) may extend this contract to support
+ * additional signer types (e.g., viem accounts, TronWeb accounts).
  */
 export interface SignServiceContract {
   /**
    * @method sign
-   * @description Performs a cryptographic signature operation on transaction data.
-   * This method supports signing using either a direct private key or an account abstraction.
-   * @param {SigningWithPrivateKey | SigningWithAccount} signingArgs - The arguments required for the signing process,
-   * encapsulating either a private key or an account object along with transaction details.
-   * @returns {Promise<Hex>} A promise that resolves to the completed cryptographic signature in hexadecimal format.
+   * @description Signs a transaction using a raw private key.
+   * @param {SigningWithPrivateKey} signingArgs - The transaction details and private key.
+   * @returns {Promise<string>} A promise that resolves to the signed transaction as a hex string.
    */
-  sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex>;
+  sign(signingArgs: SigningWithPrivateKey): Promise<string>;
 
   /**
    * @method prehash
@@ -42,25 +39,21 @@ export interface SignServiceContract {
    * into a final, deployable hexadecimal string that can be broadcast to the blockchain.
    * @param {CompileArgs} compileArgs - The arguments required for compilation, which typically include
    * the original transaction details and the `r`, `s`, and `v` components of the signature.
-   * @returns {Promise<Hex>} A promise that resolves to the fully compiled and RLP-encoded transaction
+   * @returns {Promise<string>} A promise that resolves to the fully compiled transaction
    * in hexadecimal format, ready for submission to a node.
    */
-  compile(compileArgs: CompileArgs): Promise<Hex>;
+  compile(compileArgs: CompileArgs): Promise<string>;
 
   /**
    * @method buildCallData
    * @description Constructs the hexadecimal call data and the associated amount for a given transaction.
-   * This data is typically used when interacting with smart contracts or sending value.
-   * @param {Transaction} transaction - The transaction object from which to extract or construct
-   * the necessary call data and value.
-   * @returns {{ data: Hex; amount: bigint; }} An object containing:
-   * - `data`: The hexadecimal string representing the function call data or message.
-   * - `amount`: The amount of native currency (e.g., Ether, BNB) to be sent with the transaction, as a `bigint`.
+   * @param {Transaction} transaction - The transaction object from which to construct the call data.
+   * @returns {{ data: HexString; amount: bigint; }} An object containing the call data and value.
    */
   buildCallData(
     transaction: Transaction
   ): {
-    data: Hex;
+    data: HexString;
     amount: bigint;
   };
 }

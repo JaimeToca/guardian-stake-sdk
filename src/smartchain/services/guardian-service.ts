@@ -1,29 +1,31 @@
-import { Address, Hex } from "viem";
+import { Address, isAddress } from "viem";
 import { GuardianChain } from "../../common/chain";
 import { Balance } from "../../common/service/balance-types";
 import { Fee } from "../../common/service/fee-types";
 import { GuardianServiceContract } from "../../common/service/guardian-service-contract";
 import {
   SigningWithPrivateKey,
-  SigningWithAccount,
   BaseSignArgs,
   PrehashResult,
   CompileArgs,
-} from "../../common/service/sign-types";
+  HexString,
+} from "../../common";
 import { Transaction } from "../../common/service/transaction-types";
 import {
   BalanceServiceContract,
   Delegations,
   FeeServiceContract,
   NonceServiceContract,
-  SignServiceContract,
   StakingServiceContract,
   Validator,
 } from "../../common";
+import { SigningWithAccount } from "../sign-types";
+import { SignService } from "./sign-service";
 
 /**
- * @interface GuardianServiceContract
- * Defines the contract for the GuardianService, outlining the methods it must implement.
+ * BSC implementation of `GuardianServiceContract`.
+ * Extends the base `sign()` contract to also accept a viem `PrivateKeyAccount`
+ * via `SigningWithAccount` — a BSC-specific convenience.
  */
 export class GuardianService implements GuardianServiceContract {
   /**
@@ -32,106 +34,64 @@ export class GuardianService implements GuardianServiceContract {
    * @param {BalanceServiceContract} balanceService - Handles retrieving account balances.
    * @param {NonceServiceContract} nonceService - Manages transaction nonces for an address.
    * @param {FeeServiceContract} feeService - Provides functionality for estimating transaction fees.
-   * @param {SignServiceContract} signService - Handles cryptographic signing operations.
-   * @param {StakingServiceContract} stakingService - Manages interactions related to staking, like validators and delegations.
+   * @param {SignService} signService - BSC signing service; accepts both private key and viem account.
+   * @param {StakingServiceContract} stakingService - Manages interactions related to staking.
    */
   constructor(
     private readonly chain: GuardianChain,
     private balanceService: BalanceServiceContract,
     private nonceService: NonceServiceContract,
     private feeService: FeeServiceContract,
-    private signService: SignServiceContract,
+    private signService: SignService,
     private stakingService: StakingServiceContract
   ) {}
 
-  /**
-   * Retrieves a list of all active validators on the network.
-   * @returns {Promise<Validator[]>} A promise that resolves to an array of validator objects.
-   */
   getValidators(): Promise<Validator[]> {
     return this.stakingService.getValidators();
   }
 
-  /**
-   * Retrieves the staking delegations for a given address.
-   * @param {Address} address - The blockchain address to query for delegations.
-   * @returns {Promise<Delegations>} A promise that resolves to the delegation information for the address.
-   */
-  getDelegations(address: Address): Promise<Delegations> {
-    return this.stakingService.getDelegations(address);
+  getDelegations(address: string): Promise<Delegations> {
+    return this.stakingService.getDelegations(address as Address);
   }
 
-  /**
-   * Returns information about the configured blockchain chain.
-   * @returns {GuardianChain} An object containing details about the blockchain chain.
-   */
+  isValidAddress(address: string): boolean {
+    return isAddress(address);
+  }
+
   getChainInfo(): GuardianChain {
     return this.chain;
   }
 
-  /**
-   * Retrieves the balances for a given address across different assets.
-   * @param {Address} address - The blockchain address to query for balances.
-   * @returns {Promise<Balance[]>} A promise that resolves to an array of balance objects.
-   */
-  getBalances(address: Address): Promise<Balance[]> {
-    return this.balanceService.getBalances(address);
+  getBalances(address: string): Promise<Balance[]> {
+    return this.balanceService.getBalances(address as Address);
   }
 
-  /**
-   * Retrieves the current transaction nonce for a given address.
-   * The nonce is used to prevent transaction replay attacks and ensure transaction order.
-   * @param {Address} address - The blockchain address to query for its nonce.
-   * @returns {Promise<number>} A promise that resolves to the current nonce.
-   */
-  getNonce(address: Address): Promise<number> {
-    return this.nonceService.getNonce(address);
+  getNonce(address: string): Promise<number> {
+    return this.nonceService.getNonce(address as Address);
   }
 
-  /**
-   * Estimates the transaction fee for a given transaction.
-   * @param {Transaction} transaction - The transaction object for which to estimate the fee.
-   * @returns {Promise<Fee>} A promise that resolves to the estimated fee.
-   */
   estimateFee(transaction: Transaction): Promise<Fee> {
     return this.feeService.estimateFee(transaction);
   }
 
   /**
-   * Signs a transaction or message using either a private key or an account.
-   * @param {SigningWithPrivateKey | SigningWithAccount} signingArgs - The arguments required for signing, either a private key or account details.
-   * @returns {Promise<Hex>} A promise that resolves to the signed data in hexadecimal format.
+   * Signs a transaction using either a raw private key or a viem `PrivateKeyAccount`.
+   * The base contract only exposes `SigningWithPrivateKey`; `SigningWithAccount` is
+   * a BSC-specific extension accessible via the concrete `GuardianService` type.
    */
-  sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex> {
+  sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<string> {
     return this.signService.sign(signingArgs);
   }
 
-  /**
-   * Computes the pre-hash of transaction data before final signing.
-   * This is often an intermediate step in the signing process.
-   * @param {BaseSignArgs} preHasArgs - The base arguments for pre-hashing.
-   * @returns {Promise<PrehashResult>} A promise that resolves to the pre-hash result.
-   */
   prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult> {
     return this.signService.prehash(preHasArgs);
   }
 
-  /**
-   * Compiles transaction data into a format suitable for execution on the blockchain.
-   * @param {CompileArgs} compileArgs - The arguments required for compilation.
-   * @returns {Promise<Hex>} A promise that resolves to the compiled data in hexadecimal format.
-   */
-  compile(compileArgs: CompileArgs): Promise<Hex> {
+  compile(compileArgs: CompileArgs): Promise<string> {
     return this.signService.compile(compileArgs);
   }
 
-  /**
-   * Builds the call data and amount for a given transaction.
-   * This prepares the raw data and value to be sent with a transaction.
-   * @param {Transaction} transaction - The transaction object from which to build call data.
-   * @returns {{ data: Hex; amount: bigint }} An object containing the hexadecimal call data and the transaction amount as a bigint.
-   */
-  buildCallData(transaction: Transaction): { data: Hex; amount: bigint } {
+  buildCallData(transaction: Transaction): { data: HexString; amount: bigint } {
     return this.signService.buildCallData(transaction);
   }
 }

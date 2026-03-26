@@ -1,4 +1,5 @@
-import { Hex, PrivateKeyAccount } from "viem";
+import { HexString } from "../entity/types";
+import { PrivateKey } from "../entity/private-key";
 import { Fee } from "./fee-types";
 import { Transaction } from "./transaction-types";
 
@@ -17,20 +18,12 @@ export type BaseSignArgs = {
 };
 
 /**
- * @typedef {BaseSignArgs & { privateKey: Hex }} SigningWithPrivateKey
- * @description Extends `BaseSignArgs` to include a private key for signing.
- * This type is used when the signing operation requires direct access to the private key.
- * @property {Hex} privateKey - The private key (in hexadecimal format) used for signing the transaction.
+ * @typedef {BaseSignArgs & { privateKey: PrivateKey }} SigningWithPrivateKey
+ * @description Extends `BaseSignArgs` to include a validated private key for signing.
+ * This is the chain-agnostic signing path — any chain implementation can accept a private key.
+ * @property {PrivateKey} privateKey - A validated `PrivateKey` instance.
  */
-export type SigningWithPrivateKey = BaseSignArgs & { privateKey: Hex };
-
-/**
- * @typedef {BaseSignArgs & { account: PrivateKeyAccount }} SigningWithAccount
- * @description Extends `BaseSignArgs` to include a Viem `PrivateKeyAccount` for signing.
- * This type is used when the signing operation is handled by an account object, often abstracting the private key.
- * @property {PrivateKeyAccount} account - The Viem `PrivateKeyAccount` object used for signing.
- */
-export type SigningWithAccount = BaseSignArgs & { account: PrivateKeyAccount };
+export type SigningWithPrivateKey = BaseSignArgs & { privateKey: PrivateKey };
 
 /**
  * @typedef {object} CompileArgs
@@ -38,56 +31,28 @@ export type SigningWithAccount = BaseSignArgs & { account: PrivateKeyAccount };
  * ready-to-broadcast hexadecimal format. This often includes the raw transaction details
  * along with the cryptographic signature components.
  * @property {BaseSignArgs} signArgs - The base arguments originally used for the signing process.
- * @property {Hex} r - The 'r' component of the ECDSA signature (hexadecimal).
- * @property {Hex} s - The 's' component of the ECDSA signature (hexadecimal).
+ * @property {HexString} r - The 'r' component of the ECDSA signature (hexadecimal).
+ * @property {HexString} s - The 's' component of the ECDSA signature (hexadecimal).
  * @property {bigint} v - The 'v' component (recovery ID) of the ECDSA signature.
  */
 export type CompileArgs = {
   signArgs: BaseSignArgs;
-  r: Hex;
-  s: Hex;
+  r: HexString;
+  s: HexString;
   v: bigint;
 };
-
-/**
- * @function isSigningWithPrivateKey
- * @description Type guard function to determine if a given `signingArgs` object is of type `SigningWithPrivateKey`.
- * This allows for type-safe handling of different signing argument types.
- * @param {SigningWithPrivateKey | SigningWithAccount} args - The arguments to check.
- * @returns {args is SigningWithPrivateKey} `true` if `args` contains a `privateKey` property, 
- * indicating it's a `SigningWithPrivateKey` type; otherwise, `false`.
- */
-export function isSigningWithPrivateKey(
-  args: SigningWithPrivateKey | SigningWithAccount
-): args is SigningWithPrivateKey {
-  return "privateKey" in args;
-}
-
-/**
- * @function isSigningWithAccount
- * @description Type guard function to determine if a given `signingArgs` object is of type `SigningWithAccount`.
- * This allows for type-safe handling of different signing argument types.
- * @param {SigningWithPrivateKey | SigningWithAccount} args - The arguments to check.
- * @returns {args is SigningWithAccount} `true` if `args` contains an `account` property, indicating 
- * it's a `SigningWithAccount` type; otherwise, `false`.
- */
-export function isSigningWithAccount(
-  args: SigningWithPrivateKey | SigningWithAccount
-): args is SigningWithAccount {
-  return "account" in args;
-}
 
 /**
  * @typedef {object} PrehashResult
  * @description Represents the result of a pre-hashing operation, typically performed before a final signature.
  * This might involve serialization of the transaction data into a format ready for hashing.
- * @property {Hex} serializedTransaction - The transaction data serialized into a hexadecimal string,
+ * @property {HexString} serializedTransaction - The transaction data serialized into a hexadecimal string,
  * often used for external signing services (e.g., MPC servers).
  * @property {BaseSignArgs} signArgs - The original base signing arguments. This is included
  * because some compilation processes (like Viem's) might not accept already serialized data
  * and prefer the original, unserialized arguments.
  */
 export type PrehashResult = {
-  serializedTransaction: Hex; // used for MPC server
+  serializedTransaction: HexString; // used for MPC server
   signArgs: BaseSignArgs; // pass into compile as viem does not offer unserialized
 };

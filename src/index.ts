@@ -20,11 +20,15 @@ export type {
 } from "./common";
 
 // Signing types
-export { isSigningWithAccount, isSigningWithPrivateKey } from "./common";
+export { PrivateKey, Curve } from "./common";
 export type {
   BaseSignArgs,
   SigningWithPrivateKey,
-  SigningWithAccount,
   CompileArgs,
   PrehashResult,
+  HexString,
 } from "./common";
+
+// BSC-specific signing types (viem account-based signing)
+export { isSigningWithPrivateKey, isSigningWithAccount } from "./smartchain/sign-types";
+export type { SigningWithAccount } from "./smartchain/sign-types";

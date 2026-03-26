@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isSigningWithPrivateKey = exports.isSigningWithAccount = exports.FeeType = exports.DelegationStatus = exports.ValidatorStatus = exports.TransactionType = exports.BalanceType = exports.ChainEcosystemType = exports.GuardianChainType = exports.BSC_CHAIN = exports.getSupportedChains = exports.GuardianSDK = void 0;
+exports.isSigningWithAccount = exports.isSigningWithPrivateKey = exports.Curve = exports.PrivateKey = exports.FeeType = exports.DelegationStatus = exports.ValidatorStatus = exports.TransactionType = exports.BalanceType = exports.ChainEcosystemType = exports.GuardianChainType = exports.BSC_CHAIN = exports.getSupportedChains = exports.GuardianSDK = void 0;
 var sdk_1 = require("./sdk");
 Object.defineProperty(exports, "GuardianSDK", { enumerable: true, get: function () { return sdk_1.GuardianSDK; } });
 Object.defineProperty(exports, "getSupportedChains", { enumerable: true, get: function () { return sdk_1.getSupportedChains; } });
@@ -15,6 +15,9 @@ Object.defineProperty(exports, "ValidatorStatus", { enumerable: true, get: funct
 Object.defineProperty(exports, "DelegationStatus", { enumerable: true, get: function () { return common_1.DelegationStatus; } });
 Object.defineProperty(exports, "FeeType", { enumerable: true, get: function () { return common_1.FeeType; } });
 var common_2 = require("./common");
-Object.defineProperty(exports, "isSigningWithAccount", { enumerable: true, get: function () { return common_2.isSigningWithAccount; } });
-Object.defineProperty(exports, "isSigningWithPrivateKey", { enumerable: true, get: function () { return common_2.isSigningWithPrivateKey; } });
+Object.defineProperty(exports, "PrivateKey", { enumerable: true, get: function () { return common_2.PrivateKey; } });
+Object.defineProperty(exports, "Curve", { enumerable: true, get: function () { return common_2.Curve; } });
+var sign_types_1 = require("./smartchain/sign-types");
+Object.defineProperty(exports, "isSigningWithPrivateKey", { enumerable: true, get: function () { return sign_types_1.isSigningWithPrivateKey; } });
+Object.defineProperty(exports, "isSigningWithAccount", { enumerable: true, get: function () { return sign_types_1.isSigningWithAccount; } });
 //# sourceMappingURL=index.js.map

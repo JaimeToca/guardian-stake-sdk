@@ -6,6 +6,7 @@ const staking_function_enconder_1 = require("../abi/staking-function-enconder");
 const accounts_1 = require("viem/accounts");
 const multicall_stake_abi_1 = require("../abi/multicall-stake-abi");
 const common_1 = require("../../common");
+const sign_types_1 = require("../sign-types");
 class SignService {
     async sign(signingArgs) {
         const fee = signingArgs.fee;
@@ -13,13 +14,12 @@ class SignService {
         const transaction = signingArgs.transaction;
         const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
         let signedTransaction;
-        if ((0, common_1.isSigningWithAccount)(signingArgs)) {
+        if ((0, sign_types_1.isSigningWithAccount)(signingArgs)) {
             const account = signingArgs.account;
             signedTransaction = await account.signTransaction(unsignedTransaction);
         }
-        else if ((0, common_1.isSigningWithPrivateKey)(signingArgs)) {
-            const privateKey = signingArgs.privateKey;
-            const account = (0, accounts_1.privateKeyToAccount)(privateKey);
+        else if ((0, sign_types_1.isSigningWithPrivateKey)(signingArgs)) {
+            const account = (0, accounts_1.privateKeyToAccount)(signingArgs.privateKey.toHex());
             signedTransaction = await account.signTransaction(unsignedTransaction);
         }
         else {

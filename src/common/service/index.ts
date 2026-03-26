@@ -22,12 +22,9 @@ export {
 
 export {
   SigningWithPrivateKey,
-  SigningWithAccount,
   BaseSignArgs,
   CompileArgs,
   PrehashResult,
-  isSigningWithAccount,
-  isSigningWithPrivateKey,
 } from "./sign-types";
 
 export { GuardianServiceContract } from "./guardian-service-contract";

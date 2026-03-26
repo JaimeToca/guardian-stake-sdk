@@ -14,7 +14,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Curve = exports.PrivateKey = void 0;
 __exportStar(require("./cache"), exports);
 __exportStar(require("./rpc"), exports);
 __exportStar(require("./service"), exports);
+__exportStar(require("./types"), exports);
+var private_key_1 = require("./private-key");
+Object.defineProperty(exports, "PrivateKey", { enumerable: true, get: function () { return private_key_1.PrivateKey; } });
+Object.defineProperty(exports, "Curve", { enumerable: true, get: function () { return private_key_1.Curve; } });
 //# sourceMappingURL=index.js.map

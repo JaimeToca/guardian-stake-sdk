@@ -1,17 +1,20 @@
-import { Hex, isAddress } from "viem";
 import { getChainById, GuardianChain, SUPPORTED_CHAINS } from "../common/chain";
 import { provideGuarService } from "../smartchain";
 import {
   Balance,
   BaseSignArgs,
   CompileArgs,
+  ConfigError,
+  ConfigErrorCode,
   Delegations,
   Fee,
   GuardianServiceContract,
   PrehashResult,
-  SigningWithAccount,
   SigningWithPrivateKey,
   Transaction,
+  TransactionType,
+  ValidationError,
+  ValidationErrorCode,
   Validator,
 } from "../common";
 import { SdkConfig } from "./sdk-config-types";
@@ -121,10 +124,14 @@ export class GuardianSDK {
    * @throws Error if the provided address is invalid.
    */
   getDelegations(chain: GuardianChain, address: string): Promise<Delegations> {
-    if (!isAddress(address)) {
-      throw Error("Invalid Address parameter");
+    const service = this.getInternalService(chain);
+    if (!service.isValidAddress(address)) {
+      throw new ValidationError(
+        ValidationErrorCode.INVALID_ADDRESS,
+        `"${address}" is not a valid address for chain "${chain.chainId}".`
+      );
     }
-    return this.getInternalService(chain).getDelegations(address);
+    return service.getDelegations(address);
   }
 
   /**
@@ -156,11 +163,15 @@ export class GuardianSDK {
    * @throws Error if the provided address is invalid.
    */
   getBalances(chain: GuardianChain, address: string): Promise<Balance[]> {
-    if (!isAddress(address)) {
-      throw Error("Invalid Address parameter");
+    const service = this.getInternalService(chain);
+    if (!service.isValidAddress(address)) {
+      throw new ValidationError(
+        ValidationErrorCode.INVALID_ADDRESS,
+        `"${address}" is not a valid address for chain "${chain.chainId}".`
+      );
     }
 
-    return this.getInternalService(chain).getBalances(address);
+    return service.getBalances(address);
   }
 
   /**
@@ -171,11 +182,15 @@ export class GuardianSDK {
    * @throws Error if the provided address is invalid.
    */
   getNonce(chain: GuardianChain, address: string): Promise<number> {
-    if (!isAddress(address)) {
-      throw Error("Invalid Address parameter");
+    const service = this.getInternalService(chain);
+    if (!service.isValidAddress(address)) {
+      throw new ValidationError(
+        ValidationErrorCode.INVALID_ADDRESS,
+        `"${address}" is not a valid address for chain "${chain.chainId}".`
+      );
     }
 
-    return this.getInternalService(chain).getNonce(address);
+    return service.getNonce(address);
   }
 
   /**
@@ -226,6 +241,7 @@ export class GuardianSDK {
    * @returns A promise that resolves to a Fee object.
    */
   estimateFee(transaction: Transaction): Promise<Fee> {
+    validateTransaction(transaction);
     const chain = transaction.chain;
 
     return this.getInternalService(chain).estimateFee(transaction);
@@ -236,9 +252,8 @@ export class GuardianSDK {
    * @param signingArgs The arguments required for signing.
    * @returns A promise that resolves to the signed transaction as a hexadecimal string.
    */
-  sign(
-    signingArgs: SigningWithPrivateKey | SigningWithAccount
-  ): Promise<string> {
+  sign(signingArgs: SigningWithPrivateKey): Promise<string> {
+    validateSignArgs(signingArgs);
     const chain = signingArgs.transaction.chain;
 
     return this.getInternalService(chain).sign(signingArgs);
@@ -258,6 +273,7 @@ export class GuardianSDK {
    * that is ready to be signed.
    */
   preHash(preHasArgs: BaseSignArgs): Promise<PrehashResult> {
+    validateSignArgs(preHasArgs);
     const chain = preHasArgs.transaction.chain;
 
     return this.getInternalService(chain).prehash(preHasArgs);
@@ -281,7 +297,8 @@ export class GuardianSDK {
    * @returns A promise that resolves to a `Hex` string, representing the fully compiled,
    * ready-to-broadcast transaction.
    */
-  compile(compileArgs: CompileArgs): Promise<Hex> {
+  compile(compileArgs: CompileArgs): Promise<string> {
+    validateSignArgs(compileArgs.signArgs);
     const chain = compileArgs.signArgs.transaction.chain;
 
     return this.getInternalService(chain).compile(compileArgs);
@@ -297,9 +314,12 @@ export class GuardianSDK {
   private getInternalService(
     guardianChain: GuardianChain
   ): GuardianServiceContract {
-    const chainId = guardianChain.chainId;
+    const chainId = guardianChain.chainId; // adjust this once supporting more chains
     if (chainId === undefined) {
-      throw Error("Cannot get blockchain service, chaiId is undefined");
+      throw new ConfigError(
+        ConfigErrorCode.MISSING_CHAIN_ID,
+        "Cannot get blockchain service: chainId is undefined."
+      );
     }
 
     if (this.initializedServices.has(chainId)) {
@@ -308,14 +328,16 @@ export class GuardianSDK {
 
     const chain = getChainById(chainId);
     if (!chain) {
-      throw new Error(
+      throw new ConfigError(
+        ConfigErrorCode.UNSUPPORTED_CHAIN,
         `Chain with ID "${chainId}" is not supported by the Guardian SDK. Please check 'getSupportedChains()'.`
       );
     }
 
     const serviceConfig = this.config.chains[chainId];
     if (!serviceConfig) {
-      throw new Error(
+      throw new ConfigError(
+        ConfigErrorCode.MISSING_CHAIN_CONFIG,
         `Runtime configuration for chain "${chainId}" is missing in the provided SDK config. ` +
           `Please ensure 'sdkConfig.chains.${chainId}' is defined.`
       );
@@ -328,12 +350,59 @@ export class GuardianSDK {
         guardianService = provideGuarService(chain, serviceConfig.rpcUrl);
         break;
       default:
-        throw new Error(
-          `Internal SDK Error: No service implementation mapping found for chain type: ${chain.type} (Chain ID: ${chainId})`
+        throw new ConfigError(
+          ConfigErrorCode.UNSUPPORTED_CHAIN,
+          `No service implementation found for chain type: ${chain.type} (Chain ID: ${chainId}).`
         );
     }
 
     this.initializedServices.set(chainId, guardianService);
     return guardianService;
+  }
+}
+
+// ─── Module-level validation helpers ─────────────────────────────────────────
+
+/**
+ * Validates the `amount` field of a transaction.
+ * Claim transactions carry no value so they are exempt from this check.
+ */
+function validateTransaction(transaction: Transaction): void {
+  if (
+    transaction.type !== TransactionType.Claim &&
+    transaction.amount <= 0n
+  ) {
+    throw new ValidationError(
+      ValidationErrorCode.INVALID_AMOUNT,
+      `Transaction amount must be greater than zero (got ${transaction.amount}).`
+    );
+  }
+}
+
+/**
+ * Validates the common fields shared by sign / preHash / compile calls.
+ */
+function validateSignArgs(args: BaseSignArgs): void {
+  validateTransaction(args.transaction);
+
+  if (args.nonce < 0 || !Number.isInteger(args.nonce)) {
+    throw new ValidationError(
+      ValidationErrorCode.INVALID_NONCE,
+      `Nonce must be a non-negative integer (got ${args.nonce}).`
+    );
+  }
+
+  if (args.fee.gasLimit <= 0n) {
+    throw new ValidationError(
+      ValidationErrorCode.INVALID_FEE,
+      `Fee gasLimit must be greater than zero (got ${args.fee.gasLimit}).`
+    );
+  }
+
+  if (args.fee.gasPrice <= 0n) {
+    throw new ValidationError(
+      ValidationErrorCode.INVALID_FEE,
+      `Fee gasPrice must be greater than zero (got ${args.fee.gasPrice}).`
+    );
   }
 }
