@@ -96,15 +96,6 @@ export interface GuardianServiceContract {
   };
 
   /**
-   * @method isValidAddress
-   * @description Validates whether the given string is a valid address for this chain.
-   * Each chain implementation applies its own address format rules.
-   * @param {string} address - The address string to validate.
-   * @returns {boolean} `true` if the address is valid for this chain, `false` otherwise.
-   */
-  isValidAddress(address: string): boolean;
-
-  /**
    * @method getChainInfo
    * @description Retrieves information about the blockchain chain this service is configured for.
    * @returns {GuardianChain} An object containing details about the chain.

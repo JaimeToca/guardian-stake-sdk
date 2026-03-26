@@ -1,5 +1,6 @@
 import { Address, PublicClient } from "viem";
 import { NonceServiceContract } from "../../common/service/nonce-service-contract";
+import { checkIsValidAddress } from "../validations";
 
 /**
  * Service responsible for managing and retrieving transaction nonces for blockchain addresses.
@@ -22,6 +23,8 @@ export class NonceService implements NonceServiceContract {
    * @returns A Promise that resolves to the numerical nonce of the given address.
    */
   getNonce(address: Address): Promise<number> {
+    checkIsValidAddress(address);
+    
     return this.client.getTransactionCount({
       address: address,
     });

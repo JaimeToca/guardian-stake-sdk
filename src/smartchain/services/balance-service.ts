@@ -1,4 +1,4 @@
-import { Address, Chain, PublicClient } from "viem";
+import { Address, PublicClient } from "viem";
 import {
   Balance,
   BalanceServiceContract,
@@ -6,6 +6,7 @@ import {
   DelegationStatus,
   StakingServiceContract,
 } from "../../common";
+import { checkIsValidAddress } from "../validations";
 
 /**
  * Service class responsible for fetching and categorizing different types of token balances
@@ -33,6 +34,8 @@ export class BalanceService implements BalanceServiceContract {
    * @returns A Promise that resolves to an array of `Balance` objects, each representing a different type of balance.
    */
   async getBalances(address: Address): Promise<Balance[]> {
+    checkIsValidAddress(address);
+
     const availableBalanceRequest = this.client.getBalance({
       address: address,
     });

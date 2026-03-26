@@ -14,6 +14,7 @@ import {
   Validator,
   ValidatorStatus,
 } from "../../common";
+import { checkIsValidAddress } from "../validations";
 
 export class StakingService implements StakingServiceContract {
   /**
@@ -120,6 +121,8 @@ export class StakingService implements StakingServiceContract {
    * @returns A promise that resolves to a Delegations object containing a list of delegations and staking summary.
    */
   async getDelegations(address: Address): Promise<Delegations> {
+    checkIsValidAddress(address);
+    
     const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
     const validators = await this.getValidators();
     const activeDelegationsPromise = this.getActiveDelegations(

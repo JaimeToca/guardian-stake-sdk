@@ -54,10 +54,6 @@ export class GuardianService implements GuardianServiceContract {
     return this.stakingService.getDelegations(address as Address);
   }
 
-  isValidAddress(address: string): boolean {
-    return isAddress(address);
-  }
-
   getChainInfo(): GuardianChain {
     return this.chain;
   }

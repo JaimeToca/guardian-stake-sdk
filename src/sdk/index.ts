@@ -75,7 +75,9 @@ export class GuardianSDK {
    * ```
    */
   getValidators(chain: GuardianChain): Promise<Validator[]> {
-    return this.getInternalService(chain).getValidators();
+    const service = this.getInternalService(chain);
+
+    return service.getValidators();
   }
 
   /**
@@ -125,12 +127,7 @@ export class GuardianSDK {
    */
   getDelegations(chain: GuardianChain, address: string): Promise<Delegations> {
     const service = this.getInternalService(chain);
-    if (!service.isValidAddress(address)) {
-      throw new ValidationError(
-        ValidationErrorCode.INVALID_ADDRESS,
-        `"${address}" is not a valid address for chain "${chain.chainId}".`
-      );
-    }
+
     return service.getDelegations(address);
   }
 
@@ -164,12 +161,6 @@ export class GuardianSDK {
    */
   getBalances(chain: GuardianChain, address: string): Promise<Balance[]> {
     const service = this.getInternalService(chain);
-    if (!service.isValidAddress(address)) {
-      throw new ValidationError(
-        ValidationErrorCode.INVALID_ADDRESS,
-        `"${address}" is not a valid address for chain "${chain.chainId}".`
-      );
-    }
 
     return service.getBalances(address);
   }
@@ -183,12 +174,6 @@ export class GuardianSDK {
    */
   getNonce(chain: GuardianChain, address: string): Promise<number> {
     const service = this.getInternalService(chain);
-    if (!service.isValidAddress(address)) {
-      throw new ValidationError(
-        ValidationErrorCode.INVALID_ADDRESS,
-        `"${address}" is not a valid address for chain "${chain.chainId}".`
-      );
-    }
 
     return service.getNonce(address);
   }
@@ -241,7 +226,6 @@ export class GuardianSDK {
    * @returns A promise that resolves to a Fee object.
    */
   estimateFee(transaction: Transaction): Promise<Fee> {
-    validateTransaction(transaction);
     const chain = transaction.chain;
 
     return this.getInternalService(chain).estimateFee(transaction);
@@ -253,7 +237,6 @@ export class GuardianSDK {
    * @returns A promise that resolves to the signed transaction as a hexadecimal string.
    */
   sign(signingArgs: SigningWithPrivateKey): Promise<string> {
-    validateSignArgs(signingArgs);
     const chain = signingArgs.transaction.chain;
 
     return this.getInternalService(chain).sign(signingArgs);
@@ -273,7 +256,6 @@ export class GuardianSDK {
    * that is ready to be signed.
    */
   preHash(preHasArgs: BaseSignArgs): Promise<PrehashResult> {
-    validateSignArgs(preHasArgs);
     const chain = preHasArgs.transaction.chain;
 
     return this.getInternalService(chain).prehash(preHasArgs);
@@ -298,7 +280,6 @@ export class GuardianSDK {
    * ready-to-broadcast transaction.
    */
   compile(compileArgs: CompileArgs): Promise<string> {
-    validateSignArgs(compileArgs.signArgs);
     const chain = compileArgs.signArgs.transaction.chain;
 
     return this.getInternalService(chain).compile(compileArgs);
@@ -358,51 +339,5 @@ export class GuardianSDK {
 
     this.initializedServices.set(chainId, guardianService);
     return guardianService;
-  }
-}
-
-// ─── Module-level validation helpers ─────────────────────────────────────────
-
-/**
- * Validates the `amount` field of a transaction.
- * Claim transactions carry no value so they are exempt from this check.
- */
-function validateTransaction(transaction: Transaction): void {
-  if (
-    transaction.type !== TransactionType.Claim &&
-    transaction.amount <= 0n
-  ) {
-    throw new ValidationError(
-      ValidationErrorCode.INVALID_AMOUNT,
-      `Transaction amount must be greater than zero (got ${transaction.amount}).`
-    );
-  }
-}
-
-/**
- * Validates the common fields shared by sign / preHash / compile calls.
- */
-function validateSignArgs(args: BaseSignArgs): void {
-  validateTransaction(args.transaction);
-
-  if (args.nonce < 0 || !Number.isInteger(args.nonce)) {
-    throw new ValidationError(
-      ValidationErrorCode.INVALID_NONCE,
-      `Nonce must be a non-negative integer (got ${args.nonce}).`
-    );
-  }
-
-  if (args.fee.gasLimit <= 0n) {
-    throw new ValidationError(
-      ValidationErrorCode.INVALID_FEE,
-      `Fee gasLimit must be greater than zero (got ${args.fee.gasLimit}).`
-    );
-  }
-
-  if (args.fee.gasPrice <= 0n) {
-    throw new ValidationError(
-      ValidationErrorCode.INVALID_FEE,
-      `Fee gasPrice must be greater than zero (got ${args.fee.gasPrice}).`
-    );
   }
 }
