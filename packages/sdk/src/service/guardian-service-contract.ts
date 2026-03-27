@@ -1,4 +1,3 @@
-import type { HexString } from "../entity/types";
 import type { GuardianChain } from "../chain";
 import type { Balance } from "./balance-types";
 import type { Transaction } from "./transaction-types";
@@ -14,8 +13,7 @@ export interface GuardianServiceContract {
   getNonce(address: string): Promise<number>;
   estimateFee(transaction: Transaction): Promise<Fee>;
   sign(signingArgs: SigningWithPrivateKey): Promise<string>;
-  prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult>;
+  prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult>;
   compile(compileArgs: CompileArgs): Promise<string>;
-  buildCallData(transaction: Transaction): { data: HexString; amount: bigint };
   getChainInfo(): GuardianChain;
 }

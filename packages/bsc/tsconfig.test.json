@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "@guardian/sdk": ["../sdk/src/index.ts"]
+      "@guardian/sdk": ["../sdk/src/index.ts"],
+      "@guardian/sdk/testing": ["../sdk/src/testing/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],

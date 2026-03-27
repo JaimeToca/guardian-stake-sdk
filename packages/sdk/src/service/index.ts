@@ -6,7 +6,15 @@ export { NonceServiceContract } from "./nonce-service-contract";
 
 export { Balance, BalanceType } from "./balance-types";
 export { FeeType, Fee } from "./fee-types";
-export { Transaction, OperatorAddress, TransactionType } from "./transaction-types";
+export {
+  Transaction,
+  DelegateTransaction,
+  UndelegateTransaction,
+  RedelegateTransaction,
+  ClaimTransaction,
+  OperatorAddress,
+  TransactionType,
+} from "./transaction-types";
 export {
   Validator,
   ValidatorStatus,

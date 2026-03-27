@@ -55,6 +55,7 @@ As a result, developers are still burdened with deep staking knowledge, even whe
 - [Sample — Delegate on BNB Smart Chain](#sample--delegate-on-bnb-smart-chain)
 - [Signing Flows](#signing-flows)
 - [Logging](#logging)
+- [Testing](#testing)
 - [Error Handling](#error-handling)
   - [ValidationError](#validationerror)
   - [ConfigError](#configerror)
@@ -464,6 +465,114 @@ const sdk = new GuardianSDK([
 | `warn` | Retries, unexpected empty responses |
 
 > **Note:** The SDK does **not** log errors that are thrown — those are left entirely to the caller to avoid duplicate log entries. Private keys and signatures are **never** logged at any level.
+
+---
+
+## Testing
+
+`@guardian/sdk` ships test utilities so you can unit-test your own code without hitting real RPC nodes.
+
+### `createMockService(overrides?, chain?)`
+
+Returns a fully-typed `GuardianServiceContract` with no-op defaults. Pass only the methods relevant to your test.
+
+```typescript
+import { describe, it, expect, vi } from "vitest";
+import { GuardianSDK } from "@guardian/sdk";
+import { createMockService, mockValidator } from "@guardian/sdk/testing";
+import { BSC_CHAIN } from "@guardian/bsc";
+
+describe("my staking feature", () => {
+  it("renders the validator with the highest APY", async () => {
+    const sdk = new GuardianSDK([
+      createMockService({
+        getValidators: vi.fn().mockResolvedValue([
+          mockValidator({ name: "Alpha", apy: 8 }),
+          mockValidator({ name: "Beta",  apy: 12 }),
+        ]),
+      }),
+    ]);
+
+    const validators = await sdk.getValidators(BSC_CHAIN);
+    const best = validators.sort((a, b) => b.apy - a.apy)[0];
+
+    expect(best.name).toBe("Beta");
+  });
+});
+```
+
+### Fixture helpers
+
+All fixtures accept an optional `overrides` object — set only what matters for your test, everything else gets a sensible default.
+
+| Helper | Returns | Use for |
+|--------|---------|---------|
+| `mockValidator(overrides?)` | `Validator` | Validator lists, staking UI |
+| `mockDelegation(overrides?)` | `Delegation` | Portfolio, delegation status |
+| `mockDelegations(overrides?)` | `Delegations` | Full `getDelegations` response including `StakingSummary` |
+| `mockStakingSummary(overrides?)` | `StakingSummary` | Protocol parameter display |
+| `mockBalance(type?, overrides?)` | `Balance` | Balance display, available/staked/pending/claimable |
+| `mockFee(overrides?)` | `Fee` | Fee display, sign arg construction |
+| `mockDelegateTransaction(overrides?)` | `DelegateTransaction` | Fee estimation, signing tests |
+| `mockUndelegateTransaction(overrides?)` | `UndelegateTransaction` | Undelegate flow tests |
+| `mockRedelegateTransaction(overrides?)` | `RedelegateTransaction` | Redelegate flow tests |
+| `mockClaimTransaction(overrides?)` | `ClaimTransaction` | Claim flow tests |
+| `MOCK_CHAIN` | `GuardianChain` | Neutral chain constant for tests that don't target a specific chain |
+
+```typescript
+import {
+  mockValidator, mockDelegation, mockDelegations,
+  mockBalance, mockFee, mockDelegateTransaction,
+} from "@guardian/sdk/testing";
+import { ValidatorStatus, DelegationStatus, BalanceType } from "@guardian/sdk";
+import { parseEther } from "viem";
+
+// Jailed validator
+const jailed = mockValidator({ status: ValidatorStatus.Jailed, name: "BadActor" });
+
+// Pending unbond
+const pending = mockDelegation({
+  status: DelegationStatus.Pending,
+  amount: parseEther("5"),
+  pendingUntil: Date.now() + 7 * 24 * 60 * 60 * 1000,
+});
+
+// Full getDelegations response
+const delegations = mockDelegations({
+  delegations: [pending],
+  stakingSummary: { maxApy: 12, activeValidators: 21 },
+});
+
+// Staked balance
+const balance = mockBalance(BalanceType.Staked, { amount: parseEther("10") });
+
+// Realistic fee for sign args
+const fee = mockFee({ gasPrice: parseGwei("3"), gasLimit: 200_000n });
+
+// Delegate transaction
+const tx = mockDelegateTransaction({ amount: parseEther("2"), account: "0x123..." });
+```
+
+### Testing with a custom logger
+
+Capture log output in tests by passing a mock logger:
+
+```typescript
+import { createMockService } from "@guardian/sdk/testing";
+import type { Logger } from "@guardian/sdk";
+
+const logs: string[] = [];
+const testLogger: Logger = {
+  debug: (msg) => logs.push(`DEBUG: ${msg}`),
+  info:  (msg) => logs.push(`INFO: ${msg}`),
+  warn:  (msg) => logs.push(`WARN: ${msg}`),
+  error: (msg) => logs.push(`ERROR: ${msg}`),
+};
+
+const sdk = new GuardianSDK([bsc({ rpcUrl: "...", logger: testLogger })]);
+```
+
+> **Note:** Test utilities are exported from the `@guardian/sdk/testing` subpath — they are tree-shaken out of production builds automatically. They are plain TypeScript with no dependency on any test framework.
 
 ---
 

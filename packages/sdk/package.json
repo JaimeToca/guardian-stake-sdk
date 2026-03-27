@@ -7,11 +7,17 @@
   "types": "./dist/cjs/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/cjs/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/cjs/index.d.ts"
+      "require": "./dist/cjs/index.js"
+    },
+    "./testing": {
+      "types": "./dist/cjs/testing/index.d.ts",
+      "import": "./dist/esm/testing/index.js",
+      "require": "./dist/cjs/testing/index.js"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist"
   ],
