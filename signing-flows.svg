@@ -1,0 +1,142 @@
+<svg width="900" height="320" viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+
+    <!-- Direct flow colors: indigo -->
+    <linearGradient id="directGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0.5"/>
+    </linearGradient>
+
+    <!-- MPC flow colors: teal -->
+    <linearGradient id="mpcGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#042f2e"/>
+      <stop offset="100%" stop-color="#042f2e" stop-opacity="0.5"/>
+    </linearGradient>
+
+    <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <marker id="arrTeal" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#0d9488"/>
+    </marker>
+    <marker id="arrIndigo" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#6366f1"/>
+    </marker>
+    <marker id="arrAmber" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <polygon points="0 0, 7 3.5, 0 7" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="320" fill="url(#bg)" rx="12"/>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- FLOW 1 — Direct signing                        -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="20" y="18" width="860" height="120" rx="8" fill="url(#directGrad)" stroke="#3730a3" stroke-width="1"/>
+  <rect x="20" y="18" width="3" height="120" rx="2" fill="#6366f1"/>
+
+  <!-- Label -->
+  <rect x="32" y="26" width="284" height="18" rx="4" fill="#312e81"/>
+  <text x="174" y="39" text-anchor="middle" font-size="10" fill="#a5b4fc" font-weight="700" letter-spacing="0.8">DIRECT SIGNING — private key available</text>
+
+  <!-- Step nodes -->
+  <!-- estimateFee -->
+  <rect x="36" y="56" width="118" height="52" rx="7" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="95" y="77" text-anchor="middle" font-size="11" fill="#a5b4fc" font-weight="700">estimateFee()</text>
+  <text x="95" y="93" text-anchor="middle" font-size="9" fill="#6366f1">gas · fee estimate</text>
+
+  <!-- arrow -->
+  <line x1="154" y1="82" x2="185" y2="82" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrIndigo)"/>
+
+  <!-- getNonce -->
+  <rect x="188" y="56" width="118" height="52" rx="7" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="247" y="77" text-anchor="middle" font-size="11" fill="#a5b4fc" font-weight="700">getNonce()</text>
+  <text x="247" y="93" text-anchor="middle" font-size="9" fill="#6366f1">account nonce</text>
+
+  <!-- arrow -->
+  <line x1="306" y1="82" x2="337" y2="82" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrIndigo)"/>
+
+  <!-- sign -->
+  <rect x="340" y="56" width="118" height="52" rx="7" fill="#4f46e5" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="399" y="77" text-anchor="middle" font-size="11" fill="white" font-weight="700">sign()</text>
+  <text x="399" y="93" text-anchor="middle" font-size="9" fill="#c7d2fe">builds + signs tx</text>
+
+  <!-- arrow -->
+  <line x1="458" y1="82" x2="489" y2="82" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arrIndigo)"/>
+
+  <!-- broadcast -->
+  <rect x="492" y="56" width="118" height="52" rx="7" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="551" y="77" text-anchor="middle" font-size="11" fill="#a5b4fc" font-weight="700">broadcast</text>
+  <text x="551" y="93" text-anchor="middle" font-size="9" fill="#6366f1">signed hex tx → RPC</text>
+
+  <!-- done badge -->
+  <rect x="650" y="65" width="60" height="24" rx="12" fill="#312e81" stroke="#6366f1" stroke-width="1"/>
+  <text x="680" y="81" text-anchor="middle" font-size="10" fill="#a5b4fc" font-weight="700">3 steps</text>
+
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- FLOW 2 — MPC / external signing                -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <rect x="20" y="158" width="860" height="142" rx="8" fill="url(#mpcGrad)" stroke="#0f766e" stroke-width="1"/>
+  <rect x="20" y="158" width="3" height="142" rx="2" fill="#0d9488"/>
+
+  <!-- Label -->
+  <rect x="32" y="166" width="195" height="18" rx="4" fill="#134e4a"/>
+  <text x="130" y="179" text-anchor="middle" font-size="10" fill="#5eead4" font-weight="700" letter-spacing="0.8">MPC / EXTERNAL SIGNING</text>
+
+  <!-- Step nodes — row -->
+  <!-- estimateFee -->
+  <rect x="36" y="196" width="112" height="52" rx="7" fill="#042f2e" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="92" y="217" text-anchor="middle" font-size="11" fill="#5eead4" font-weight="700">estimateFee()</text>
+  <text x="92" y="233" text-anchor="middle" font-size="9" fill="#0d9488">gas · fee estimate</text>
+
+  <!-- arrow -->
+  <line x1="148" y1="222" x2="172" y2="222" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrTeal)"/>
+
+  <!-- getNonce -->
+  <rect x="175" y="196" width="112" height="52" rx="7" fill="#042f2e" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="231" y="217" text-anchor="middle" font-size="11" fill="#5eead4" font-weight="700">getNonce()</text>
+  <text x="231" y="233" text-anchor="middle" font-size="9" fill="#0d9488">account nonce</text>
+
+  <!-- arrow -->
+  <line x1="287" y1="222" x2="311" y2="222" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrTeal)"/>
+
+  <!-- preHash -->
+  <rect x="314" y="196" width="112" height="52" rx="7" fill="#0d9488" stroke="#5eead4" stroke-width="1.5"/>
+  <text x="370" y="217" text-anchor="middle" font-size="11" fill="white" font-weight="700">preHash()</text>
+  <text x="370" y="233" text-anchor="middle" font-size="9" fill="#ccfbf1">unsigned tx hash</text>
+
+  <!-- arrow to external -->
+  <line x1="426" y1="222" x2="450" y2="222" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#arrAmber)"/>
+
+  <!-- external signer -->
+  <rect x="453" y="196" width="130" height="52" rx="7" fill="#1c1007" stroke="#b45309" stroke-width="1.5"/>
+  <text x="518" y="213" text-anchor="middle" font-size="10" fill="#fcd34d" font-weight="700">external signer</text>
+  <text x="518" y="228" text-anchor="middle" font-size="9" fill="#92400e">MPC · hardware wallet</text>
+  <text x="518" y="241" text-anchor="middle" font-size="9" fill="#92400e">cold storage · HSM</text>
+
+  <!-- arrow from external -->
+  <line x1="583" y1="222" x2="607" y2="222" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrTeal)"/>
+
+  <!-- compile -->
+  <rect x="610" y="196" width="112" height="52" rx="7" fill="#0d9488" stroke="#5eead4" stroke-width="1.5"/>
+  <text x="666" y="217" text-anchor="middle" font-size="11" fill="white" font-weight="700">compile()</text>
+  <text x="666" y="233" text-anchor="middle" font-size="9" fill="#ccfbf1">assembles signed tx</text>
+
+  <!-- arrow to broadcast -->
+  <line x1="722" y1="222" x2="746" y2="222" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrTeal)"/>
+
+  <!-- broadcast -->
+  <rect x="749" y="196" width="112" height="52" rx="7" fill="#042f2e" stroke="#0d9488" stroke-width="1.5"/>
+  <text x="805" y="217" text-anchor="middle" font-size="11" fill="#5eead4" font-weight="700">broadcast</text>
+  <text x="805" y="233" text-anchor="middle" font-size="9" fill="#0d9488">signed hex tx → RPC</text>
+
+  <!-- dashed legend -->
+  <line x1="36" y1="274" x2="56" y2="274" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2"/>
+  <text x="62" y="278" font-size="9" fill="#92400e">SDK boundary — your signer receives the hash and returns the signature</text>
+</svg>
