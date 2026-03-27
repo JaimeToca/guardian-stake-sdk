@@ -2,6 +2,29 @@
   <img src="./Logo.png" alt="Guardian SDK" width="500" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/JaimeToca/bnb-native-staking/actions/workflows/ci.yml">
+    <img src="https://github.com/JaimeToca/bnb-native-staking/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  </a>
+  <a href="https://www.npmjs.com/package/@guardian/bsc">
+    <img src="https://img.shields.io/npm/v/@guardian/bsc?label=%40guardian%2Fbsc&color=0d9488" alt="npm @guardian/bsc" />
+  </a>
+  <a href="https://www.npmjs.com/package/@guardian/sdk">
+    <img src="https://img.shields.io/npm/v/@guardian/sdk?label=%40guardian%2Fsdk&color=6366f1" alt="npm @guardian/sdk" />
+  </a>
+  <a href="https://www.npmjs.com/package/@guardian/bsc">
+    <img src="https://img.shields.io/npm/dm/@guardian/bsc?color=0d9488" alt="npm downloads" />
+  </a>
+  <a href="./LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
+  </a>
+  <a href="https://github.com/JaimeToca/bnb-native-staking/blob/main/CONTRIBUTING.md">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
+  </a>
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white" alt="Node.js" />
+</p>
+
 The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (`@guardian/sdk`) and one package per supported chain. Install only the chain you need.
 
 ## Why Guardian SDK
