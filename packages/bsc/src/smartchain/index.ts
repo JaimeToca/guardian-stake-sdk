@@ -2,7 +2,7 @@ import { createPublicClient, http, PublicClient } from "viem";
 import { GuardianServiceContract, InMemoryCache, StakingServiceContract, Validator } from "@guardian/sdk";
 import { GuardianChain } from "@guardian/sdk";
 import { GuardianService } from "./services/guardian-service";
-import { getViemChain } from "../chain";
+import { BSC_CHAIN, getViemChain } from "../chain";
 import { BalanceService } from "./services/balance-service";
 import { StakingService } from "./services/staking-service";
 import { BNBRpcClient } from "./rpc/bnb-rpc-client";
@@ -11,7 +11,25 @@ import { NonceService } from "./services/nonce-service";
 import { FeeService } from "./services/fee-service";
 import { SignService } from "./services/sign-service";
 
-export function provideGuarService(
+/**
+ * Creates a GuardianServiceContract for BNB Smart Chain.
+ * Pass the result directly to the `GuardianSDK` constructor.
+ *
+ * @example
+ * ```typescript
+ * import { GuardianSDK } from "@guardian/sdk";
+ * import { bsc, BSC_CHAIN } from "@guardian/bsc";
+ *
+ * const sdk = new GuardianSDK([
+ *   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
+ * ]);
+ * ```
+ */
+export function bsc(config: { rpcUrl: string }): GuardianServiceContract {
+  return provideGuarService(BSC_CHAIN, config.rpcUrl);
+}
+
+function provideGuarService(
   chain: GuardianChain,
   rpcUrl: string
 ): GuardianServiceContract {

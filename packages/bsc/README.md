@@ -105,21 +105,20 @@ Validators can be penalised for misbehaviour, which affects delegators proportio
 npm install @guardian/bsc viem
 ```
 
-`@guardian/sdk` is included automatically. `viem` is a peer dependency — if your project already uses it, the same instance will be shared.
+`@guardian/sdk` is included automatically as a dependency of `@guardian/bsc`. `viem` is a peer dependency — if your project already uses it, the same instance will be shared.
 
 ---
 
 ## Quick Start
 
 ```typescript
-import { GuardianSDK, BSC_CHAIN, TransactionType } from "@guardian/bsc";
+import { GuardianSDK } from "@guardian/sdk";
+import { bsc, BSC_CHAIN, TransactionType } from "@guardian/bsc";
 import { formatEther, parseEther } from "viem";
 
-const sdk = new GuardianSDK({
-  chains: {
-    "56": { rpcUrl: "https://bsc-dataseed.bnbchain.org" },
-  },
-});
+const sdk = new GuardianSDK([
+  bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
+]);
 
 const ADDRESS = "0xYourAddress";
 
@@ -528,9 +527,7 @@ import { ConfigError, ConfigErrorCode } from "@guardian/bsc";
 
 | Code | Thrown when |
 |---|---|
-| `MISSING_CHAIN_ID` | The `GuardianChain` object passed to any method has an undefined `chainId` |
-| `UNSUPPORTED_CHAIN` | The `chainId` is defined but not registered in the SDK — check `getSupportedChains()` |
-| `MISSING_CHAIN_CONFIG` | The `chainId` is supported but `sdkConfig.chains[chainId]` was not provided at construction time |
+| `UNSUPPORTED_CHAIN` | The chain passed to any method has no registered service — check that you passed `bsc(...)` to the `GuardianSDK` constructor |
 
 ---
 

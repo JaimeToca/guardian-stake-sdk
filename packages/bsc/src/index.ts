@@ -1,9 +1,8 @@
-// Re-export everything from the chain-agnostic SDK core
+// Re-export everything from the chain-agnostic SDK core (includes GuardianSDK)
 export * from "@guardian/sdk";
 
-// BSC-specific SDK
-export { GuardianSDK, getSupportedChains } from "./sdk";
-export type { SdkConfig } from "./sdk/sdk-config-types";
+// BSC chain factory
+export { bsc } from "./smartchain";
 
 // BSC chain constants
 export { BSC_CHAIN, SUPPORTED_CHAINS } from "./chain";

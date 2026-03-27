@@ -43,17 +43,31 @@ Each chain ships as an independent package — install only what you need, your 
 
 ## How it works
 
-Create one `GuardianSDK` instance and configure each chain you need by its chain ID:
+Install the chain package you need, then pass its factory to `GuardianSDK`:
 
 ```typescript
-import { GuardianSDK } from "@guardian/bsc";
+import { GuardianSDK } from "@guardian/sdk";
+import { bsc, BSC_CHAIN } from "@guardian/bsc";
 
-const sdk = new GuardianSDK({
-  chains: {
-    "56": { rpcUrl: "https://bsc-dataseed.bnbchain.org" }, // BNB Smart Chain
-  },
-});
+const sdk = new GuardianSDK([
+  bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
+]);
 ```
+
+Adding another chain later is just adding another entry to the array:
+
+```typescript
+import { GuardianSDK } from "@guardian/sdk";
+import { bsc, BSC_CHAIN } from "@guardian/bsc";
+import { tron, TRON_CHAIN } from "@guardian/tron"; // when available
+
+const sdk = new GuardianSDK([
+  bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
+  tron({ rpcUrl: "https://api.trongrid.io" }),
+]);
+```
+
+No chain IDs to configure manually, no internal wiring — install the package, pass the factory, done.
 
 ---
 
@@ -279,14 +293,13 @@ const rawTx = await sdk.compile({ signArgs, r: "0x...", s: "0x...", v: 27n });
 End-to-end example using direct signing:
 
 ```typescript
-import { GuardianSDK, BSC_CHAIN, TransactionType } from "@guardian/bsc";
+import { GuardianSDK } from "@guardian/sdk";
+import { bsc, BSC_CHAIN, TransactionType } from "@guardian/bsc";
 import { parseEther, formatEther } from "viem";
 
-const sdk = new GuardianSDK({
-  chains: {
-    "56": { rpcUrl: "https://bsc-dataseed.bnbchain.org" },
-  },
-});
+const sdk = new GuardianSDK([
+  bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
+]);
 
 const ADDRESS = "0xYourAddress";
 const PRIVATE_KEY = "0xYourPrivateKey";
@@ -419,9 +432,7 @@ import { ConfigError, ConfigErrorCode } from "@guardian/bsc";
 
 | Code | Thrown when |
 |---|---|
-| `MISSING_CHAIN_ID` | The `GuardianChain` object passed to any method has an undefined `chainId` |
-| `UNSUPPORTED_CHAIN` | The `chainId` is defined but not registered in the SDK — check `getSupportedChains()` |
-| `MISSING_CHAIN_CONFIG` | The `chainId` is supported but `sdkConfig.chains[chainId]` was not provided at construction |
+| `UNSUPPORTED_CHAIN` | The chain passed to any method has no registered service — check that you passed it to the `GuardianSDK` constructor |
 
 ---
 

@@ -16,3 +16,6 @@ export { PrivateKey, Curve } from "./entity/private-key";
 
 // Service contracts and types
 export * from "./service";
+
+// SDK
+export * from "./sdk";

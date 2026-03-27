@@ -25,9 +25,7 @@ export enum ValidationErrorCode {
 }
 
 export enum ConfigErrorCode {
-  MISSING_CHAIN_ID = "MISSING_CHAIN_ID",
   UNSUPPORTED_CHAIN = "UNSUPPORTED_CHAIN",
-  MISSING_CHAIN_CONFIG = "MISSING_CHAIN_CONFIG",
 }
 
 export enum SigningErrorCode {

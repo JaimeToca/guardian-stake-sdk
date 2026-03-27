@@ -1,11 +1,2 @@
-/**
- * Defines the structure for the SDK configuration.
- */
-export type SdkConfig = {
-  chains: {
-    [chainId: string]: {
-      rpcUrl: string;
-      apiKey?: string;
-    };
-  };
-};
+// SdkConfig has been removed. Chain services are now passed directly
+// to the GuardianSDK constructor as an array.

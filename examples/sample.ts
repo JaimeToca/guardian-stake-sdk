@@ -1,14 +1,12 @@
 import { parseUnits } from "viem";
-import { GuardianSDK, BSC_CHAIN, TransactionType } from "@guardian/bsc";
+import { GuardianSDK, BSC_CHAIN, TransactionType, bsc } from "@guardian/bsc";
 
-const sdk = new GuardianSDK({
-  chains: {
-    "56": { rpcUrl: "https://bsc.twnodes.com" },
-  },
-});
+const sdk = new GuardianSDK([
+  bsc({ rpcUrl: "https://bsc.twnodes.com" }),
+]);
 
 async function main() {
-  
+
   // Fetch validators
   const validators = await sdk.getValidators(BSC_CHAIN);
   console.log("Validators:", validators);
