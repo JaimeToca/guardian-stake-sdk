@@ -1,5 +1,3 @@
-# Guardian SDK
-
 <p align="center">
   <img src="./Logo.png" alt="Guardian SDK" width="400" />
 </p>
