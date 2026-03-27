@@ -18,8 +18,9 @@ import type {
   PrehashResult,
   SigningWithPrivateKey,
   Transaction,
+  Logger,
 } from "@guardian/sdk";
-import { SigningError, SigningErrorCode, TransactionType } from "@guardian/sdk";
+import { SigningError, SigningErrorCode, TransactionType, NoopLogger } from "@guardian/sdk";
 import type { SigningWithAccount } from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
 import { parseEvmAddress } from "../validations";
@@ -28,7 +29,13 @@ import { parseEvmAddress } from "../validations";
  * Service responsible for handling various aspects of transaction signing on BSC.
  */
 export class SignService implements SignServiceContract {
+  constructor(private readonly logger: Logger = new NoopLogger()) {}
+
   async sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex> {
+    this.logger.info("SignService: signing transaction", {
+      type: signingArgs.transaction.type,
+      chain: signingArgs.transaction.chain.id,
+    });
     const fee = signingArgs.fee;
     const nonce = signingArgs.nonce;
     const transaction = signingArgs.transaction;
@@ -50,17 +57,22 @@ export class SignService implements SignServiceContract {
       );
     }
 
+    this.logger.info("SignService: transaction signed");
     return signedTransaction;
   }
 
   async prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult> {
+    this.logger.info("SignService: prehashing transaction", {
+      type: preHasArgs.transaction.type,
+      chain: preHasArgs.transaction.chain.id,
+    });
     const transaction = preHasArgs.transaction;
     const fee = preHasArgs.fee;
     const nonce = preHasArgs.nonce;
 
     const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
 
-    return {
+    const result = {
       serializedTransaction: serializeTransaction(unsignedTransaction),
       signArgs: {
         transaction: transaction,
@@ -68,9 +80,12 @@ export class SignService implements SignServiceContract {
         nonce: nonce,
       },
     };
+    this.logger.info("SignService: prehash complete — send serializedTransaction to external signer");
+    return result;
   }
 
   async compile(compileArgs: CompileArgs): Promise<Hex> {
+    this.logger.info("SignService: compiling signed transaction");
     const transaction = compileArgs.signArgs.transaction;
     const fee = compileArgs.signArgs.fee;
     const nonce = compileArgs.signArgs.nonce;
@@ -80,7 +95,9 @@ export class SignService implements SignServiceContract {
 
     const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
 
-    return serializeTransaction(unsignedTransaction, { r, s, v });
+    const compiled = serializeTransaction(unsignedTransaction, { r, s, v });
+    this.logger.info("SignService: transaction compiled");
+    return compiled;
   }
 
   private buildUnsignedTransaction(

@@ -18,6 +18,7 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
   - [sign](#sign)
   - [preHash / compile](#prehash--compile)
 - [Signing Flows](#signing-flows)
+- [Logging](#logging)
 - [Error Handling](#error-handling)
 - [Supported Chains](#supported-chains)
 
@@ -447,15 +448,29 @@ const rawTx = await sdk.compile({
 
 ## Signing Flows
 
-```
-Direct signing (private key available)
-──────────────────────────────────────
-estimateFee() ──► getNonce() ──► sign() ──► broadcast
+See the [main README signing flows diagram](../../README.md#signing-flows) for a visual reference.
 
-MPC / external signing
-──────────────────────
-estimateFee() ──► getNonce() ──► preHash() ──► [external signer] ──► compile() ──► broadcast
+---
+
+## Logging
+
+Logging is opt-in — pass a `logger` to `bsc()` to enable it:
+
+```typescript
+import { ConsoleLogger } from "@guardian/sdk";
+import { bsc } from "@guardian/bsc";
+
+const sdk = new GuardianSDK([
+  bsc({
+    rpcUrl: "https://bsc-dataseed.bnbchain.org",
+    logger: new ConsoleLogger("debug"), // "debug" | "info" | "warn" | "error"
+  }),
+]);
 ```
+
+Plug in any logger that implements the `Logger` interface (`debug`, `info`, `warn`, `error` methods). See the [main README Logging section](../../README.md#logging) for full details including bring-your-own-logger examples.
+
+> Private keys and signatures are **never** logged at any level.
 
 ---
 

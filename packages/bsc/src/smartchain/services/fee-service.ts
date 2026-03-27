@@ -1,7 +1,7 @@
 import type { PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
-import type { FeeServiceContract, SignServiceContract, Fee, Transaction } from "@guardian/sdk";
-import { FeeType, ValidationError, ValidationErrorCode } from "@guardian/sdk";
+import type { FeeServiceContract, SignServiceContract, Fee, Transaction, Logger } from "@guardian/sdk";
+import { FeeType, ValidationError, ValidationErrorCode, NoopLogger } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**
@@ -10,10 +10,16 @@ import { parseEvmAddress } from "../validations";
 export class FeeService implements FeeServiceContract {
   constructor(
     private readonly client: PublicClient,
-    private readonly signService: SignServiceContract
+    private readonly signService: SignServiceContract,
+    private readonly logger: Logger = new NoopLogger()
   ) {}
 
   async estimateFee(transaction: Transaction): Promise<Fee> {
+    this.logger.debug("FeeService: estimating fee", {
+      type: transaction.type,
+      chain: transaction.chain.id,
+    });
+
     const account =
       transaction.account !== undefined ? parseEvmAddress(transaction.account) : undefined;
 
@@ -38,6 +44,12 @@ export class FeeService implements FeeServiceContract {
     const [gasPrice, gasLimit] = await Promise.all([gasPricePromise, gasLimitPromise]);
 
     const increasedLimit = (gasLimit * BigInt(100 + 15)) / 100n;
+
+    this.logger.debug("FeeService: fee estimated", {
+      gasPrice: gasPrice.toString(),
+      gasLimit: increasedLimit.toString(),
+      total: (gasPrice * increasedLimit).toString(),
+    });
 
     return {
       type: FeeType.GasFee,

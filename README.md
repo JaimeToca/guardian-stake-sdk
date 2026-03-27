@@ -54,6 +54,7 @@ As a result, developers are still burdened with deep staking knowledge, even whe
   - [preHash / compile](#prehashhargs--compileargs)
 - [Sample — Delegate on BNB Smart Chain](#sample--delegate-on-bnb-smart-chain)
 - [Signing Flows](#signing-flows)
+- [Logging](#logging)
 - [Error Handling](#error-handling)
   - [ValidationError](#validationerror)
   - [ConfigError](#configerror)
@@ -400,6 +401,69 @@ For chain-specific details (protocol parameters, transaction shapes, error codes
 ![Signing Flows](./signing-flows.svg)
 
 The MPC flow is designed for setups where the private key is managed externally — hardware wallets, MPC servers, or custodians. `preHash()` serializes the transaction and returns it ready to sign. `compile()` assembles the final signed transaction from the ECDSA components (`r`, `s`, `v`).
+
+---
+
+## Logging
+
+The SDK is **silent by default** — no logs are emitted unless you opt in. Pass a logger to the chain factory to enable it.
+
+### Built-in console logger
+
+```typescript
+import { ConsoleLogger } from "@guardian/sdk";
+import { bsc } from "@guardian/bsc";
+
+const sdk = new GuardianSDK([
+  bsc({
+    rpcUrl: "https://bsc-dataseed.bnbchain.org",
+    logger: new ConsoleLogger("debug"), // "debug" | "info" | "warn" | "error"
+  }),
+]);
+```
+
+Sample output:
+
+```
+[2026-03-27T19:00:37.123Z] [guardian] [DEBUG] StakingService: validators cache miss — fetching from RPC
+[2026-03-27T19:00:37.124Z] [guardian] [DEBUG] BNBRpcClient: fetching validators { "url": "https://api.bnbchain.org/..." }
+[2026-03-27T19:00:37.891Z] [guardian] [DEBUG] BNBRpcClient: validators fetched { "count": 45, "ms": 767 }
+[2026-03-27T19:00:38.103Z] [guardian] [INFO]  SignService: signing transaction { "type": "delegate", "chain": "bsc-mainnet" }
+[2026-03-27T19:00:38.201Z] [guardian] [INFO]  SignService: transaction signed
+```
+
+### Bring your own logger
+
+Implement the `Logger` interface from `@guardian/sdk` to plug in any logging library:
+
+```typescript
+import type { Logger } from "@guardian/sdk";
+import winston from "winston";
+
+const winstonLogger = winston.createLogger({ ... });
+
+// Adapt your logger to the Logger interface
+const logger: Logger = {
+  debug: (msg, ctx) => winstonLogger.debug(msg, ctx),
+  info:  (msg, ctx) => winstonLogger.info(msg, ctx),
+  warn:  (msg, ctx) => winstonLogger.warn(msg, ctx),
+  error: (msg, ctx) => winstonLogger.error(msg, ctx),
+};
+
+const sdk = new GuardianSDK([
+  bsc({ rpcUrl: "...", logger }),
+]);
+```
+
+### Log levels
+
+| Level | What is logged |
+|-------|---------------|
+| `debug` | RPC calls, response times, multicall batch sizes, cache hits/misses, fee details |
+| `info` | Sign, preHash, and compile lifecycle events |
+| `warn` | Retries, unexpected empty responses |
+
+> **Note:** The SDK does **not** log errors that are thrown — those are left entirely to the caller to avoid duplicate log entries. Private keys and signatures are **never** logged at any level.
 
 ---
 

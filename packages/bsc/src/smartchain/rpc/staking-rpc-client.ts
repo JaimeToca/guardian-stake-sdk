@@ -11,11 +11,17 @@ import {
   encodeUnbondRequestData,
   decodeUnbond,
 } from "../abi";
+import type { Logger } from "@guardian/sdk";
+import { NoopLogger } from "@guardian/sdk";
 
 export class StakingRpcClient implements StakingRpcClientContract {
-  constructor(private readonly client: PublicClient) {}
+  constructor(
+    private readonly client: PublicClient,
+    private readonly logger: Logger = new NoopLogger()
+  ) {}
 
   async getCreditContractValidators(): Promise<DecodedValidators> {
+    this.logger.debug("StakingRpcClient: getCreditContractValidators");
     const validatorsResponse = await this.client.call({
       data: encodeGetValidatorsData(),
       to: STAKING_CONTRACT,
@@ -40,6 +46,9 @@ export class StakingRpcClient implements StakingRpcClientContract {
     creditContracts: Address[],
     delegator: Address
   ): Promise<MulticallResult[]> {
+    this.logger.debug("StakingRpcClient: multicall getPooledBNB", {
+      contracts: creditContracts.length,
+    });
     const multicallContracts = creditContracts.map((creditContract) => {
       return {
         address: creditContract,
@@ -59,6 +68,9 @@ export class StakingRpcClient implements StakingRpcClientContract {
     creditContracts: Address[],
     delegator: Address
   ): Promise<MulticallResult[]> {
+    this.logger.debug("StakingRpcClient: multicall pendingUnbondRequest", {
+      contracts: creditContracts.length,
+    });
     const multicallContracts = creditContracts.map((creditContract) => {
       return {
         address: creditContract,

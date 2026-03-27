@@ -1,7 +1,7 @@
 import type { PublicClient } from "viem";
 import { createPublicClient, http } from "viem";
-import type { GuardianServiceContract, StakingServiceContract, Validator } from "@guardian/sdk";
-import { InMemoryCache } from "@guardian/sdk";
+import type { GuardianServiceContract, StakingServiceContract, Validator, Logger } from "@guardian/sdk";
+import { InMemoryCache, NoopLogger } from "@guardian/sdk";
 import type { GuardianChain } from "@guardian/sdk";
 import { GuardianService } from "./services/guardian-service";
 import { BSC_CHAIN, getViemChain } from "../chain";
@@ -27,11 +27,11 @@ import { SignService } from "./services/sign-service";
  * ]);
  * ```
  */
-export function bsc(config: { rpcUrl: string }): GuardianServiceContract {
-  return provideGuarService(BSC_CHAIN, config.rpcUrl);
+export function bsc(config: { rpcUrl: string; logger?: Logger }): GuardianServiceContract {
+  return provideGuarService(BSC_CHAIN, config.rpcUrl, config.logger ?? new NoopLogger());
 }
 
-function provideGuarService(chain: GuardianChain, rpcUrl: string): GuardianServiceContract {
+function provideGuarService(chain: GuardianChain, rpcUrl: string, logger: Logger): GuardianServiceContract {
   const client = createPublicClient({
     chain: getViemChain(chain),
     transport: http(rpcUrl),
@@ -39,11 +39,11 @@ function provideGuarService(chain: GuardianChain, rpcUrl: string): GuardianServi
       multicall: true,
     },
   });
-  const stakingService = provideStakingService(client);
+  const stakingService = provideStakingService(client, logger);
   const balanceService = new BalanceService(client, stakingService);
   const nonceService = new NonceService(client);
-  const signService = new SignService();
-  const feeService = new FeeService(client, signService);
+  const signService = new SignService(logger);
+  const feeService = new FeeService(client, signService, logger);
 
   return new GuardianService(
     chain,
@@ -55,9 +55,9 @@ function provideGuarService(chain: GuardianChain, rpcUrl: string): GuardianServi
   );
 }
 
-function provideStakingService(client: PublicClient): StakingServiceContract {
+function provideStakingService(client: PublicClient, logger: Logger): StakingServiceContract {
   const cache = new InMemoryCache<string, Validator[]>();
-  const stakingRpcClient = new StakingRpcClient(client);
-  const bnbRpcClient = new BNBRpcClient();
-  return new StakingService(cache, stakingRpcClient, bnbRpcClient);
+  const stakingRpcClient = new StakingRpcClient(client, logger);
+  const bnbRpcClient = new BNBRpcClient(logger);
+  return new StakingService(cache, stakingRpcClient, bnbRpcClient, logger);
 }

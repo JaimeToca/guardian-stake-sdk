@@ -1,3 +1,6 @@
+// Logger
+export * from "./logger";
+
 // Cache
 export * from "./cache";
 

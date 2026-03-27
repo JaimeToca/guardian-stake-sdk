@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 import { parseEther } from "viem";
-import type { CacheContract } from "@guardian/sdk";
+import type { CacheContract, Logger } from "@guardian/sdk";
+import { NoopLogger } from "@guardian/sdk";
 import type { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
 import type { MulticallResult } from "../abi";
 import { processSingleMulticallResult } from "../abi";
@@ -17,13 +18,18 @@ export class StakingService implements StakingServiceContract {
   constructor(
     private readonly cache: CacheContract<string, Validator[]>,
     private readonly stakingRpcClient: StakingRpcClientContract,
-    private readonly bnbRpcClient: BNBRpcClientContract
+    private readonly bnbRpcClient: BNBRpcClientContract,
+    private readonly logger: Logger = new NoopLogger()
   ) {}
 
   async getValidators(): Promise<Validator[]> {
     const cached = this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
-    if (cached) return cached;
+    if (cached) {
+      this.logger.debug("StakingService: validators cache hit", { count: cached.length });
+      return cached;
+    }
 
+    this.logger.debug("StakingService: validators cache miss — fetching from RPC");
     const [bnbValidators, contractCallValidators] = await Promise.all([
       this.bnbRpcClient.getValidators(),
       this.stakingRpcClient.getCreditContractValidators(),
@@ -45,6 +51,7 @@ export class StakingService implements StakingServiceContract {
     });
 
     this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
+    this.logger.debug("StakingService: validators cached", { count: validators.length });
 
     return validators;
   }
