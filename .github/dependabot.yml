@@ -1,0 +1,57 @@
+version: 2
+
+updates:
+  # Root devDependencies (eslint, prettier, typedoc, semantic-release)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: UTC
+    groups:
+      eslint:
+        patterns: ["eslint*", "@typescript-eslint/*"]
+      semantic-release:
+        patterns: ["semantic-release", "@semantic-release/*"]
+      typedoc:
+        patterns: ["typedoc*"]
+    labels: ["dependencies", "chore"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  # @guardian/sdk dependencies (axios)
+  - package-ecosystem: npm
+    directory: /packages/sdk
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: UTC
+    labels: ["dependencies", "chore", "sdk"]
+    commit-message:
+      prefix: "chore(deps)(sdk)"
+
+  # @guardian/bsc dependencies (viem, vitest)
+  - package-ecosystem: npm
+    directory: /packages/bsc
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: UTC
+    labels: ["dependencies", "chore", "bsc"]
+    commit-message:
+      prefix: "chore(deps)(bsc)"
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: UTC
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "chore(ci)"
