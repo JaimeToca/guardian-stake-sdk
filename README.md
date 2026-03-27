@@ -468,4 +468,4 @@ Planned integrations follow the same architecture — each chain is an independe
 
 ### Beyond native staking
 
-The `@guardian/sdk` core is protocol-agnostic by design. Future releases may expand into other DeFi primitives — liquidity provisioning, lending, yield aggregation — using the same chain-agnostic interfaces and signing flows.
+The `@guardian/sdk` core is protocol-agnostic by design. Future releases may expand into other DeFi primitives — liquidity provisioning, lending, yield aggregation — expanding the chain-agnostic interfaces and signing flows.
