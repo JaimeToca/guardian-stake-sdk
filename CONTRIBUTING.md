@@ -1,6 +1,8 @@
 # Contributing to Guardian SDK
 
-Thank you for your interest in contributing! This document covers everything you need to get started.
+> **Legal notice:** By submitting a contribution you agree that it will be licensed under the project's [MIT License](./LICENSE) and that you have the right to grant that license. Contributions are accepted as-is with no implied obligation to merge, maintain, or support them. See the full disclaimer in [README.md](./README.md#disclaimer) before using or contributing to this project.
+
+---
 
 ## Table of Contents
 
@@ -113,6 +115,12 @@ Examples:
 5. A maintainer will review. Address any feedback and keep commits clean.
 6. Once approved and CI passes, a maintainer merges — semantic-release handles the version bump and npm publish automatically.
 
+**By opening a pull request you confirm that:**
+- You have the right to submit the contribution under the MIT License.
+- Your contribution does not introduce malicious code, backdoors, or intentional vulnerabilities.
+- You understand that the maintainers may reject any contribution at their sole discretion without explanation.
+- You understand that this project is unaudited software provided as-is, and your contribution will be subject to the same disclaimer.
+
 ---
 
 ## Adding a new chain package
@@ -124,11 +132,13 @@ Examples:
 5. Add the package to the root `eslint.config.mjs` `parserOptions.project` array.
 6. Update the root README packages table and roadmap.
 
+> **Note:** New chain implementations must include their own disclaimer that the implementation is unaudited and experimental until a formal security review has been completed.
+
 ---
 
 ## Release process
 
-Releases are fully automated via `semantic-release` on every push to `main`. You do **not** need to manually bump versions or write changelog entries — just follow the commit convention.
+Releases are fully automated via `semantic-release` on every push to `main`. Do **not** manually bump versions or write changelog entries — just follow the commit convention.
 
 The release workflow:
 1. Analyzes commits since the last release tag.

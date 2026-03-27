@@ -1,0 +1,78 @@
+name: Bug Report
+description: Report a reproducible bug in the SDK
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Disclaimer:** Guardian SDK is unaudited, experimental software provided AS-IS under the MIT License.
+        > Maintainers are not liable for any loss of funds, data, or damages resulting from bugs or the use of this software.
+        > If this bug involves a potential security vulnerability, **do not open a public issue** — see [SECURITY.md](../SECURITY.md).
+
+  - type: input
+    id: package
+    attributes:
+      label: Affected package(s)
+      placeholder: "@guardian/sdk, @guardian/bsc"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Package version(s)
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal code or steps that reproduce the issue.
+      placeholder: |
+        ```typescript
+        const sdk = new GuardianSDK([bsc({ rpcUrl: "..." })]);
+        // ...
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the full error message and stack trace if applicable.
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: "20.x"
+
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Acknowledgement
+      options:
+        - label: I understand this is unaudited software and I am not holding the maintainers liable for any loss or damage.
+          required: true
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true

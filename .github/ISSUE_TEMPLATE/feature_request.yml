@@ -1,0 +1,54 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Note:** Feature requests are considered at the maintainers' sole discretion. Opening a request does not guarantee implementation.
+        > Guardian SDK is unaudited, experimental software — new features will also ship without audit guarantees until explicitly stated otherwise.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem does this feature solve? Why do you need it?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to see added or changed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or alternative approaches you've considered?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Which package does this affect?
+      options:
+        - "@guardian/sdk (core)"
+        - "@guardian/bsc"
+        - "New chain package"
+        - "Tooling / CI / docs"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Acknowledgement
+      options:
+        - label: I understand the maintainers may decline or deprioritize this request without explanation.
+          required: true
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true
