@@ -521,11 +521,11 @@ All fixtures accept an optional `overrides` object — set only what matters for
 
 ```typescript
 import {
-  mockValidator, mockDelegation, mockDelegations,
+  mockValidator, mockDelegation, mockDelegations, mockStakingSummary,
   mockBalance, mockFee, mockDelegateTransaction,
 } from "@guardian/sdk/testing";
 import { ValidatorStatus, DelegationStatus, BalanceType } from "@guardian/sdk";
-import { parseEther } from "viem";
+import { parseEther, parseGwei } from "viem";
 
 // Jailed validator
 const jailed = mockValidator({ status: ValidatorStatus.Jailed, name: "BadActor" });
@@ -540,7 +540,7 @@ const pending = mockDelegation({
 // Full getDelegations response
 const delegations = mockDelegations({
   delegations: [pending],
-  stakingSummary: { maxApy: 12, activeValidators: 21 },
+  stakingSummary: mockStakingSummary({ maxApy: 12, activeValidators: 21 }),
 });
 
 // Staked balance
