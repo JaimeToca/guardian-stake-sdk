@@ -1,0 +1,48 @@
+{
+  "name": "@guardian/bsc",
+  "version": "1.0.0",
+  "description": "Guardian SDK for BNB Smart Chain",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "viem": "^2.47.5"
+  },
+  "dependencies": {
+    "@guardian/sdk": "*"
+  },
+  "devDependencies": {
+    "viem": "^2.47.4",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "bnb",
+    "bsc",
+    "binance",
+    "staking",
+    "web3",
+    "blockchain",
+    "sdk",
+    "guardian",
+    "native-staking",
+    "bnb-smart-chain"
+  ],
+  "author": "JaimeToca",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaimeToca/bnb-native-staking.git"
+  },
+  "license": "MIT"
+}

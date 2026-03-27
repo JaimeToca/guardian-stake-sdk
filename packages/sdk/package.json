@@ -1,0 +1,33 @@
+{
+  "name": "@guardian/sdk",
+  "version": "1.0.0",
+  "description": "Chain-agnostic core for the Guardian SDK",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "axios": "^1.13.6"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "guardian",
+    "sdk",
+    "staking",
+    "blockchain",
+    "web3"
+  ],
+  "author": "JaimeToca",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaimeToca/bnb-native-staking.git"
+  },
+  "license": "MIT"
+}

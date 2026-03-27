@@ -1,280 +1,72 @@
-# BSC Staking
+# Guardian SDK
 
-A TypeScript SDK for interacting with **BNB Smart Chain native staking**. It abstracts the low-level contract calls and RPC interactions behind a clean, type-safe API so you can build staking features without dealing with ABI encoding, multicall batching, or BSC-specifics.
+The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (`@guardian/sdk`) and one package per supported chain. Install only the chain you need.
 
-## Table of Contents
+## Packages
 
-- [How BNB Native Staking Works](#how-bnb-native-staking-works)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [API Reference](#api-reference)
-  - [getValidators](#getvalidators)
-  - [getDelegations](#getdelegations)
-  - [getBalances](#getbalances)
-  - [getNonce](#getnonce)
-  - [estimateFee](#estimatefee)
-  - [sign](#sign)
-  - [preHash / compile](#prehash--compile)
-- [Signing Flows](#signing-flows)
-- [Error Handling](#error-handling)
-- [Supported Chains](#supported-chains)
+| Package | Chain | Status | Docs |
+|---|---|---|---|
+| [`@guardian/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
+| `@guardian/tron` | Tron | In Progress | — |
+| `@guardian/sui` | SUI | Planned | — |
+| `@guardian/solana` | Solana | Planned | — |
+| `@guardian/aptos` | Aptos | Planned | — |
+| `@guardian/cardano` | Cardano | Planned | — |
 
----
+Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian/sdk` is included automatically as a dependency of each chain package.
 
-## How BNB Native Staking Works
+## How it works
 
-BNB Smart Chain uses **Proof-of-Staked-Authority (PoSA)** — a hybrid consensus model where validators are elected based on the amount of BNB staked with them. BNB holders can delegate their tokens to validators to participate in network security and earn a share of block rewards.
+### Initialization
 
-### Validators
-
-Up to **45 validators** are active at any time, ranked by total staked BNB:
-
-- **Top 21 (Cabinet)** — primary block producers, earn the highest rewards
-- **Positions 22–45 (Candidates)** — occasional block producers
-- **Below 45** — inactive, receive no rewards
-
-Elections run daily after 00:00 UTC. Each validator sets a **commission rate** — the percentage of block rewards they keep before distributing the rest to delegators.
-
-### Staking Credits
-
-When you delegate BNB to a validator, you receive **staking credit tokens** unique to that validator (e.g., `stBNB_ValidatorName`). These credits:
-
-- Are **non-transferable** and specific to each validator
-- **Auto-compound** — their BNB value grows as the validator earns block rewards
-- Are burned when you undelegate
-
-Your BNB value at any point is calculated as:
-
-```
-Your BNB = (your credit balance × total pooled BNB) ÷ total credit supply
-```
-
-This means you never need to manually claim rewards — your stake simply becomes worth more over time.
-
-### Lifecycle of a Stake
-
-```
-Delegate ──► Active (earning rewards)
-                │
-             Undelegate
-                │
-                ▼
-            Pending (7-day unbonding period)
-                │
-             Time passes
-                │
-                ▼
-            Claimable ──► Claim ──► BNB returned to wallet
-```
-
-| Stage | Description |
-|---|---|
-| **Active** | BNB is staked and earning auto-compounding rewards |
-| **Pending** | Unbonding initiated — 7-day lock before funds are accessible |
-| **Claimable** | Unbonding complete, BNB is ready to claim |
-
-### Key Protocol Parameters
-
-| Parameter | Value |
-|---|---|
-| Unbonding period | 7 days |
-| Redelegation fee | 0.002% |
-| Min validator self-stake | 2,000 BNB |
-| StakeHub contract | `0x0000000000000000000000000000000000002002` |
-| Mainnet chain ID | 56 |
-| Mainnet staking UI | https://www.bnbchain.org/en/bnb-staking |
-| Testnet staking UI | https://testnet-staking.bnbchain.org/en/bnb-staking |
-
-### Slashing
-
-Validators can be penalised for misbehaviour, which affects delegators proportionally:
-
-| Offence | Slash | Jail |
-|---|---|---|
-| Double-signing | 200 BNB | 30 days |
-| Malicious fast-finality vote | 200 BNB | 30 days |
-| Downtime (150+ missed blocks/day) | 10 BNB | 2 days |
-
----
-
-## Installation
-
-```bash
-npm install bnb-native-staking viem
-```
-
-`viem` is a peer dependency — if your project already uses it, the same instance will be shared.
-
----
-
-## Quick Start
+Create one `GuardianSDK` instance and configure each chain you need by its chain ID:
 
 ```typescript
-import { GuardianSDK, BSC_CHAIN, TransactionType } from "bnb-native-staking";
-import { formatEther, parseEther } from "viem";
+import { GuardianSDK } from "@guardian/bsc";
 
 const sdk = new GuardianSDK({
   chains: {
-    "56": { rpcUrl: "https://bsc-dataseed.bnbchain.org" },
+    "56": { rpcUrl: "https://bsc-dataseed.bnbchain.org" }, // BNB Smart Chain
   },
 });
+```
 
-const ADDRESS = "0xYourAddress";
+---
 
-// 1. Fetch all validators
+## Staking API
+
+The same API surface is available on every supported chain. Pass the chain object as the first argument to scope each call.
+
+### `getValidators(chain)`
+
+Returns all validators on the network — active, inactive, and jailed.
+
+```typescript
+import { GuardianSDK, BSC_CHAIN } from "@guardian/bsc";
+
 const validators = await sdk.getValidators(BSC_CHAIN);
-console.log(`${validators.length} validators found`);
-
-// 2. Fetch delegations for an address
-const { delegations, stakingSummary } = await sdk.getDelegations(BSC_CHAIN, ADDRESS);
-console.log(`${delegations.length} delegations, max APY: ${stakingSummary.maxApy}%`);
-
-// 3. Fetch balances
-const balances = await sdk.getBalances(BSC_CHAIN, ADDRESS);
-for (const balance of balances) {
-  console.log(balance.type, formatEther(balance.amount), "BNB");
-}
-// Available  1.5 BNB
-// Staked     10.0 BNB
-// Pending    2.0 BNB
-// Claimable  0.5 BNB
-
-// 4. Estimate fee for a delegation
-const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
-  chain: BSC_CHAIN,
-  amount: parseEther("1"),
-  account: ADDRESS,
-  isMaxAmount: false,
-  validator: validators[0],
-});
-
-// 5. Get nonce
-const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
-
-// 6. Sign and broadcast
-const rawTx = await sdk.sign({
-  transaction: {
-    type: TransactionType.Delegate,
-    chain: BSC_CHAIN,
-    amount: parseEther("1"),
-    isMaxAmount: false,
-    validator: validators[0],
-  },
-  fee,
-  nonce,
-  privateKey: "0xYourPrivateKey",
-});
-
-// rawTx is ready to broadcast via your RPC node
+// validators[0] → { name, apy, status, operatorAddress, creditAddress, ... }
 ```
 
----
+### `getDelegations(chain, address)`
 
-## API Reference
-
-### `getValidators`
-
-Returns all validators registered on the protocol, including active, inactive, and jailed ones.
+Returns all delegations for an address and a summary of the staking protocol.
 
 ```typescript
-const validators = await sdk.getValidators(BSC_CHAIN);
-```
+const { delegations, stakingSummary } = await sdk.getDelegations(BSC_CHAIN, "0xYourAddress");
 
-**Returns:** `Promise<Validator[]>`
+console.log(stakingSummary.maxApy);          // best APY across all validators
+console.log(stakingSummary.minAmountToStake); // minimum stake in wei
 
-```typescript
-interface Validator {
-  id: string;                  // Unique identifier
-  status: ValidatorStatus;     // Active | Inactive | Jailed
-  name: string;                // Human-readable name
-  description: string;
-  image: string | undefined;   // Logo URL
-  apy: number;                 // Annual percentage yield (%)
-  delegators: number;          // Total number of delegators
-  operatorAddress: Address;    // Validator operator address
-  creditAddress: Address;      // Per-validator credit contract address
-}
-
-enum ValidatorStatus {
-  Active,
-  Inactive,
-  Jailed,
+for (const d of delegations) {
+  console.log(d.validator.name, d.amount, d.status);
+  // status: Active | Pending | Claimable | Inactive
 }
 ```
 
-> Validator data is cached for 3 minutes. Validators are a fixed, slowly-changing set — elections run once per day at most.
+### `getBalances(chain, address)`
 
----
-
-### `getDelegations`
-
-Returns all delegations for a given address, along with a summary of the staking protocol.
-
-```typescript
-const { delegations, stakingSummary } = await sdk.getDelegations(
-  BSC_CHAIN,
-  "0xYourAddress"
-);
-```
-
-**Returns:** `Promise<Delegations>`
-
-```typescript
-interface Delegations {
-  delegations: Delegation[];
-  stakingSummary: StakingSummary;
-}
-
-interface Delegation {
-  id: string;
-  validator: Validator;
-  amount: bigint;              // Current BNB value of credits, in wei
-  status: DelegationStatus;   // Active | Pending | Claimable | Inactive
-  delegationIndex: number;    // Index of the unbond request — required for claim()
-  pendingUntil: number;       // Unix timestamp (ms) when unbonding completes
-}
-
-enum DelegationStatus {
-  Active,     // Staked and earning
-  Pending,    // In the 7-day unbonding window
-  Claimable,  // Ready to claim
-  Inactive,
-}
-
-interface StakingSummary {
-  totalProtocolStake: number;
-  maxApy: number;
-  minAmountToStake: bigint;       // In wei
-  unboundPeriodInMillis: number;  // 604800000 (7 days)
-  redelegateFeeRate: number;      // 0.002%
-  activeValidators: number;
-  totalValidators: number;
-}
-```
-
----
-
-### `getBalances`
-
-Returns the four balance categories for a given address — useful for displaying a portfolio overview.
-
-```typescript
-const balances = await sdk.getBalances(BSC_CHAIN, "0xYourAddress");
-```
-
-**Returns:** `Promise<Balance[]>`
-
-```typescript
-enum BalanceType {
-  Available  = "Available",   // Wallet balance, immediately spendable
-  Staked     = "Staked",      // Currently delegated and earning rewards
-  Pending    = "Pending",     // In the 7-day unbonding window
-  Claimable  = "Claimable",   // Unbonding complete, ready to claim
-}
-```
-
-Example:
+Returns the four balance categories for an address.
 
 ```typescript
 import { formatEther } from "viem";
@@ -284,96 +76,46 @@ const balances = await sdk.getBalances(BSC_CHAIN, "0xYourAddress");
 for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount));
 }
-// Available  1.5
-// Staked     10.0
-// Pending    2.0
-// Claimable  0.5
+// Available  1.5    ← wallet balance, immediately spendable
+// Staked     10.0   ← delegated and earning rewards
+// Pending    2.0    ← in the unbonding window
+// Claimable  0.5    ← unbonding complete, ready to withdraw
 ```
 
----
+### `getNonce(chain, address)`
 
-### `getNonce`
-
-Returns the current transaction nonce for an address. Required when building signing arguments.
+Returns the current transaction nonce. Required before calling `sign` or `preHash`.
 
 ```typescript
 const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
 ```
 
----
+### `estimateFee(transaction)`
 
-### `estimateFee`
-
-Simulates a transaction against the chain to estimate gas price and gas limit.
+Simulates a transaction on-chain and returns the estimated gas fee.
 
 ```typescript
-const fee = await sdk.estimateFee(transaction);
-```
+import { TransactionType } from "@guardian/bsc";
+import { parseEther } from "viem";
 
-**Returns:** `Promise<Fee>`
-
-```typescript
-interface GasFee {
-  type: FeeType.GasFee;
-  gasPrice: bigint;   // In wei
-  gasLimit: bigint;
-  total: bigint;      // gasPrice × gasLimit, in wei
-}
-```
-
-Accepts any of the four transaction types:
-
-```typescript
-// Delegate — stake BNB with a validator
 const fee = await sdk.estimateFee({
   type: TransactionType.Delegate,
   chain: BSC_CHAIN,
-  amount: parseEther("5"),
-  account: "0xYourAddress",
-  isMaxAmount: false,
-  validator: validators[0],         // Validator object or operator address
-});
-
-// Undelegate — begin the 7-day unbonding process
-const fee = await sdk.estimateFee({
-  type: TransactionType.Undelegate,
-  chain: BSC_CHAIN,
-  amount: parseEther("5"),
+  amount: parseEther("1"),
   account: "0xYourAddress",
   isMaxAmount: false,
   validator: validators[0],
 });
 
-// Redelegate — move stake from one validator to another (0.002% fee applies)
-const fee = await sdk.estimateFee({
-  type: TransactionType.Redelegate,
-  chain: BSC_CHAIN,
-  amount: parseEther("5"),
-  account: "0xYourAddress",
-  isMaxAmount: false,
-  fromValidator: validators[0],
-  toValidator: validators[1],
-});
-
-// Claim — withdraw BNB after the unbonding period completes
-const fee = await sdk.estimateFee({
-  type: TransactionType.Claim,
-  chain: BSC_CHAIN,
-  amount: 0n,
-  account: "0xYourAddress",
-  validator: validators[0],
-  index: 0n,    // delegationIndex from getDelegations()
-});
+console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
----
+Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `Claim`. See the [BSC README](./packages/bsc/README.md#estimatefee) for the full shape of each.
 
-### `sign`
+### `sign(signingArgs)`
 
 Signs a transaction and returns the raw hex string ready to broadcast.
 
-**With a private key:**
-
 ```typescript
 const rawTx = await sdk.sign({
   transaction: {
@@ -385,66 +127,97 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: "0xYourPrivateKey",
+  privateKey: "0xYourPrivateKey", // or pass a viem `account` object
 });
+
+// rawTx → broadcast via your RPC node
 ```
 
-**With a viem account object:**
+### `preHash(args)` / `compile(args)`
+
+For MPC wallets, hardware wallets, or any setup where the private key is not directly available.
 
 ```typescript
-import { privateKeyToAccount } from "viem/accounts";
-
-const account = privateKeyToAccount("0xYourPrivateKey");
-
-const rawTx = await sdk.sign({
-  transaction: { ... },
-  fee,
-  nonce,
-  account,
-});
-```
-
----
-
-### `preHash` / `compile`
-
-For **MPC wallets, hardware wallets, or any setup where the private key is not directly available**. Splitting the signing process into two steps:
-
-**Step 1 — serialize the transaction:**
-
-```typescript
+// Step 1 — serialize
 const { serializedTransaction, signArgs } = await sdk.preHash({
-  transaction: {
-    type: TransactionType.Delegate,
-    chain: BSC_CHAIN,
-    amount: parseEther("1"),
-    isMaxAmount: false,
-    validator: validators[0],
-  },
+  transaction: { type: TransactionType.Delegate, chain: BSC_CHAIN, ... },
   fee,
   nonce,
 });
 
-// Send `serializedTransaction` to your MPC server or hardware wallet.
-// It returns the ECDSA signature components: r, s, v.
-```
+// Send serializedTransaction to your external signer → get back r, s, v
 
-**Step 2 — compile the final transaction:**
-
-```typescript
-const rawTx = await sdk.compile({
-  signArgs,
-  r: "0x...",
-  s: "0x...",
-  v: 27n,
-});
-
-// Broadcast rawTx via your RPC node
+// Step 2 — assemble
+const rawTx = await sdk.compile({ signArgs, r: "0x...", s: "0x...", v: 27n });
 ```
 
 ---
 
-## Signing Flows
+## Sample — Delegate on BNB Smart Chain
+
+End-to-end example using direct signing:
+
+```typescript
+import { GuardianSDK, BSC_CHAIN, TransactionType } from "@guardian/bsc";
+import { parseEther, formatEther } from "viem";
+
+const sdk = new GuardianSDK({
+  chains: {
+    "56": { rpcUrl: "https://bsc-dataseed.bnbchain.org" },
+  },
+});
+
+const ADDRESS = "0xYourAddress";
+const PRIVATE_KEY = "0xYourPrivateKey";
+
+// 1. Pick a validator
+const validators = await sdk.getValidators(BSC_CHAIN);
+const validator = validators.find((v) => v.name === "TWStaking")!;
+console.log(`Staking with ${validator.name} — APY: ${validator.apy}%`);
+
+// 2. Check balances before
+const before = await sdk.getBalances(BSC_CHAIN, ADDRESS);
+const available = before.find((b) => b.type === "Available")!;
+console.log(`Available: ${formatEther(available.amount)} BNB`);
+
+// 3. Estimate fee
+const amount = parseEther("1");
+const fee = await sdk.estimateFee({
+  type: TransactionType.Delegate,
+  chain: BSC_CHAIN,
+  amount,
+  account: ADDRESS,
+  isMaxAmount: false,
+  validator,
+});
+console.log(`Estimated fee: ${formatEther(fee.total)} BNB`);
+
+// 4. Sign
+const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+const rawTx = await sdk.sign({
+  transaction: {
+    type: TransactionType.Delegate,
+    chain: BSC_CHAIN,
+    amount,
+    isMaxAmount: false,
+    validator,
+  },
+  fee,
+  nonce,
+  privateKey: PRIVATE_KEY,
+});
+
+console.log("Signed tx:", rawTx);
+// → broadcast rawTx via your RPC node
+```
+
+For chain-specific details (transaction types, protocol parameters, error codes) see the chain README:
+
+- [BNB Smart Chain →](./packages/bsc/README.md)
+
+---
+
+## Signing flows
 
 ```
 Direct signing (private key available)
@@ -456,137 +229,48 @@ MPC / external signing
 estimateFee() ──► getNonce() ──► preHash() ──► [external signer] ──► compile() ──► broadcast
 ```
 
----
+The MPC flow is designed for setups where the private key is managed externally — hardware wallets, MPC servers, or custodians. `preHash()` serializes the transaction and returns it ready to sign. `compile()` assembles the final signed transaction from the ECDSA components (`r`, `s`, `v`).
 
-## Error Handling
+### Error handling
 
-Every error thrown by the SDK extends `GuardianError`, so you can catch the base class or narrow to a specific subclass depending on how much detail you need.
+Every error thrown by the SDK extends `GuardianError`, exported from each chain package:
 
 ```typescript
-import {
-  GuardianError,
-  ValidationError,
-  ConfigError,
-  SigningError,
-} from "bnb-native-staking";
+import { GuardianError, ValidationError, ConfigError, SigningError } from "@guardian/bsc";
 
 try {
-  await sdk.getDelegations(BSC_CHAIN, address);
+  await sdk.getDelegations(chain, address);
 } catch (err) {
   if (err instanceof ValidationError) {
+    // invalid input — caught before any network call
     console.error(err.code, err.message);
-    // e.g. "INVALID_ADDRESS" "0xbad is not a valid address for chain 56."
   } else if (err instanceof ConfigError) {
+    // misconfigured SDK or unsupported chain
     console.error(err.code, err.message);
   } else if (err instanceof SigningError) {
-    console.error(err.code, err.message);
-  } else if (err instanceof GuardianError) {
-    // catch-all for any SDK error
+    // signing failed
     console.error(err.code, err.message);
   } else {
-    throw err; // re-throw anything not from the SDK
+    throw err;
   }
 }
 ```
 
-Every `GuardianError` instance exposes:
+## Roadmap
 
-| Property | Type | Description |
+### Chain support
+
+Planned integrations follow the same architecture — each chain is an independent package implementing the `GuardianServiceContract` interface from `@guardian/sdk`.
+
+| Chain | Package | Status |
 |---|---|---|
-| `message` | `string` | Human-readable description of what went wrong |
-| `code` | `ErrorCode` | Machine-readable code (see tables below) |
-| `name` | `string` | Class name (`"ValidationError"`, `"ConfigError"`, `"SigningError"`) |
+| BNB Smart Chain | [`@guardian/bsc`](./packages/bsc/README.md) | Available |
+| Tron | `@guardian/tron` | In Progress |
+| SUI | `@guardian/sui` | Planned |
+| Solana | `@guardian/solana` | Planned |
+| Aptos | `@guardian/aptos` | Planned |
+| Cardano | `@guardian/cardano` | Planned |
 
----
+### Beyond native staking
 
-### `ValidationError`
-
-Thrown when the caller provides invalid input. Caught before any network call is made.
-
-```typescript
-import { ValidationError, ValidationErrorCode } from "bnb-native-staking";
-```
-
-| Code | Thrown when |
-|---|---|
-| `INVALID_ADDRESS` | An address string fails the chain's address format check — e.g. `getDelegations`, `getBalances`, `getNonce`, or a validator/account address inside a transaction |
-| `INVALID_AMOUNT` | A transaction `amount` is zero or negative (Claim transactions are exempt) |
-| `INVALID_NONCE` | The `nonce` passed to `sign`, `preHash`, or `compile` is negative or not an integer |
-| `INVALID_FEE` | The `fee.gasLimit` or `fee.gasPrice` passed to `sign`, `preHash`, or `compile` is zero or negative |
-
----
-
-### `ConfigError`
-
-Thrown when the SDK is misconfigured or asked to operate on a chain it does not support.
-
-```typescript
-import { ConfigError, ConfigErrorCode } from "bnb-native-staking";
-```
-
-| Code | Thrown when |
-|---|---|
-| `MISSING_CHAIN_ID` | The `GuardianChain` object passed to any method has an undefined `chainId` |
-| `UNSUPPORTED_CHAIN` | The `chainId` is defined but not registered in the SDK — check `getSupportedChains()` |
-| `MISSING_CHAIN_CONFIG` | The `chainId` is supported but `sdkConfig.chains[chainId]` was not provided at construction time |
-
----
-
-### `SigningError`
-
-Thrown during transaction signing when the signing arguments are invalid or the transaction type is not supported.
-
-```typescript
-import { SigningError, SigningErrorCode } from "bnb-native-staking";
-```
-
-| Code | Thrown when |
-|---|---|
-| `INVALID_SIGNING_ARGS` | The object passed to `sign()` contains neither a `privateKey` nor an `account` field |
-| `UNSUPPORTED_TRANSACTION_TYPE` | `buildCallData` is called with a `TransactionType` that has no ABI encoding defined |
-
----
-
-### Catching by code
-
-If you only want to handle one specific condition:
-
-```typescript
-import { ValidationError, ValidationErrorCode } from "bnb-native-staking";
-
-try {
-  await sdk.getBalances(BSC_CHAIN, rawInput);
-} catch (err) {
-  if (
-    err instanceof ValidationError &&
-    err.code === ValidationErrorCode.INVALID_ADDRESS
-  ) {
-    showAddressError("Please enter a valid wallet address.");
-  }
-}
-```
-
----
-
-## Supported Chains
-
-Import the chain constant for the network you want to interact with:
-
-```typescript
-import { BSC_CHAIN } from "bnb-native-staking";
-```
-
-| Constant | Chain | Chain ID | Explorer |
-|---|---|---|---|
-| `BSC_CHAIN` | BNB Smart Chain Mainnet | 56 | https://bscscan.com |
-
-You can also retrieve all supported chains at runtime:
-
-```typescript
-import { getSupportedChains } from "bnb-native-staking";
-
-const chains = getSupportedChains();
-// [{ id: "bsc-mainnet", symbol: "BNB", chainId: "56", ... }]
-```
-
-Adding support for additional chains follows the pattern described in the [architecture guide](./CLAUDE.md).
+The `@guardian/sdk` core is protocol-agnostic by design. Future releases may expand into other DeFi primitives — liquidity provisioning, lending, yield aggregation — using the same chain-agnostic interfaces and signing flows.

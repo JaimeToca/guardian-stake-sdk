@@ -4,51 +4,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-There are no npm scripts defined. Use the TypeScript compiler directly:
-
 ```bash
 # Install dependencies
 npm install
 
-# Compile TypeScript to dist/
-npx tsc
+# Build both packages (sdk first, then bsc)
+npm run build
 
-# Type-check without emitting
-npx tsc --noEmit
+# Type-check all packages
+npm run typecheck
 
-# Run the sample (after compiling)
-node dist/index.js
+# Run tests
+npm test
 ```
 
-No test runner or linter is configured.
+## Monorepo Structure
+
+This is an npm workspaces monorepo with two packages:
+
+- `packages/sdk` → published as `@guardian/sdk` — chain-agnostic core (no viem dependency)
+- `packages/bsc` → published as `@guardian/bsc` — BSC implementation (viem peer dep, depends on `@guardian/sdk`)
+
+Consumers install only `@guardian/bsc`, which re-exports everything from `@guardian/sdk`.
 
 ## Architecture
 
-This is a TypeScript SDK for BNB Smart Chain (BSC) native staking. It follows a layered architecture:
+**Entry point**: `packages/bsc/src/sdk/index.ts` exports `GuardianSDK` — the single public class consumers use. It lazily initializes chain-specific services on first use and caches them by chain ID.
 
-**Entry point**: `src/sdk/index.ts` exports `GuardianSDK` — the single public class consumers use. It lazily initializes chain-specific services on first use and caches them by chain ID.
-
-**Service wiring**: `src/smartchain/index.ts` contains `provideGuarService()`, which is the DI factory for BSC. It constructs the viem `PublicClient` (with multicall batching enabled) and composes all services together.
+**Service wiring**: `packages/bsc/src/smartchain/index.ts` contains `provideGuarService()`, which is the DI factory for BSC. It constructs the viem `PublicClient` (with multicall batching enabled) and composes all services together.
 
 **Layer breakdown**:
-- `src/sdk/` — Public API (`GuardianSDK` class). Routes calls to the correct chain's `GuardianServiceContract`.
-- `src/smartchain/services/` — Concrete service implementations for BSC:
+- `packages/bsc/src/sdk/` — Public API (`GuardianSDK` class). Routes calls to the correct chain's `GuardianServiceContract`.
+- `packages/bsc/src/smartchain/services/` — Concrete service implementations for BSC:
   - `StakingService` — validators, delegations, protocol parameters (uses in-memory cache for validators)
   - `BalanceService` — aggregates available/staked/pending/claimable balances
   - `FeeService` — fee estimation via transaction simulation
   - `SignService` — signs transactions or produces a pre-hash for MPC/external signing
   - `NonceService` — fetches account nonce
   - `GuardianService` — facade that delegates to the above services, implementing `GuardianServiceContract`
-- `src/smartchain/rpc/` — Low-level RPC clients:
+- `packages/bsc/src/smartchain/rpc/` — Low-level RPC clients:
   - `StakingRpcClient` — interacts with BSC staking contracts via viem multicall
   - `BNBRpcClient` — fetches validator metadata from BNB Chain's native RPC (not EVM)
-- `src/smartchain/abi/` — ABI encoding/decoding for staking contract calls
-- `src/common/` — Shared interfaces (`GuardianServiceContract`, `StakingServiceContract`, etc.), types, cache, and RPC error utilities
+- `packages/bsc/src/smartchain/abi/` — ABI encoding/decoding for staking contract calls
+- `packages/sdk/src/` — Shared interfaces (`GuardianServiceContract`, `StakingServiceContract`, etc.), types, cache, and RPC error utilities. No viem dependency.
 
-**Adding a new chain**: Add a new case in `GuardianSDK.getInternalService()` (in `src/sdk/index.ts`) and create a corresponding factory in a new directory parallel to `src/smartchain/`.
+**Address handling**: Service contracts use `string` for addresses throughout. BSC services call `parseEvmAddress(address)` internally to validate and cast to viem's `Address` type.
+
+**Adding a new chain**: Add a new case in `GuardianSDK.getInternalService()` (in `packages/bsc/src/sdk/index.ts`) and create a corresponding factory in a new directory parallel to `packages/bsc/src/smartchain/`.
 
 **Signing flow**: Two paths exist:
 1. Direct: `sign()` — requires a private key, returns a signed hex tx
 2. MPC/external: `preHash()` → external signing → `compile()` — for when you don't control the private key
 
-**Dependencies**: `viem` (EVM interactions, ABI encoding) and `axios` (HTTP for BNB native RPC).
+**Dependencies**:
+- `@guardian/sdk`: `axios` only
+- `@guardian/bsc`: `@guardian/sdk`, `viem` (peer dep)

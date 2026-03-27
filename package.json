@@ -1,50 +1,18 @@
 {
-  "name": "bnb-native-staking",
-  "version": "1.0.0",
-  "description": "TypeScript SDK for BNB Smart Chain native staking",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
+  "name": "guardian-sdk",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "build": "tsc",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "peerDependencies": {
-    "viem": "^2.47.5"
-  },
-  "dependencies": {
-    "axios": "^1.13.6"
-  },
-  "devDependencies": {
-    "viem": "^2.47.4",
-    "vitest": "^3.0.0"
+    "build": "npm run build -w packages/sdk && npm run build -w packages/bsc",
+    "typecheck": "npm run build -w packages/sdk && npm run typecheck --workspaces --if-present",
+    "test": "npm test -w packages/bsc"
   },
   "engines": {
     "node": ">=18"
   },
-  "keywords": [
-    "bnb",
-    "bsc",
-    "binance",
-    "staking",
-    "web3",
-    "blockchain",
-    "sdk",
-    "native-staking",
-    "crypto",
-    "bnbstaking",
-    "bnb-smart-chain",
-    "bnb-native-staking"
-  ],
   "author": "JaimeToca",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/JaimeToca/bnb-native-staking.git"
-  },
   "license": "MIT"
 }

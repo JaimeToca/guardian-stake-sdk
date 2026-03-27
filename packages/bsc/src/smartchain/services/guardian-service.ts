@@ -1,0 +1,78 @@
+import { GuardianChain } from "@guardian/sdk";
+import { Balance } from "@guardian/sdk";
+import { Fee } from "@guardian/sdk";
+import { GuardianServiceContract } from "@guardian/sdk";
+import {
+  SigningWithPrivateKey,
+  BaseSignArgs,
+  PrehashResult,
+  CompileArgs,
+  HexString,
+} from "@guardian/sdk";
+import { Transaction } from "@guardian/sdk";
+import {
+  BalanceServiceContract,
+  Delegations,
+  FeeServiceContract,
+  NonceServiceContract,
+  StakingServiceContract,
+  Validator,
+} from "@guardian/sdk";
+import { SigningWithAccount } from "../sign-types";
+import { SignService } from "./sign-service";
+
+/**
+ * BSC implementation of `GuardianServiceContract`.
+ * Extends the base `sign()` contract to also accept a viem `PrivateKeyAccount`
+ * via `SigningWithAccount` — a BSC-specific convenience.
+ */
+export class GuardianService implements GuardianServiceContract {
+  constructor(
+    private readonly chain: GuardianChain,
+    private balanceService: BalanceServiceContract,
+    private nonceService: NonceServiceContract,
+    private feeService: FeeServiceContract,
+    private signService: SignService,
+    private stakingService: StakingServiceContract
+  ) {}
+
+  getValidators(): Promise<Validator[]> {
+    return this.stakingService.getValidators();
+  }
+
+  getDelegations(address: string): Promise<Delegations> {
+    return this.stakingService.getDelegations(address);
+  }
+
+  getChainInfo(): GuardianChain {
+    return this.chain;
+  }
+
+  getBalances(address: string): Promise<Balance[]> {
+    return this.balanceService.getBalances(address);
+  }
+
+  getNonce(address: string): Promise<number> {
+    return this.nonceService.getNonce(address);
+  }
+
+  estimateFee(transaction: Transaction): Promise<Fee> {
+    return this.feeService.estimateFee(transaction);
+  }
+
+  sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<string> {
+    return this.signService.sign(signingArgs);
+  }
+
+  prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult> {
+    return this.signService.prehash(preHasArgs);
+  }
+
+  compile(compileArgs: CompileArgs): Promise<string> {
+    return this.signService.compile(compileArgs);
+  }
+
+  buildCallData(transaction: Transaction): { data: HexString; amount: bigint } {
+    return this.signService.buildCallData(transaction);
+  }
+}

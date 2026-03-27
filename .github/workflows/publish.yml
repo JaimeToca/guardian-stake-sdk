@@ -28,7 +28,15 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Publish
-        run: npm publish
+      - name: Build
+        run: npm run build
+
+      - name: Publish @guardian/sdk
+        run: npm publish -w packages/sdk --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @guardian/bsc
+        run: npm publish -w packages/bsc --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
