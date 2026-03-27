@@ -1,0 +1,22 @@
+{
+  "entryPoints": [
+    "packages/sdk/src/index.ts",
+    "packages/bsc/src/index.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "out": "docs",
+  "name": "Guardian SDK",
+  "plugin": ["typedoc-plugin-merge-modules"],
+  "mergeModulesMergeMode": "module",
+  "tsconfig": "tsconfig.docs.json",
+  "blockTags": ["@example", "@param", "@returns", "@throws", "@deprecated", "@remarks", "@see", "@since"],
+  "readme": "README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "hideGenerator": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/JaimeToca/bnb-native-staking"
+  }
+}

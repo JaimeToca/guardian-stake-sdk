@@ -1,0 +1,379 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>Guardian SDK - v0.0.0</title><meta name="description" content="Documentation for Guardian SDK"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">Guardian SDK - v0.0.0</a><div id="tsd-toolbar-links"><a href="https://github.com/JaimeToca/bnb-native-staking">GitHub</a></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>Guardian SDK - v0.0.0</h1></div><div class="tsd-panel tsd-typography"><p align="center">
+  <img src="media/Logo.png" alt="Guardian SDK" width="500" />
+</p>
+<p>The <strong>Guardian SDK</strong> is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (<code>@guardian/sdk</code>) and one package per supported chain. Install only the chain you need.</p>
+<h2 id="table-of-contents" class="tsd-anchor-link">Table of Contents<a href="#table-of-contents" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<ul>
+<li><a href="#packages">Packages</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#how-it-works">How it works</a></li>
+<li><a href="#staking-api">Staking API</a>
+<ul>
+<li><a href="#getvalidatorschain">getValidators</a></li>
+<li><a href="#getdelegationschain-address">getDelegations</a></li>
+<li><a href="#getbalanceschain-address">getBalances</a></li>
+<li><a href="#getnoncechain-address">getNonce</a></li>
+<li><a href="#estimatefeetransaction">estimateFee</a></li>
+<li><a href="#signsigningargs">sign</a></li>
+<li><a href="#prehashhargs--compileargs">preHash / compile</a></li>
+</ul>
+</li>
+<li><a href="#sample--delegate-on-bnb-smart-chain">Sample — Delegate on BNB Smart Chain</a></li>
+<li><a href="#signing-flows">Signing Flows</a></li>
+<li><a href="#error-handling">Error Handling</a>
+<ul>
+<li><a href="#validationerror">ValidationError</a></li>
+<li><a href="#configerror">ConfigError</a></li>
+<li><a href="#signingerror">SigningError</a></li>
+</ul>
+</li>
+<li><a href="#roadmap">Roadmap</a></li>
+</ul>
+<hr>
+<h2 id="packages" class="tsd-anchor-link">Packages<a href="#packages" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Chain</th>
+<th>Status</th>
+<th>Docs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="media/README.md"><code>@guardian/bsc</code></a></td>
+<td>BNB Smart Chain</td>
+<td>Available</td>
+<td><a href="media/README.md">README</a></td>
+</tr>
+<tr>
+<td><code>@guardian/tron</code></td>
+<td>Tron</td>
+<td>In Progress</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>@guardian/sui</code></td>
+<td>SUI</td>
+<td>Planned</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>@guardian/solana</code></td>
+<td>Solana</td>
+<td>Planned</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>@guardian/aptos</code></td>
+<td>Aptos</td>
+<td>Planned</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>@guardian/cardano</code></td>
+<td>Cardano</td>
+<td>Planned</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. <code>@guardian/sdk</code> is included automatically as a dependency of each chain package.</p>
+<hr>
+<h2 id="architecture" class="tsd-anchor-link">Architecture<a href="#architecture" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code class="mermaid">graph TD
+    User["Your App"]
+
+    subgraph SDK["@guardian/sdk (chain-agnostic core)"]
+        GSDK["GuardianSDK\n─────────────────\ngetValidators(chain)\ngetDelegations(chain, addr)\ngetBalances(chain, addr)\ngetNonce(chain, addr)\nestimate Fee(tx)\nsign(args)\npreHash(args)\ncompile(args)"]
+        GSC["GuardianServiceContract\n(interface)"]
+        Types["Shared Types & Errors\nValidator · Delegation · Balance\nFee · Transaction · GuardianError"]
+    end
+
+    subgraph BSC["@guardian/bsc (BNB Smart Chain)"]
+        Factory["bsc({ rpcUrl })\n─────────────\nchain factory"]
+        GS["GuardianService\n(facade)"]
+        SS["StakingService"]
+        BS["BalanceService"]
+        FS["FeeService"]
+        NS["NonceService"]
+        SignS["SignService"]
+        SRC["StakingRpcClient\n(viem multicall)"]
+        BRC["BNBRpcClient\n(axios / BNB API)"]
+    end
+
+    User -->|"new GuardianSDK([bsc(...)])"| GSDK
+    GSDK -->|"routes by chain.id"| GSC
+    Factory -->|"implements"| GSC
+    Factory -->|"creates"| GS
+    GS --> SS
+    GS --> BS
+    GS --> FS
+    GS --> NS
+    GS --> SignS
+    SS --> SRC
+    SS --> BRC
+    BS --> SRC
+    FS --> SRC
+    GSDK --- Types
+</code><button type="button">Copy</button></pre>
+
+<blockquote>
+<p><strong>Mermaid</strong> diagrams render natively on GitHub. Each chain package implements <code>GuardianServiceContract</code> — <code>GuardianSDK</code> routes every call to the correct service by <code>chain.id</code>.</p>
+</blockquote>
+<hr>
+<h2 id="how-it-works" class="tsd-anchor-link">How it works<a href="#how-it-works" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Install the chain package you need, then pass its factory to <code>GuardianSDK</code>:</p>
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">GuardianSDK</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/sdk&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">bsc</span><span class="hl-1">, </span><span class="hl-2">BSC_CHAIN</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">sdk</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">GuardianSDK</span><span class="hl-1">([</span><br/><span class="hl-1">  </span><span class="hl-6">bsc</span><span class="hl-1">({ </span><span class="hl-2">rpcUrl:</span><span class="hl-1"> </span><span class="hl-3">&quot;https://bsc-dataseed.bnbchain.org&quot;</span><span class="hl-1"> }),</span><br/><span class="hl-1">]);</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Adding another chain later is just adding another entry to the array:</p>
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">GuardianSDK</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/sdk&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">bsc</span><span class="hl-1">, </span><span class="hl-2">BSC_CHAIN</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">tron</span><span class="hl-1">, </span><span class="hl-2">TRON_CHAIN</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/tron&quot;</span><span class="hl-1">; </span><span class="hl-7">// when available</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">sdk</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">GuardianSDK</span><span class="hl-1">([</span><br/><span class="hl-1">  </span><span class="hl-6">bsc</span><span class="hl-1">({ </span><span class="hl-2">rpcUrl:</span><span class="hl-1"> </span><span class="hl-3">&quot;https://bsc-dataseed.bnbchain.org&quot;</span><span class="hl-1"> }),</span><br/><span class="hl-1">  </span><span class="hl-6">tron</span><span class="hl-1">({ </span><span class="hl-2">rpcUrl:</span><span class="hl-1"> </span><span class="hl-3">&quot;https://api.trongrid.io&quot;</span><span class="hl-1"> }),</span><br/><span class="hl-1">]);</span>
+</code><button type="button">Copy</button></pre>
+
+<p>No chain IDs to configure manually, no internal wiring — install the package, pass the factory, done.</p>
+<hr>
+<h2 id="staking-api" class="tsd-anchor-link">Staking API<a href="#staking-api" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>The same API surface is available on every supported chain. Pass the chain object as the first argument to scope each call.</p>
+<h3 id="_" class="tsd-anchor-link"><code>getValidators(chain)</code><a href="#_" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Returns all validators on the network — active, inactive, and jailed.</p>
+<p><strong>Returns:</strong> <code>Promise&lt;Validator[]&gt;</code></p>
+<pre><code class="typescript"><span class="hl-4">interface</span><span class="hl-1"> </span><span class="hl-8">Validator</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-2">id</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">name</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">description</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">image</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1"> | </span><span class="hl-8">undefined</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">status</span><span class="hl-1">: </span><span class="hl-8">ValidatorStatus</span><span class="hl-1">;      </span><span class="hl-7">// Active | Inactive | Jailed</span><br/><span class="hl-1">  </span><span class="hl-2">apy</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;                  </span><span class="hl-7">// Annual percentage yield (%)</span><br/><span class="hl-1">  </span><span class="hl-2">delegators</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">operatorAddress</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">creditAddress</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1">;</span><br/><span class="hl-1">}</span>
+</code><button type="button">Copy</button></pre>
+
+<pre><code class="typescript"><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">validators</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getValidators</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">);</span><br/><span class="hl-7">// validators[0] → { name, apy, status, operatorAddress, ... }</span>
+</code><button type="button">Copy</button></pre>
+
+<blockquote>
+<p>Validator data is cached for 3 minutes.</p>
+</blockquote>
+<hr>
+<h3 id="_-1" class="tsd-anchor-link"><code>getDelegations(chain, address)</code><a href="#_-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Returns all delegations for an address and a protocol-level staking summary.</p>
+<p><strong>Returns:</strong> <code>Promise&lt;Delegations&gt;</code></p>
+<pre><code class="typescript"><span class="hl-4">interface</span><span class="hl-1"> </span><span class="hl-8">Delegations</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-2">delegations</span><span class="hl-1">: </span><span class="hl-8">Delegation</span><span class="hl-1">[];</span><br/><span class="hl-1">  </span><span class="hl-2">stakingSummary</span><span class="hl-1">: </span><span class="hl-8">StakingSummary</span><span class="hl-1">;</span><br/><span class="hl-1">}</span><br/><br/><span class="hl-4">interface</span><span class="hl-1"> </span><span class="hl-8">Delegation</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-2">id</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">validator</span><span class="hl-1">: </span><span class="hl-8">Validator</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">amount</span><span class="hl-1">: </span><span class="hl-8">bigint</span><span class="hl-1">;               </span><span class="hl-7">// Current value in wei</span><br/><span class="hl-1">  </span><span class="hl-2">status</span><span class="hl-1">: </span><span class="hl-8">DelegationStatus</span><span class="hl-1">;    </span><span class="hl-7">// Active | Pending | Claimable | Inactive</span><br/><span class="hl-1">  </span><span class="hl-2">delegationIndex</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;     </span><span class="hl-7">// Required for Claim transactions</span><br/><span class="hl-1">  </span><span class="hl-2">pendingUntil</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;        </span><span class="hl-7">// Unix timestamp (ms) when unbonding completes</span><br/><span class="hl-1">}</span><br/><br/><span class="hl-4">interface</span><span class="hl-1"> </span><span class="hl-8">StakingSummary</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-2">totalProtocolStake</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">maxApy</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">minAmountToStake</span><span class="hl-1">: </span><span class="hl-8">bigint</span><span class="hl-1">;      </span><span class="hl-7">// In wei</span><br/><span class="hl-1">  </span><span class="hl-2">unboundPeriodInMillis</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">redelegateFeeRate</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">activeValidators</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">totalValidators</span><span class="hl-1">: </span><span class="hl-8">number</span><span class="hl-1">;</span><br/><span class="hl-1">}</span>
+</code><button type="button">Copy</button></pre>
+
+<pre><code class="typescript"><span class="hl-4">const</span><span class="hl-1"> { </span><span class="hl-5">delegations</span><span class="hl-1">, </span><span class="hl-5">stakingSummary</span><span class="hl-1"> } = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getDelegations</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">, </span><span class="hl-3">&quot;0xYourAddress&quot;</span><span class="hl-1">);</span><br/><br/><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-2">stakingSummary</span><span class="hl-1">.</span><span class="hl-2">maxApy</span><span class="hl-1">);           </span><span class="hl-7">// best APY across all validators</span><br/><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-2">stakingSummary</span><span class="hl-1">.</span><span class="hl-2">minAmountToStake</span><span class="hl-1">); </span><span class="hl-7">// minimum stake in wei</span><br/><br/><span class="hl-0">for</span><span class="hl-1"> (</span><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">d</span><span class="hl-1"> </span><span class="hl-4">of</span><span class="hl-1"> </span><span class="hl-2">delegations</span><span class="hl-1">) {</span><br/><span class="hl-1">  </span><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-2">d</span><span class="hl-1">.</span><span class="hl-2">validator</span><span class="hl-1">.</span><span class="hl-2">name</span><span class="hl-1">, </span><span class="hl-2">d</span><span class="hl-1">.</span><span class="hl-2">amount</span><span class="hl-1">, </span><span class="hl-2">d</span><span class="hl-1">.</span><span class="hl-2">status</span><span class="hl-1">);</span><br/><span class="hl-1">}</span>
+</code><button type="button">Copy</button></pre>
+
+<hr>
+<h3 id="_-2" class="tsd-anchor-link"><code>getBalances(chain, address)</code><a href="#_-2" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Returns the four balance categories for an address.</p>
+<p><strong>Returns:</strong> <code>Promise&lt;Balance[]&gt;</code></p>
+<pre><code class="typescript"><span class="hl-4">interface</span><span class="hl-1"> </span><span class="hl-8">Balance</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-2">type</span><span class="hl-1">: </span><span class="hl-8">BalanceType</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">amount</span><span class="hl-1">: </span><span class="hl-8">bigint</span><span class="hl-1">;   </span><span class="hl-7">// In wei</span><br/><span class="hl-1">}</span><br/><br/><span class="hl-4">enum</span><span class="hl-1"> </span><span class="hl-8">BalanceType</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-5">Available</span><span class="hl-1"> = </span><span class="hl-3">&quot;Available&quot;</span><span class="hl-1">,  </span><span class="hl-7">// Wallet balance, immediately spendable</span><br/><span class="hl-1">  </span><span class="hl-5">Staked</span><span class="hl-1">    = </span><span class="hl-3">&quot;Staked&quot;</span><span class="hl-1">,     </span><span class="hl-7">// Delegated and earning rewards</span><br/><span class="hl-1">  </span><span class="hl-5">Pending</span><span class="hl-1">   = </span><span class="hl-3">&quot;Pending&quot;</span><span class="hl-1">,    </span><span class="hl-7">// In the unbonding window</span><br/><span class="hl-1">  </span><span class="hl-5">Claimable</span><span class="hl-1"> = </span><span class="hl-3">&quot;Claimable&quot;</span><span class="hl-1">,  </span><span class="hl-7">// Unbonding complete, ready to withdraw</span><br/><span class="hl-1">}</span>
+</code><button type="button">Copy</button></pre>
+
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">formatEther</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;viem&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">balances</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getBalances</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">, </span><span class="hl-3">&quot;0xYourAddress&quot;</span><span class="hl-1">);</span><br/><br/><span class="hl-0">for</span><span class="hl-1"> (</span><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">balance</span><span class="hl-1"> </span><span class="hl-4">of</span><span class="hl-1"> </span><span class="hl-2">balances</span><span class="hl-1">) {</span><br/><span class="hl-1">  </span><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-2">balance</span><span class="hl-1">.</span><span class="hl-2">type</span><span class="hl-1">, </span><span class="hl-6">formatEther</span><span class="hl-1">(</span><span class="hl-2">balance</span><span class="hl-1">.</span><span class="hl-2">amount</span><span class="hl-1">));</span><br/><span class="hl-1">}</span><br/><span class="hl-7">// Available  1.5</span><br/><span class="hl-7">// Staked     10.0</span><br/><span class="hl-7">// Pending    2.0</span><br/><span class="hl-7">// Claimable  0.5</span>
+</code><button type="button">Copy</button></pre>
+
+<hr>
+<h3 id="_-3" class="tsd-anchor-link"><code>getNonce(chain, address)</code><a href="#_-3" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Returns the current transaction nonce for an address. Required before calling <code>sign</code> or <code>preHash</code>.</p>
+<p><strong>Returns:</strong> <code>Promise&lt;number&gt;</code></p>
+<pre><code class="typescript"><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">nonce</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getNonce</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">, </span><span class="hl-3">&quot;0xYourAddress&quot;</span><span class="hl-1">);</span>
+</code><button type="button">Copy</button></pre>
+
+<hr>
+<h3 id="_-4" class="tsd-anchor-link"><code>estimateFee(transaction)</code><a href="#_-4" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Simulates a transaction on-chain and returns the estimated gas fee.</p>
+<p><strong>Returns:</strong> <code>Promise&lt;Fee&gt;</code></p>
+<pre><code class="typescript"><span class="hl-4">interface</span><span class="hl-1"> </span><span class="hl-8">GasFee</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-2">type</span><span class="hl-1">: </span><span class="hl-8">FeeType</span><span class="hl-1">.</span><span class="hl-8">GasFee</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">gasPrice</span><span class="hl-1">: </span><span class="hl-8">bigint</span><span class="hl-1">;   </span><span class="hl-7">// In wei</span><br/><span class="hl-1">  </span><span class="hl-2">gasLimit</span><span class="hl-1">: </span><span class="hl-8">bigint</span><span class="hl-1">;</span><br/><span class="hl-1">  </span><span class="hl-2">total</span><span class="hl-1">: </span><span class="hl-8">bigint</span><span class="hl-1">;      </span><span class="hl-7">// gasPrice × gasLimit, in wei</span><br/><span class="hl-1">}</span>
+</code><button type="button">Copy</button></pre>
+
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">TransactionType</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">parseEther</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;viem&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">fee</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">estimateFee</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-2">type:</span><span class="hl-1"> </span><span class="hl-2">TransactionType</span><span class="hl-1">.</span><span class="hl-2">Delegate</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">chain:</span><span class="hl-1"> </span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">amount:</span><span class="hl-1"> </span><span class="hl-6">parseEther</span><span class="hl-1">(</span><span class="hl-3">&quot;1&quot;</span><span class="hl-1">),</span><br/><span class="hl-1">  </span><span class="hl-2">account:</span><span class="hl-1"> </span><span class="hl-3">&quot;0xYourAddress&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">isMaxAmount:</span><span class="hl-1"> </span><span class="hl-4">false</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">validator:</span><span class="hl-1"> </span><span class="hl-2">validators</span><span class="hl-1">[</span><span class="hl-9">0</span><span class="hl-1">],</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-2">fee</span><span class="hl-1">.</span><span class="hl-2">gasPrice</span><span class="hl-1">, </span><span class="hl-2">fee</span><span class="hl-1">.</span><span class="hl-2">gasLimit</span><span class="hl-1">, </span><span class="hl-2">fee</span><span class="hl-1">.</span><span class="hl-2">total</span><span class="hl-1">);</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Transaction types: <code>Delegate</code>, <code>Undelegate</code>, <code>Redelegate</code>, <code>Claim</code>. See the <a href="media/README.md#estimatefee">BSC README</a> for the full shape of each.</p>
+<hr>
+<h3 id="_-5" class="tsd-anchor-link"><code>sign(signingArgs)</code><a href="#_-5" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Signs a transaction and returns the raw hex string ready to broadcast.</p>
+<p><strong>Returns:</strong> <code>Promise&lt;string&gt;</code></p>
+<pre><code class="typescript"><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">rawTx</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">sign</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-2">transaction:</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-2">type:</span><span class="hl-1"> </span><span class="hl-2">TransactionType</span><span class="hl-1">.</span><span class="hl-2">Delegate</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-2">chain:</span><span class="hl-1"> </span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-2">amount:</span><span class="hl-1"> </span><span class="hl-6">parseEther</span><span class="hl-1">(</span><span class="hl-3">&quot;1&quot;</span><span class="hl-1">),</span><br/><span class="hl-1">    </span><span class="hl-2">isMaxAmount:</span><span class="hl-1"> </span><span class="hl-4">false</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-2">validator:</span><span class="hl-1"> </span><span class="hl-2">validators</span><span class="hl-1">[</span><span class="hl-9">0</span><span class="hl-1">],</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">  </span><span class="hl-2">fee</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">nonce</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">privateKey:</span><span class="hl-1"> </span><span class="hl-3">&quot;0xYourPrivateKey&quot;</span><span class="hl-1">, </span><span class="hl-7">// or pass a viem `account` object</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-7">// rawTx → broadcast via your RPC node</span>
+</code><button type="button">Copy</button></pre>
+
+<hr>
+<h3 id="_-6" class="tsd-anchor-link"><code>preHash(args)</code> / <code>compile(args)</code><a href="#_-6" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>For MPC wallets, hardware wallets, or any setup where the private key is not directly available.</p>
+<p><strong><code>preHash</code> returns:</strong> <code>Promise&lt;PrehashResult&gt;</code></p>
+<pre><code class="typescript"><span class="hl-4">interface</span><span class="hl-1"> </span><span class="hl-8">PrehashResult</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-2">serializedTransaction</span><span class="hl-1">: </span><span class="hl-8">string</span><span class="hl-1">;  </span><span class="hl-7">// Hex-encoded transaction to send to the external signer</span><br/><span class="hl-1">  </span><span class="hl-2">signArgs</span><span class="hl-1">: </span><span class="hl-8">BaseSignArgs</span><span class="hl-1">;         </span><span class="hl-7">// Passed through to compile()</span><br/><span class="hl-1">}</span>
+</code><button type="button">Copy</button></pre>
+
+<p><strong><code>compile</code> returns:</strong> <code>Promise&lt;string&gt;</code> — the final signed raw transaction.</p>
+<pre><code class="typescript"><span class="hl-7">// Step 1 — serialize</span><br/><span class="hl-4">const</span><span class="hl-1"> { </span><span class="hl-5">serializedTransaction</span><span class="hl-1">, </span><span class="hl-5">signArgs</span><span class="hl-1"> } = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">preHash</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-2">transaction:</span><span class="hl-1"> { </span><span class="hl-2">type:</span><span class="hl-1"> </span><span class="hl-2">TransactionType</span><span class="hl-1">.</span><span class="hl-2">Delegate</span><span class="hl-1">, </span><span class="hl-2">chain:</span><span class="hl-1"> </span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">, ... },</span><br/><span class="hl-1">  </span><span class="hl-2">fee</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">nonce</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-7">// Send serializedTransaction to your external signer → get back r, s, v</span><br/><br/><span class="hl-7">// Step 2 — assemble</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">rawTx</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">compile</span><span class="hl-1">({ </span><span class="hl-2">signArgs</span><span class="hl-1">, </span><span class="hl-2">r:</span><span class="hl-1"> </span><span class="hl-3">&quot;0x...&quot;</span><span class="hl-1">, </span><span class="hl-2">s:</span><span class="hl-1"> </span><span class="hl-3">&quot;0x...&quot;</span><span class="hl-1">, </span><span class="hl-2">v:</span><span class="hl-1"> </span><span class="hl-9">27</span><span class="hl-4">n</span><span class="hl-1"> });</span>
+</code><button type="button">Copy</button></pre>
+
+<hr>
+<h2 id="sample-delegate-on-bnb-smart-chain" class="tsd-anchor-link">Sample — Delegate on BNB Smart Chain<a href="#sample-delegate-on-bnb-smart-chain" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>End-to-end example using direct signing:</p>
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">GuardianSDK</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/sdk&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">bsc</span><span class="hl-1">, </span><span class="hl-2">BSC_CHAIN</span><span class="hl-1">, </span><span class="hl-2">TransactionType</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">parseEther</span><span class="hl-1">, </span><span class="hl-2">formatEther</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;viem&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">sdk</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">GuardianSDK</span><span class="hl-1">([</span><br/><span class="hl-1">  </span><span class="hl-6">bsc</span><span class="hl-1">({ </span><span class="hl-2">rpcUrl:</span><span class="hl-1"> </span><span class="hl-3">&quot;https://bsc-dataseed.bnbchain.org&quot;</span><span class="hl-1"> }),</span><br/><span class="hl-1">]);</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">ADDRESS</span><span class="hl-1"> = </span><span class="hl-3">&quot;0xYourAddress&quot;</span><span class="hl-1">;</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">PRIVATE_KEY</span><span class="hl-1"> = </span><span class="hl-3">&quot;0xYourPrivateKey&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-7">// 1. Pick a validator</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">validators</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getValidators</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">validator</span><span class="hl-1"> = </span><span class="hl-2">validators</span><span class="hl-1">.</span><span class="hl-6">find</span><span class="hl-1">((</span><span class="hl-2">v</span><span class="hl-1">) </span><span class="hl-4">=&gt;</span><span class="hl-1"> </span><span class="hl-2">v</span><span class="hl-1">.</span><span class="hl-2">name</span><span class="hl-1"> === </span><span class="hl-3">&quot;TWStaking&quot;</span><span class="hl-1">)!;</span><br/><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-3">`Staking with </span><span class="hl-4">${</span><span class="hl-2">validator</span><span class="hl-10">.</span><span class="hl-2">name</span><span class="hl-4">}</span><span class="hl-3"> — APY: </span><span class="hl-4">${</span><span class="hl-2">validator</span><span class="hl-10">.</span><span class="hl-2">apy</span><span class="hl-4">}</span><span class="hl-3">%`</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// 2. Check available balance</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">balances</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getBalances</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">, </span><span class="hl-5">ADDRESS</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">available</span><span class="hl-1"> = </span><span class="hl-2">balances</span><span class="hl-1">.</span><span class="hl-6">find</span><span class="hl-1">((</span><span class="hl-2">b</span><span class="hl-1">) </span><span class="hl-4">=&gt;</span><span class="hl-1"> </span><span class="hl-2">b</span><span class="hl-1">.</span><span class="hl-2">type</span><span class="hl-1"> === </span><span class="hl-3">&quot;Available&quot;</span><span class="hl-1">)!;</span><br/><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-3">`Available: </span><span class="hl-4">${</span><span class="hl-6">formatEther</span><span class="hl-10">(</span><span class="hl-2">available</span><span class="hl-10">.</span><span class="hl-2">amount</span><span class="hl-10">)</span><span class="hl-4">}</span><span class="hl-3"> BNB`</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// 3. Estimate fee</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">amount</span><span class="hl-1"> = </span><span class="hl-6">parseEther</span><span class="hl-1">(</span><span class="hl-3">&quot;1&quot;</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">fee</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">estimateFee</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-2">type:</span><span class="hl-1"> </span><span class="hl-2">TransactionType</span><span class="hl-1">.</span><span class="hl-2">Delegate</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">chain:</span><span class="hl-1"> </span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">amount</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">account:</span><span class="hl-1"> </span><span class="hl-5">ADDRESS</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">isMaxAmount:</span><span class="hl-1"> </span><span class="hl-4">false</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">validator</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-3">`Estimated fee: </span><span class="hl-4">${</span><span class="hl-6">formatEther</span><span class="hl-10">(</span><span class="hl-2">fee</span><span class="hl-10">.</span><span class="hl-2">total</span><span class="hl-10">)</span><span class="hl-4">}</span><span class="hl-3"> BNB`</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// 4. Sign</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">nonce</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getNonce</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">, </span><span class="hl-5">ADDRESS</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">rawTx</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">sign</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-2">transaction:</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-2">type:</span><span class="hl-1"> </span><span class="hl-2">TransactionType</span><span class="hl-1">.</span><span class="hl-2">Delegate</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-2">chain:</span><span class="hl-1"> </span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-2">amount</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-2">isMaxAmount:</span><span class="hl-1"> </span><span class="hl-4">false</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-2">validator</span><span class="hl-1">,</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">  </span><span class="hl-2">fee</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">nonce</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-2">privateKey:</span><span class="hl-1"> </span><span class="hl-5">PRIVATE_KEY</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">log</span><span class="hl-1">(</span><span class="hl-3">&quot;Signed tx:&quot;</span><span class="hl-1">, </span><span class="hl-2">rawTx</span><span class="hl-1">);</span><br/><span class="hl-7">// → broadcast rawTx via your RPC node</span>
+</code><button type="button">Copy</button></pre>
+
+<p>For chain-specific details (protocol parameters, transaction shapes, error codes) see:</p>
+<ul>
+<li><a href="media/README.md">BNB Smart Chain →</a></li>
+</ul>
+<hr>
+<h2 id="signing-flows" class="tsd-anchor-link">Signing Flows<a href="#signing-flows" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<pre><code><span class="hl-2">Direct</span><span class="hl-1"> </span><span class="hl-6">signing</span><span class="hl-1"> (</span><span class="hl-2">private</span><span class="hl-1"> </span><span class="hl-2">key</span><span class="hl-1"> </span><span class="hl-2">available</span><span class="hl-1">)</span><br/><span class="hl-1">──────────────────────────────────────</span><br/><span class="hl-6">estimateFee</span><span class="hl-1">() ──► </span><span class="hl-6">getNonce</span><span class="hl-1">() ──► </span><span class="hl-6">sign</span><span class="hl-1">() ──► </span><span class="hl-2">broadcast</span><br/><br/><span class="hl-5">MPC</span><span class="hl-1"> / </span><span class="hl-2">external</span><span class="hl-1"> </span><span class="hl-2">signing</span><br/><span class="hl-1">──────────────────────</span><br/><span class="hl-6">estimateFee</span><span class="hl-1">() ──► </span><span class="hl-6">getNonce</span><span class="hl-1">() ──► </span><span class="hl-6">preHash</span><span class="hl-1">() ──► [</span><span class="hl-2">external</span><span class="hl-1"> </span><span class="hl-2">signer</span><span class="hl-1">] ──► </span><span class="hl-6">compile</span><span class="hl-1">() ──► </span><span class="hl-2">broadcast</span>
+</code><button>Copy</button></pre>
+
+<p>The MPC flow is designed for setups where the private key is managed externally — hardware wallets, MPC servers, or custodians. <code>preHash()</code> serializes the transaction and returns it ready to sign. <code>compile()</code> assembles the final signed transaction from the ECDSA components (<code>r</code>, <code>s</code>, <code>v</code>).</p>
+<hr>
+<h2 id="error-handling" class="tsd-anchor-link">Error Handling<a href="#error-handling" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<p>Every error thrown by the SDK extends <code>GuardianError</code>. Each subclass carries a <code>code</code> (machine-readable) and <code>message</code> (human-readable).</p>
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">GuardianError</span><span class="hl-1">, </span><span class="hl-2">ValidationError</span><span class="hl-1">, </span><span class="hl-2">ConfigError</span><span class="hl-1">, </span><span class="hl-2">SigningError</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-0">try</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">sdk</span><span class="hl-1">.</span><span class="hl-6">getDelegations</span><span class="hl-1">(</span><span class="hl-5">BSC_CHAIN</span><span class="hl-1">, </span><span class="hl-2">address</span><span class="hl-1">);</span><br/><span class="hl-1">} </span><span class="hl-0">catch</span><span class="hl-1"> (</span><span class="hl-2">err</span><span class="hl-1">) {</span><br/><span class="hl-1">  </span><span class="hl-0">if</span><span class="hl-1"> (</span><span class="hl-2">err</span><span class="hl-1"> </span><span class="hl-4">instanceof</span><span class="hl-1"> </span><span class="hl-8">ValidationError</span><span class="hl-1">) {</span><br/><span class="hl-1">    </span><span class="hl-7">// invalid input — caught before any network call</span><br/><span class="hl-1">    </span><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">error</span><span class="hl-1">(</span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">code</span><span class="hl-1">, </span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">message</span><span class="hl-1">);</span><br/><span class="hl-1">  } </span><span class="hl-0">else</span><span class="hl-1"> </span><span class="hl-0">if</span><span class="hl-1"> (</span><span class="hl-2">err</span><span class="hl-1"> </span><span class="hl-4">instanceof</span><span class="hl-1"> </span><span class="hl-8">ConfigError</span><span class="hl-1">) {</span><br/><span class="hl-1">    </span><span class="hl-7">// misconfigured SDK or unsupported chain</span><br/><span class="hl-1">    </span><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">error</span><span class="hl-1">(</span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">code</span><span class="hl-1">, </span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">message</span><span class="hl-1">);</span><br/><span class="hl-1">  } </span><span class="hl-0">else</span><span class="hl-1"> </span><span class="hl-0">if</span><span class="hl-1"> (</span><span class="hl-2">err</span><span class="hl-1"> </span><span class="hl-4">instanceof</span><span class="hl-1"> </span><span class="hl-8">SigningError</span><span class="hl-1">) {</span><br/><span class="hl-1">    </span><span class="hl-7">// signing failed</span><br/><span class="hl-1">    </span><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">error</span><span class="hl-1">(</span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">code</span><span class="hl-1">, </span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">message</span><span class="hl-1">);</span><br/><span class="hl-1">  } </span><span class="hl-0">else</span><span class="hl-1"> </span><span class="hl-0">if</span><span class="hl-1"> (</span><span class="hl-2">err</span><span class="hl-1"> </span><span class="hl-4">instanceof</span><span class="hl-1"> </span><span class="hl-8">GuardianError</span><span class="hl-1">) {</span><br/><span class="hl-1">    </span><span class="hl-7">// catch-all for any SDK error</span><br/><span class="hl-1">    </span><span class="hl-2">console</span><span class="hl-1">.</span><span class="hl-6">error</span><span class="hl-1">(</span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">code</span><span class="hl-1">, </span><span class="hl-2">err</span><span class="hl-1">.</span><span class="hl-2">message</span><span class="hl-1">);</span><br/><span class="hl-1">  } </span><span class="hl-0">else</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-0">throw</span><span class="hl-1"> </span><span class="hl-2">err</span><span class="hl-1">;</span><br/><span class="hl-1">  }</span><br/><span class="hl-1">}</span>
+</code><button type="button">Copy</button></pre>
+
+<p>Every <code>GuardianError</code> exposes:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>message</code></td>
+<td><code>string</code></td>
+<td>Human-readable description</td>
+</tr>
+<tr>
+<td><code>code</code></td>
+<td><code>string</code></td>
+<td>Machine-readable error code</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>Class name (<code>&quot;ValidationError&quot;</code>, <code>&quot;ConfigError&quot;</code>, <code>&quot;SigningError&quot;</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="_-7" class="tsd-anchor-link"><code>ValidationError</code><a href="#_-7" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Thrown when the caller provides invalid input. Always caught before any network call is made.</p>
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">ValidationError</span><span class="hl-1">, </span><span class="hl-2">ValidationErrorCode</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span>
+</code><button type="button">Copy</button></pre>
+
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Thrown when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INVALID_ADDRESS</code></td>
+<td>An address fails the chain's format check — applies to <code>getDelegations</code>, <code>getBalances</code>, <code>getNonce</code>, and any address field inside a transaction</td>
+</tr>
+<tr>
+<td><code>INVALID_AMOUNT</code></td>
+<td>A transaction <code>amount</code> is zero or negative (Claim transactions are exempt)</td>
+</tr>
+<tr>
+<td><code>INVALID_NONCE</code></td>
+<td>The <code>nonce</code> passed to <code>sign</code>, <code>preHash</code>, or <code>compile</code> is negative or not an integer</td>
+</tr>
+<tr>
+<td><code>INVALID_FEE</code></td>
+<td>The <code>fee.gasLimit</code> or <code>fee.gasPrice</code> passed to <code>sign</code>, <code>preHash</code>, or <code>compile</code> is zero or negative</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="_-8" class="tsd-anchor-link"><code>ConfigError</code><a href="#_-8" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Thrown when the SDK is misconfigured or asked to operate on an unsupported chain.</p>
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">ConfigError</span><span class="hl-1">, </span><span class="hl-2">ConfigErrorCode</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span>
+</code><button type="button">Copy</button></pre>
+
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Thrown when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UNSUPPORTED_CHAIN</code></td>
+<td>The chain passed to any method has no registered service — check that you passed it to the <code>GuardianSDK</code> constructor</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="_-9" class="tsd-anchor-link"><code>SigningError</code><a href="#_-9" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Thrown during transaction signing when arguments are invalid or the transaction type has no implementation.</p>
+<pre><code class="typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">SigningError</span><span class="hl-1">, </span><span class="hl-2">SigningErrorCode</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@guardian/bsc&quot;</span><span class="hl-1">;</span>
+</code><button type="button">Copy</button></pre>
+
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Thrown when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INVALID_SIGNING_ARGS</code></td>
+<td>The object passed to <code>sign()</code> contains neither a <code>privateKey</code> nor an <code>account</code> field</td>
+</tr>
+<tr>
+<td><code>UNSUPPORTED_TRANSACTION_TYPE</code></td>
+<td>A <code>TransactionType</code> is used that has no ABI encoding defined</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="roadmap" class="tsd-anchor-link">Roadmap<a href="#roadmap" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2>
+<h3 id="chain-support" class="tsd-anchor-link">Chain support<a href="#chain-support" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>Planned integrations follow the same architecture — each chain is an independent package implementing the <code>GuardianServiceContract</code> interface from <code>@guardian/sdk</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Chain</th>
+<th>Package</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BNB Smart Chain</td>
+<td><a href="media/README.md"><code>@guardian/bsc</code></a></td>
+<td>Available</td>
+</tr>
+<tr>
+<td>Tron</td>
+<td><code>@guardian/tron</code></td>
+<td>In Progress</td>
+</tr>
+<tr>
+<td>SUI</td>
+<td><code>@guardian/sui</code></td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>Solana</td>
+<td><code>@guardian/solana</code></td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>Aptos</td>
+<td><code>@guardian/aptos</code></td>
+<td>Planned</td>
+</tr>
+<tr>
+<td>Cardano</td>
+<td><code>@guardian/cardano</code></td>
+<td>Planned</td>
+</tr>
+</tbody>
+</table>
+<h3 id="beyond-native-staking" class="tsd-anchor-link">Beyond native staking<a href="#beyond-native-staking" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3>
+<p>The <code>@guardian/sdk</code> core is protocol-agnostic by design. Future releases may expand into other DeFi primitives — liquidity provisioning, lending, yield aggregation — expanding the chain-agnostic interfaces and signing flows.</p>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#table-of-contents"><span>Table of <wbr/>Contents</span></a><a href="#packages"><span>Packages</span></a><a href="#architecture"><span>Architecture</span></a><a href="#how-it-works"><span>How it works</span></a><a href="#staking-api"><span>Staking <wbr/>API</span></a><ul><li><a href="#_"><span></span></a></li><li><a href="#_-1"><span></span></a></li><li><a href="#_-2"><span></span></a></li><li><a href="#_-3"><span></span></a></li><li><a href="#_-4"><span></span></a></li><li><a href="#_-5"><span></span></a></li><li><a href="#_-6"><span> / </span></a></li></ul><a href="#sample-delegate-on-bnb-smart-chain"><span>Sample — <wbr/>Delegate on <wbr/>BNB <wbr/>Smart <wbr/>Chain</span></a><a href="#signing-flows"><span>Signing <wbr/>Flows</span></a><a href="#error-handling"><span>Error <wbr/>Handling</span></a><ul><li><a href="#_-7"><span></span></a></li><li><a href="#_-8"><span></span></a></li><li><a href="#_-9"><span></span></a></li></ul><a href="#roadmap"><span>Roadmap</span></a><ul><li><a href="#chain-support"><span>Chain support</span></a></li><li><a href="#beyond-native-staking"><span>Beyond native staking</span></a></li></ul></div></details></div><div class="site-menu"><nav id="tsd-sidebar-links" class="tsd-navigation"><a href="https://github.com/JaimeToca/bnb-native-staking" class="tsd-nav-link">GitHub</a></nav><nav class="tsd-navigation"><a href="modules.html">Guardian SDK - v0.0.0</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer></footer><div class="overlay"></div></body></html>

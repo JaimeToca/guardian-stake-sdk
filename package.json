@@ -8,11 +8,16 @@
   "scripts": {
     "build": "npm run build -w packages/sdk && npm run build -w packages/bsc",
     "typecheck": "npm run build -w packages/sdk && npm run typecheck --workspaces --if-present",
-    "test": "npm test -w packages/bsc"
+    "test": "npm test -w packages/bsc",
+    "docs": "typedoc"
   },
   "engines": {
     "node": ">=18"
   },
   "author": "JaimeToca",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "typedoc": "^0.28.18",
+    "typedoc-plugin-merge-modules": "^7.0.0"
+  }
 }

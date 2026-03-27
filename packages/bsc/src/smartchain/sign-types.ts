@@ -1,10 +1,7 @@
 import { PrivateKeyAccount } from "viem";
 import { BaseSignArgs, SigningWithPrivateKey } from "@guardian/sdk";
 
-/**
- * @typedef {BaseSignArgs & { account: PrivateKeyAccount }} SigningWithAccount
- * @description BSC-specific signing type that accepts a viem `PrivateKeyAccount`.
- */
+/** BSC-specific signing args that accept a viem `PrivateKeyAccount` instead of a raw private key. */
 export type SigningWithAccount = BaseSignArgs & { account: PrivateKeyAccount };
 
 export function isSigningWithPrivateKey(

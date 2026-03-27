@@ -1,5 +1,5 @@
 /**
- * @fileoverview Typed error hierarchy for the Guardian SDK.
+ * Typed error hierarchy for the Guardian SDK.
  *
  * All errors thrown by the SDK extend `GuardianError`, so callers can
  * catch the base type and still narrow to a specific subclass when needed:

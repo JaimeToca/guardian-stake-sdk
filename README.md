@@ -7,6 +7,7 @@ The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It
 ## Table of Contents
 
 - [Packages](#packages)
+- [Architecture](#architecture)
 - [How it works](#how-it-works)
 - [Staking API](#staking-api)
   - [getValidators](#getvalidatorschain)
@@ -38,6 +39,50 @@ The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It
 | `@guardian/cardano` | Cardano | Planned | — |
 
 Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian/sdk` is included automatically as a dependency of each chain package.
+
+---
+
+## Architecture
+
+```mermaid
+graph TD
+    User["Your App"]
+
+    subgraph SDK["@guardian/sdk (chain-agnostic core)"]
+        GSDK["GuardianSDK\n─────────────────\ngetValidators(chain)\ngetDelegations(chain, addr)\ngetBalances(chain, addr)\ngetNonce(chain, addr)\nestimate Fee(tx)\nsign(args)\npreHash(args)\ncompile(args)"]
+        GSC["GuardianServiceContract\n(interface)"]
+        Types["Shared Types & Errors\nValidator · Delegation · Balance\nFee · Transaction · GuardianError"]
+    end
+
+    subgraph BSC["@guardian/bsc (BNB Smart Chain)"]
+        Factory["bsc({ rpcUrl })\n─────────────\nchain factory"]
+        GS["GuardianService\n(facade)"]
+        SS["StakingService"]
+        BS["BalanceService"]
+        FS["FeeService"]
+        NS["NonceService"]
+        SignS["SignService"]
+        SRC["StakingRpcClient\n(viem multicall)"]
+        BRC["BNBRpcClient\n(axios / BNB API)"]
+    end
+
+    User -->|"new GuardianSDK([bsc(...)])"| GSDK
+    GSDK -->|"routes by chain.id"| GSC
+    Factory -->|"implements"| GSC
+    Factory -->|"creates"| GS
+    GS --> SS
+    GS --> BS
+    GS --> FS
+    GS --> NS
+    GS --> SignS
+    SS --> SRC
+    SS --> BRC
+    BS --> SRC
+    FS --> SRC
+    GSDK --- Types
+```
+
+> **Mermaid** diagrams render natively on GitHub. Each chain package implements `GuardianServiceContract` — `GuardianSDK` routes every call to the correct service by `chain.id`.
 
 ---
 

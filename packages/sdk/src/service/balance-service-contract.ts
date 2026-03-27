@@ -1,15 +1,10 @@
 import { Balance } from "./balance-types";
 
-/**
- * @interface BalanceServiceContract
- * @description Defines the contract for a service responsible for retrieving cryptocurrency balances.
- */
+/** Contract for a service responsible for retrieving balances for a given address. */
 export interface BalanceServiceContract {
   /**
-   * @method getBalances
-   * @description Retrieves an array of balances for a specific blockchain address.
-   * @param {string} address - The blockchain address for which to fetch balances.
-   * @returns {Promise<Balance[]>} A promise that resolves to an array of Balance objects.
+   * Retrieves all balance categories for a blockchain address.
+   * @param address The blockchain address to fetch balances for.
    */
   getBalances(address: string): Promise<Balance[]>;
 }

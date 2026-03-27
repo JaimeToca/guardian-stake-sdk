@@ -2,10 +2,7 @@ import { Chain } from "viem";
 import { bsc } from "viem/chains";
 import { ChainEcosystemType, GuardianChain, GuardianChainType } from "@guardian/sdk";
 
-/**
- * @constant BSC_CHAIN
- * @description Represents the configuration for the Binance Smart Chain (BSC) mainnet.
- */
+/** BNB Smart Chain mainnet configuration. */
 export const BSC_CHAIN: GuardianChain = {
   id: "bsc-mainnet",
   type: GuardianChainType.Smartchain,
@@ -16,24 +13,15 @@ export const BSC_CHAIN: GuardianChain = {
   explorer: "https://bscscan.com",
 };
 
-/**
- * @constant SUPPORTED_CHAINS
- * @description An array containing all GuardianChain objects supported by the BSC package.
- */
+/** All chains supported by `@guardian/bsc`. */
 export const SUPPORTED_CHAINS: GuardianChain[] = [BSC_CHAIN];
 
-/**
- * @function getChainById
- * @description Retrieves a GuardianChain object from the list of supported chains based on its unique ID.
- */
+/** Retrieves a supported chain by its `id` string (e.g. `"bsc-mainnet"`). */
 export const getChainById = (id: string): GuardianChain | undefined => {
   return SUPPORTED_CHAINS.find((chain) => chain.id === id);
 };
 
-/**
- * @function isSupportedChain
- * @description Checks if a given GuardianChain object is present in the list of supported chains.
- */
+/** Returns true if the given chain is in the supported chains list. */
 export const isSupportedChain = (chain: GuardianChain): boolean => {
   return SUPPORTED_CHAINS.some(
     (supportedChain) =>
@@ -41,10 +29,7 @@ export const isSupportedChain = (chain: GuardianChain): boolean => {
   );
 };
 
-/**
- * @function getViemChain
- * @description Converts a custom GuardianChain object into a Viem-compatible Chain object.
- */
+/** Converts a GuardianChain to the corresponding viem Chain object. */
 export const getViemChain = (chain: GuardianChain): Chain => {
   switch (chain.id) {
     case "bsc-mainnet":

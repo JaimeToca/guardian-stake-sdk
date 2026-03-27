@@ -11,10 +11,7 @@ import {
 } from "./sign-types";
 import { Delegations, Validator } from "./staking-types";
 
-/**
- * @interface GuardianServiceContract
- * @description Defines the chain-agnostic contract for the Guardian Service facade.
- */
+/** Chain-agnostic contract for the Guardian Service facade. Implemented by each chain package. */
 export interface GuardianServiceContract {
   getValidators(): Promise<Validator[]>;
   getDelegations(address: string): Promise<Delegations>;

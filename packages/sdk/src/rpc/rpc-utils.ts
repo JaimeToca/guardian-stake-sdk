@@ -5,7 +5,7 @@ import { ApiErrorType } from "./error-types";
 /**
  * Asynchronously fetches data using Axios and throws an error if the request fails.
  *
- * @template T The expected type of the data to be returned from the successful request.
+ * @param T The expected type of the data returned from the successful request.
  * @param {AxiosRequestConfig} requestConfig The Axios request configuration object.
  * @returns {Promise<T>} A promise that resolves with the fetched data of type T.
  * @throws {ApiError} Throws an ApiError if the request fails.

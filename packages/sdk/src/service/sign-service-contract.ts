@@ -7,10 +7,7 @@ import {
 } from "./sign-types";
 import { Transaction } from "./transaction-types";
 
-/**
- * @interface SignServiceContract
- * @description Defines the chain-agnostic contract for cryptographic signing operations.
- */
+/** Chain-agnostic contract for cryptographic signing operations. */
 export interface SignServiceContract {
   sign(signingArgs: SigningWithPrivateKey): Promise<string>;
   prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult>;
