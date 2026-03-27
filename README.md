@@ -14,7 +14,7 @@ They typically:
 - Require developers to understand **protocol-specific staking mechanics** (unbonding periods, validator states, reward flows)  
 - Force teams to reimplement the same logic across chains  
 
-As a result, developers are still burdened with **deep staking knowledge**, even when using an SDK. **Guardian SDK aims to abstract staking mechanics**
+As a result, developers are still burdened with deep staking knowledge, even when using an SDK. **Guardian SDK aims to abstract staking mechanics through a unified, generic API.**
 
 ## Table of Contents
 
