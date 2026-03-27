@@ -1,13 +1,18 @@
-import { isAddress } from "viem";
+import { Address, isAddress } from "viem";
 import { BaseSignArgs, ValidationError, ValidationErrorCode } from "../common";
 
 export function checkIsValidAddress(address: string): void {
+  parseEvmAddress(address);
+}
+
+export function parseEvmAddress(address: string): Address {
   if (!isAddress(address)) {
     throw new ValidationError(
       ValidationErrorCode.INVALID_ADDRESS,
-      `"${address}" is not a valid address for chain SmartChain. Please provide a valid address.`,
+      `"${address}" is not a valid EVM address.`
     );
   }
+  return address;
 }
 
 

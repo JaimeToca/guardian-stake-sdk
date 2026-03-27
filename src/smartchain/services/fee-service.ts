@@ -1,7 +1,15 @@
 import { Hex, PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
-import { parseAccount } from "viem/utils";
-import { FeeServiceContract, SignServiceContract, Fee, FeeType, Transaction } from "../../common";
+import {
+  FeeServiceContract,
+  SignServiceContract,
+  Fee,
+  FeeType,
+  Transaction,
+  ValidationError,
+  ValidationErrorCode,
+} from "../../common";
+import { parseEvmAddress } from "../validations";
 
 /**
  * Service class responsible for estimating transaction fees on the BNB chain.
@@ -9,7 +17,7 @@ import { FeeServiceContract, SignServiceContract, Fee, FeeType, Transaction } fr
  * and uses a SignService to build transaction call data.
  */
 export class FeeService implements FeeServiceContract {
-   /**
+  /**
    * Constructs an instance of FeeService.
    * @param client The PublicClient instance used for interacting
    * with the blockchain (e.g., getting gas price, estimating gas).
@@ -17,7 +25,7 @@ export class FeeService implements FeeServiceContract {
    */
   constructor(
     private readonly client: PublicClient,
-    private readonly signService: SignServiceContract
+    private readonly signService: SignServiceContract,
   ) {}
 
   /**
@@ -29,10 +37,18 @@ export class FeeService implements FeeServiceContract {
    * @returns A Promise that resolves to a `Fee` object, containing `gasPrice`, `gasLimit`, and `total` fee.
    */
   async estimateFee(transaction: Transaction): Promise<Fee> {
-    const transactionAccount = transaction.account;
-    const account = transactionAccount
-      ? parseAccount(transactionAccount)
-      : undefined;
+    const account =
+      transaction.account !== undefined
+        ? parseEvmAddress(transaction.account)
+        : undefined;
+
+    if (account === undefined) {
+      throw new ValidationError(
+        ValidationErrorCode.INVALID_ADDRESS,
+        "Account address is required to estimate fee",
+      );
+    }
+
     const callDataResult = this.signService.buildCallData(transaction);
 
     const gasPricePromise = this.client.getGasPrice();

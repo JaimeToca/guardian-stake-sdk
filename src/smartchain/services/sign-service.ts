@@ -31,6 +31,7 @@ import {
   isSigningWithAccount,
   isSigningWithPrivateKey,
 } from "../sign-types";
+import { parseEvmAddress } from "../validations";
 
 /**
  * Service responsible for handling various aspects of transaction signing,
@@ -248,9 +249,9 @@ export class SignService implements SignServiceContract {
    */
   private getValidatorAddress(validator: Validator | OperatorAddress): Address {
     if (typeof validator === "string") {
-      return validator;
+      return parseEvmAddress(validator);
     } else {
-      return validator.operatorAddress;
+      return parseEvmAddress(validator.operatorAddress);
     }
   }
 }

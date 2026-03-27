@@ -1,5 +1,3 @@
-import { Address } from "viem";
-
 /**
  * Represents the detailed information about a validator for staking
  */
@@ -42,13 +40,13 @@ export interface Validator {
   /**
    * The blockchain address of the validator's operator.
    */
-  operatorAddress: Address;
+  operatorAddress: string;
 
   /**
    * The blockchain address of the credit contract associated with this validator,
    * used for staking and unstaking operations.
    */
-  creditAddress: Address;
+  creditAddress: string;
 }
 
 /**

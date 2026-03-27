@@ -1,5 +1,4 @@
 import { Validator } from "./staking-types";
-import { Account, Address } from "viem";
 import { GuardianChain } from "../chain";
 
 /**
@@ -16,7 +15,7 @@ export type Transaction =
  * Represents the on-chain address of a Validator Operator.
  * This address is used for enconding data internally by the signer
  */
-export type OperatorAddress = Address;
+export type OperatorAddress = string;
 
 /**
  * Defines the common properties shared by all transaction types.
@@ -36,10 +35,10 @@ interface BaseTransaction {
    */
   amount: bigint;
   /**
-   * The account or address initiating the transaction. It can be an `Account` object,
-   * a simple `Address` string, or `undefined` if not immediately available.
+   * The address initiating the transaction, or `undefined` if not immediately available.
+   * Each chain implementation is responsible for interpreting the format of this address.
    */
-  account?: Account | Address | undefined;
+  account?: string | undefined;
 }
 
 /**
