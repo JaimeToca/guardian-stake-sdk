@@ -16,6 +16,7 @@ A TypeScript SDK for interacting with **BNB Smart Chain native staking**. It abs
   - [sign](#sign)
   - [preHash / compile](#prehash--compile)
 - [Signing Flows](#signing-flows)
+- [Error Handling](#error-handling)
 - [Supported Chains](#supported-chains)
 
 ---
@@ -453,6 +454,116 @@ estimateFee() ──► getNonce() ──► sign() ──► broadcast
 MPC / external signing
 ──────────────────────
 estimateFee() ──► getNonce() ──► preHash() ──► [external signer] ──► compile() ──► broadcast
+```
+
+---
+
+## Error Handling
+
+Every error thrown by the SDK extends `GuardianError`, so you can catch the base class or narrow to a specific subclass depending on how much detail you need.
+
+```typescript
+import {
+  GuardianError,
+  ValidationError,
+  ConfigError,
+  SigningError,
+} from "bnb-native-staking";
+
+try {
+  await sdk.getDelegations(BSC_CHAIN, address);
+} catch (err) {
+  if (err instanceof ValidationError) {
+    console.error(err.code, err.message);
+    // e.g. "INVALID_ADDRESS" "0xbad is not a valid address for chain 56."
+  } else if (err instanceof ConfigError) {
+    console.error(err.code, err.message);
+  } else if (err instanceof SigningError) {
+    console.error(err.code, err.message);
+  } else if (err instanceof GuardianError) {
+    // catch-all for any SDK error
+    console.error(err.code, err.message);
+  } else {
+    throw err; // re-throw anything not from the SDK
+  }
+}
+```
+
+Every `GuardianError` instance exposes:
+
+| Property | Type | Description |
+|---|---|---|
+| `message` | `string` | Human-readable description of what went wrong |
+| `code` | `ErrorCode` | Machine-readable code (see tables below) |
+| `name` | `string` | Class name (`"ValidationError"`, `"ConfigError"`, `"SigningError"`) |
+
+---
+
+### `ValidationError`
+
+Thrown when the caller provides invalid input. Caught before any network call is made.
+
+```typescript
+import { ValidationError, ValidationErrorCode } from "bnb-native-staking";
+```
+
+| Code | Thrown when |
+|---|---|
+| `INVALID_ADDRESS` | An address string fails the chain's address format check — e.g. `getDelegations`, `getBalances`, `getNonce`, or a validator/account address inside a transaction |
+| `INVALID_AMOUNT` | A transaction `amount` is zero or negative (Claim transactions are exempt) |
+| `INVALID_NONCE` | The `nonce` passed to `sign`, `preHash`, or `compile` is negative or not an integer |
+| `INVALID_FEE` | The `fee.gasLimit` or `fee.gasPrice` passed to `sign`, `preHash`, or `compile` is zero or negative |
+
+---
+
+### `ConfigError`
+
+Thrown when the SDK is misconfigured or asked to operate on a chain it does not support.
+
+```typescript
+import { ConfigError, ConfigErrorCode } from "bnb-native-staking";
+```
+
+| Code | Thrown when |
+|---|---|
+| `MISSING_CHAIN_ID` | The `GuardianChain` object passed to any method has an undefined `chainId` |
+| `UNSUPPORTED_CHAIN` | The `chainId` is defined but not registered in the SDK — check `getSupportedChains()` |
+| `MISSING_CHAIN_CONFIG` | The `chainId` is supported but `sdkConfig.chains[chainId]` was not provided at construction time |
+
+---
+
+### `SigningError`
+
+Thrown during transaction signing when the signing arguments are invalid or the transaction type is not supported.
+
+```typescript
+import { SigningError, SigningErrorCode } from "bnb-native-staking";
+```
+
+| Code | Thrown when |
+|---|---|
+| `INVALID_SIGNING_ARGS` | The object passed to `sign()` contains neither a `privateKey` nor an `account` field |
+| `UNSUPPORTED_TRANSACTION_TYPE` | `buildCallData` is called with a `TransactionType` that has no ABI encoding defined |
+
+---
+
+### Catching by code
+
+If you only want to handle one specific condition:
+
+```typescript
+import { ValidationError, ValidationErrorCode } from "bnb-native-staking";
+
+try {
+  await sdk.getBalances(BSC_CHAIN, rawInput);
+} catch (err) {
+  if (
+    err instanceof ValidationError &&
+    err.code === ValidationErrorCode.INVALID_ADDRESS
+  ) {
+    showAddressError("Please enter a valid wallet address.");
+  }
+}
 ```
 
 ---
