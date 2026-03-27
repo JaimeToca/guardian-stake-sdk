@@ -44,9 +44,9 @@ Each chain ships as an independent package — install only what you need, your 
 
 ## Architecture
 
-![Architecture](./architecture.svg)
+> The diagram above shows how `@guardian/bsc` plugs into the SDK. Each chain package implements `GuardianServiceContract` independently — it can expose any number of services and RPC clients suited to that chain's protocol. `GuardianSDK` only ever sees the contract interface and routes calls by `chain.id`.
 
-Each chain package implements `GuardianServiceContract` — `GuardianSDK` routes every call to the correct service by `chain.id`.
+![Architecture](./architecture.svg)
 
 ---
 
