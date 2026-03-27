@@ -1,5 +1,7 @@
 # Guardian SDK
 
+![Guardian SDK](./Logo.png)
+
 The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (`@guardian/sdk`) and one package per supported chain. Install only the chain you need.
 
 ## Packages
