@@ -362,15 +362,7 @@ For chain-specific details (protocol parameters, transaction shapes, error codes
 
 ## Signing Flows
 
-```
-Direct signing (private key available)
-──────────────────────────────────────
-estimateFee() ──► getNonce() ──► sign() ──► broadcast
-
-MPC / external signing
-──────────────────────
-estimateFee() ──► getNonce() ──► preHash() ──► [external signer] ──► compile() ──► broadcast
-```
+![Signing Flows](./signing-flows.svg)
 
 The MPC flow is designed for setups where the private key is managed externally — hardware wallets, MPC servers, or custodians. `preHash()` serializes the transaction and returns it ready to sign. `compile()` assembles the final signed transaction from the ECDSA components (`r`, `s`, `v`).
 
