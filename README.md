@@ -9,14 +9,12 @@ The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It
 Most SDKs today expose **low-level primitives**, but stop short of solving the real developer problem.
 
 They typically:
-- Return raw delegation data without meaningful state interpretation  
+- Return raw data without meaningful state interpretation  
 - Don’t track **delegation lifecycle status** 
 - Require developers to understand **protocol-specific staking mechanics** (unbonding periods, validator states, reward flows)  
 - Force teams to reimplement the same logic across chains  
 
-As a result, developers are still burdened with **deep staking knowledge**, even when using an SDK.
-
----
+As a result, developers are still burdened with **deep staking knowledge**, even when using an SDK. **Guardian SDK aims to abstract staking mechanics**
 
 ## Table of Contents
 
