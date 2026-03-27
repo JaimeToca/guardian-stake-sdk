@@ -1,4 +1,5 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
+import axios from "axios";
 import { ApiError } from "./rpc-error";
 import { ApiErrorType } from "./error-types";
 
@@ -10,9 +11,7 @@ import { ApiErrorType } from "./error-types";
  * @returns {Promise<T>} A promise that resolves with the fetched data of type T.
  * @throws {ApiError} Throws an ApiError if the request fails.
  */
-export async function fetchOrError<T>(
-  requestConfig: AxiosRequestConfig
-): Promise<T> {
+export async function fetchOrError<T>(requestConfig: AxiosRequestConfig): Promise<T> {
   try {
     const response: AxiosResponse<T> = await axios({
       timeout: 16000,

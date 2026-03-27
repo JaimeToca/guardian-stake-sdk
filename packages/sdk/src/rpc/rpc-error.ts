@@ -1,4 +1,5 @@
-import { ApiErrorDetails, ApiErrorType } from "./error-types";
+import type { ApiErrorDetails } from "./error-types";
+import { ApiErrorType } from "./error-types";
 
 /**
  * Custom error class for representing API-related errors.

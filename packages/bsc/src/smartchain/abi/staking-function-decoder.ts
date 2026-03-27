@@ -1,4 +1,5 @@
-import { Address, decodeAbiParameters, Hex } from "viem";
+import type { Address, Hex } from "viem";
+import { decodeAbiParameters } from "viem";
 
 export function decodeGetValidators(data: Hex): [Address[], Address[], bigint] {
   const decodedResult = decodeAbiParameters(
@@ -10,11 +11,7 @@ export function decodeGetValidators(data: Hex): [Address[], Address[], bigint] {
     data
   );
 
-  return [
-    decodedResult[0] as Address[],
-    decodedResult[1] as Address[],
-    decodedResult[2],
-  ];
+  return [decodedResult[0] as Address[], decodedResult[1] as Address[], decodedResult[2]];
 }
 
 export function decodeUnbond(data: Hex): [bigint, bigint, bigint] {

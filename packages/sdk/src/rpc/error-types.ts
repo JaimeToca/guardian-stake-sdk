@@ -3,11 +3,11 @@
  * This enum helps categorize errors for more specific handling and reporting
  */
 export enum ApiErrorType {
-    ServerResponseError,
-    NetworkError,
-    RequestSetupError,
-    UnexpectedError,
-    UnknownError,
+  ServerResponseError,
+  NetworkError,
+  RequestSetupError,
+  UnexpectedError,
+  UnknownError,
 }
 
 /**

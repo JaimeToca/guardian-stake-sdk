@@ -1,11 +1,6 @@
-import { HexString } from "../entity/types";
-import {
-  BaseSignArgs,
-  CompileArgs,
-  PrehashResult,
-  SigningWithPrivateKey,
-} from "./sign-types";
-import { Transaction } from "./transaction-types";
+import type { HexString } from "../entity/types";
+import type { BaseSignArgs, CompileArgs, PrehashResult, SigningWithPrivateKey } from "./sign-types";
+import type { Transaction } from "./transaction-types";
 
 /** Chain-agnostic contract for cryptographic signing operations. */
 export interface SignServiceContract {

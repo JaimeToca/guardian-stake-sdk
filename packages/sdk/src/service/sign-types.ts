@@ -1,7 +1,7 @@
-import { HexString } from "../entity/types";
-import { PrivateKey } from "../entity/private-key";
-import { Fee } from "./fee-types";
-import { Transaction } from "./transaction-types";
+import type { HexString } from "../entity/types";
+import type { PrivateKey } from "../entity/private-key";
+import type { Fee } from "./fee-types";
+import type { Transaction } from "./transaction-types";
 
 export type BaseSignArgs = {
   transaction: Transaction;

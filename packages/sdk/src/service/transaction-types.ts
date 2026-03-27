@@ -1,5 +1,5 @@
-import { Validator } from "./staking-types";
-import { GuardianChain } from "../chain";
+import type { Validator } from "./staking-types";
+import type { GuardianChain } from "../chain";
 
 export type Transaction =
   | DelegateTransaction

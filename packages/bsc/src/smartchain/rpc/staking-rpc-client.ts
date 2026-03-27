@@ -1,9 +1,8 @@
-import { StakingRpcClientContract } from "./staking-rpc-client-contract";
-import { Address, decodeAbiParameters, PublicClient } from "viem";
+import type { StakingRpcClientContract } from "./staking-rpc-client-contract";
+import type { Address, PublicClient } from "viem";
+import { decodeAbiParameters } from "viem";
+import type { DecodedValidators, MulticallResult, DecodedUnbondRequest } from "../abi";
 import {
-  DecodedValidators,
-  MulticallResult,
-  DecodedUnbondRequest,
   multicallStakeAbi,
   STAKING_CONTRACT,
   decodeGetValidators,
@@ -23,14 +22,10 @@ export class StakingRpcClient implements StakingRpcClientContract {
     });
 
     if (!validatorsResponse.data) {
-      throw new Error(
-        "Missing data for call getValidatorsCreditContracts(contract)"
-      );
+      throw new Error("Missing data for call getValidatorsCreditContracts(contract)");
     }
 
-    const decodedValidatorResponse = decodeGetValidators(
-      validatorsResponse.data
-    );
+    const decodedValidatorResponse = decodeGetValidators(validatorsResponse.data);
     const operatorAddresses = decodedValidatorResponse[0] as Address[];
     const creditAddresses = decodedValidatorResponse[1] as Address[];
 
@@ -90,9 +85,7 @@ export class StakingRpcClient implements StakingRpcClientContract {
     });
 
     if (!unbondRequestDataResponse.data) {
-      throw new Error(
-        "Missing data for call getUnbondRequestData(delegator, index)"
-      );
+      throw new Error("Missing data for call getUnbondRequestData(delegator, index)");
     }
 
     const decodedUnbondResponse = decodeUnbond(unbondRequestDataResponse.data);
@@ -104,7 +97,10 @@ export class StakingRpcClient implements StakingRpcClientContract {
     };
   }
 
-  async getSharesByPooledBNBData(creditContract: Address, amount: bigint): Promise<bigint | undefined> {
+  async getSharesByPooledBNBData(
+    creditContract: Address,
+    amount: bigint
+  ): Promise<bigint | undefined> {
     const response = await this.client.call({
       to: creditContract,
       data: encodeGetSharesByPooledBNBData(amount),

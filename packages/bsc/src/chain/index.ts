@@ -1,6 +1,7 @@
-import { Chain } from "viem";
+import type { Chain } from "viem";
 import { bsc } from "viem/chains";
-import { ChainEcosystemType, GuardianChain, GuardianChainType } from "@guardian/sdk";
+import type { GuardianChain } from "@guardian/sdk";
+import { ChainEcosystemType, GuardianChainType } from "@guardian/sdk";
 
 /** BNB Smart Chain mainnet configuration. */
 export const BSC_CHAIN: GuardianChain = {
@@ -24,8 +25,7 @@ export const getChainById = (id: string): GuardianChain | undefined => {
 /** Returns true if the given chain is in the supported chains list. */
 export const isSupportedChain = (chain: GuardianChain): boolean => {
   return SUPPORTED_CHAINS.some(
-    (supportedChain) =>
-      supportedChain.id === chain.id && supportedChain.chainId == chain.chainId
+    (supportedChain) => supportedChain.id === chain.id && supportedChain.chainId == chain.chainId
   );
 };
 

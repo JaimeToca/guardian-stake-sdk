@@ -1,16 +1,16 @@
-import { GuardianChain } from "../chain";
+import type { GuardianChain } from "../chain";
 import { ConfigError, ConfigErrorCode } from "../entity/errors";
-import { Balance } from "../service/balance-types";
-import { Fee } from "../service/fee-types";
-import { GuardianServiceContract } from "../service/guardian-service-contract";
-import {
+import type { Balance } from "../service/balance-types";
+import type { Fee } from "../service/fee-types";
+import type { GuardianServiceContract } from "../service/guardian-service-contract";
+import type {
   BaseSignArgs,
   CompileArgs,
   PrehashResult,
   SigningWithPrivateKey,
 } from "../service/sign-types";
-import { Delegations, Validator } from "../service/staking-types";
-import { Transaction } from "../service/transaction-types";
+import type { Delegations, Validator } from "../service/staking-types";
+import type { Transaction } from "../service/transaction-types";
 
 /**
  * The primary interface for interacting with supported blockchains.

@@ -1,4 +1,4 @@
-import { Delegations, Validator } from "./staking-types";
+import type { Delegations, Validator } from "./staking-types";
 
 /** Contract for a service responsible for staking operations. */
 export interface StakingServiceContract {

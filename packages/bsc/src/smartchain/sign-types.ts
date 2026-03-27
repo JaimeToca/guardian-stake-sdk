@@ -1,5 +1,5 @@
-import { PrivateKeyAccount } from "viem";
-import { BaseSignArgs, SigningWithPrivateKey } from "@guardian/sdk";
+import type { PrivateKeyAccount } from "viem";
+import type { BaseSignArgs, SigningWithPrivateKey } from "@guardian/sdk";
 
 /** BSC-specific signing args that accept a viem `PrivateKeyAccount` instead of a raw private key. */
 export type SigningWithAccount = BaseSignArgs & { account: PrivateKeyAccount };

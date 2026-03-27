@@ -1,10 +1,17 @@
-import { Address } from "viem";
-import { DecodedUnbondRequest, DecodedValidators, MulticallResult } from "../abi/abi-types";
+import type { Address } from "viem";
+import type { DecodedUnbondRequest, DecodedValidators, MulticallResult } from "../abi/abi-types";
 
 export interface StakingRpcClientContract {
   getCreditContractValidators(): Promise<DecodedValidators>;
-  getPendingUnbondDelegation(creditContracts: Address[], address: Address): Promise<MulticallResult[]>;
+  getPendingUnbondDelegation(
+    creditContracts: Address[],
+    address: Address
+  ): Promise<MulticallResult[]>;
   getPooledBNBData(creditContracts: Address[], delegator: Address): Promise<MulticallResult[]>;
-  getUnbondRequestData(creditContract: Address, delegator: Address, index: bigint): Promise<DecodedUnbondRequest>;
+  getUnbondRequestData(
+    creditContract: Address,
+    delegator: Address,
+    index: bigint
+  ): Promise<DecodedUnbondRequest>;
   getSharesByPooledBNBData(contract: Address, amount: bigint): void;
 }

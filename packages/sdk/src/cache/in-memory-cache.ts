@@ -1,5 +1,5 @@
-import { CacheEntry } from "./cache-entry";
-import { CacheContract } from "./cache-contract";
+import type { CacheEntry } from "./cache-entry";
+import type { CacheContract } from "./cache-contract";
 
 /**
  * Simple in-process, TTL-based cache backed by a `Map`.

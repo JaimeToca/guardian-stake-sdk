@@ -1,9 +1,5 @@
-import {
-  Address,
-  Hex,
-  serializeTransaction,
-  TransactionSerializable,
-} from "viem";
+import type { Address, Hex, TransactionSerializable } from "viem";
+import { serializeTransaction } from "viem";
 import {
   encodeClaim,
   encodeDelegate,
@@ -12,12 +8,9 @@ import {
 } from "../abi/staking-function-enconder";
 import { privateKeyToAccount } from "viem/accounts";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
-import {
+import type {
   SignServiceContract,
   Fee,
-  SigningError,
-  SigningErrorCode,
-  TransactionType,
   Validator,
   OperatorAddress,
   BaseSignArgs,
@@ -26,29 +19,21 @@ import {
   SigningWithPrivateKey,
   Transaction,
 } from "@guardian/sdk";
-import {
-  SigningWithAccount,
-  isSigningWithAccount,
-  isSigningWithPrivateKey,
-} from "../sign-types";
+import { SigningError, SigningErrorCode, TransactionType } from "@guardian/sdk";
+import type { SigningWithAccount } from "../sign-types";
+import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
 import { parseEvmAddress } from "../validations";
 
 /**
  * Service responsible for handling various aspects of transaction signing on BSC.
  */
 export class SignService implements SignServiceContract {
-  async sign(
-    signingArgs: SigningWithPrivateKey | SigningWithAccount
-  ): Promise<Hex> {
+  async sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex> {
     const fee = signingArgs.fee;
     const nonce = signingArgs.nonce;
     const transaction = signingArgs.transaction;
 
-    const unsignedTransaction = this.buildUnsignedTransaction(
-      transaction,
-      fee,
-      nonce
-    );
+    const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
 
     let signedTransaction: Hex;
 
@@ -73,11 +58,7 @@ export class SignService implements SignServiceContract {
     const fee = preHasArgs.fee;
     const nonce = preHasArgs.nonce;
 
-    const unsignedTransaction = this.buildUnsignedTransaction(
-      transaction,
-      fee,
-      nonce
-    );
+    const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
 
     return {
       serializedTransaction: serializeTransaction(unsignedTransaction),
@@ -97,11 +78,7 @@ export class SignService implements SignServiceContract {
     const s = compileArgs.s;
     const v = compileArgs.v;
 
-    const unsignedTransaction = this.buildUnsignedTransaction(
-      transaction,
-      fee,
-      nonce
-    );
+    const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
 
     return serializeTransaction(unsignedTransaction, { r, s, v });
   }

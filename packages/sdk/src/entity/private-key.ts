@@ -1,4 +1,4 @@
-import { HexString } from "./types";
+import type { HexString } from "./types";
 
 const HEX_64_REGEX = /^[0-9a-fA-F]{64}$/;
 
@@ -42,15 +42,10 @@ export class PrivateKey {
   }
 
   private static fromSecp256k1(value: string): PrivateKey {
-    const stripped =
-      value.startsWith("0x") || value.startsWith("0X")
-        ? value.slice(2)
-        : value;
+    const stripped = value.startsWith("0x") || value.startsWith("0X") ? value.slice(2) : value;
 
     if (!HEX_64_REGEX.test(stripped)) {
-      throw new Error(
-        "Invalid secp256k1 private key: expected 32 bytes (64 hex characters)"
-      );
+      throw new Error("Invalid secp256k1 private key: expected 32 bytes (64 hex characters)");
     }
 
     const keyValue = BigInt("0x" + stripped);
@@ -60,9 +55,7 @@ export class PrivateKey {
     }
 
     if (keyValue >= SECP256K1_ORDER) {
-      throw new Error(
-        "Invalid secp256k1 private key: value exceeds curve order"
-      );
+      throw new Error("Invalid secp256k1 private key: value exceeds curve order");
     }
 
     return new PrivateKey(stripped, Curve.Secp256k1);

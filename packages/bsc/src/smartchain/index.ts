@@ -1,6 +1,8 @@
-import { createPublicClient, http, PublicClient } from "viem";
-import { GuardianServiceContract, InMemoryCache, StakingServiceContract, Validator } from "@guardian/sdk";
-import { GuardianChain } from "@guardian/sdk";
+import type { PublicClient } from "viem";
+import { createPublicClient, http } from "viem";
+import type { GuardianServiceContract, StakingServiceContract, Validator } from "@guardian/sdk";
+import { InMemoryCache } from "@guardian/sdk";
+import type { GuardianChain } from "@guardian/sdk";
 import { GuardianService } from "./services/guardian-service";
 import { BSC_CHAIN, getViemChain } from "../chain";
 import { BalanceService } from "./services/balance-service";
@@ -29,10 +31,7 @@ export function bsc(config: { rpcUrl: string }): GuardianServiceContract {
   return provideGuarService(BSC_CHAIN, config.rpcUrl);
 }
 
-function provideGuarService(
-  chain: GuardianChain,
-  rpcUrl: string
-): GuardianServiceContract {
+function provideGuarService(chain: GuardianChain, rpcUrl: string): GuardianServiceContract {
   const client = createPublicClient({
     chain: getViemChain(chain),
     transport: http(rpcUrl),

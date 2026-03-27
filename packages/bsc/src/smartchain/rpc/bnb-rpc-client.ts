@@ -1,6 +1,6 @@
 import { fetchOrError } from "@guardian/sdk";
-import { BNBRpcClientContract } from "./bnb-rpc-client-contract";
-import {
+import type { BNBRpcClientContract } from "./bnb-rpc-client-contract";
+import type {
   BNBChainValidator,
   BNBStakingSummary,
   BNBValidatorsResponse,
@@ -11,8 +11,7 @@ import {
  * A client class responsible for interacting with BNB Chain indexing API.
  */
 export class BNBRpcClient implements BNBRpcClientContract {
-  private static readonly BASE_MAINNET_URL =
-    "https://api.bnbchain.org/bnb-staking/v1";
+  private static readonly BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
   private static readonly VALIDATORS_LIMIT = "100";
   private static readonly VALIDATORS_OFFSET = "0";
 

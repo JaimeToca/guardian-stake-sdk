@@ -26,8 +26,4 @@ interface ClaimableBalance extends BalanceBase {
   type: BalanceType.Claimable;
 }
 
-export type Balance =
-  | AvailableBalance
-  | StakedBalance
-  | PendingBalance
-  | ClaimableBalance;
+export type Balance = AvailableBalance | StakedBalance | PendingBalance | ClaimableBalance;

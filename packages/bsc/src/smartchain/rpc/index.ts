@@ -1,4 +1,4 @@
-import { PublicClient } from "viem";
+import type { PublicClient } from "viem";
 import { BNBRpcClient } from "./bnb-rpc-client";
 import { StakingRpcClient } from "./staking-rpc-client";
 

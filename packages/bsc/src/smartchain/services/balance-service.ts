@@ -1,11 +1,6 @@
-import { Address, PublicClient } from "viem";
-import {
-  Balance,
-  BalanceServiceContract,
-  BalanceType,
-  DelegationStatus,
-  StakingServiceContract,
-} from "@guardian/sdk";
+import type { Address, PublicClient } from "viem";
+import type { Balance, BalanceServiceContract, StakingServiceContract } from "@guardian/sdk";
+import { BalanceType, DelegationStatus } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**
@@ -25,8 +20,7 @@ export class BalanceService implements BalanceServiceContract {
       address: evmAddress,
     });
 
-    const pendingOrClaimableBalanceRequest =
-      this.getPendingAndClaimableBalances(evmAddress);
+    const pendingOrClaimableBalanceRequest = this.getPendingAndClaimableBalances(evmAddress);
 
     const [availableBalance, pendingDelegations] = await Promise.all([
       availableBalanceRequest,

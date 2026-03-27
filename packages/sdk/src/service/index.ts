@@ -6,11 +6,7 @@ export { NonceServiceContract } from "./nonce-service-contract";
 
 export { Balance, BalanceType } from "./balance-types";
 export { FeeType, Fee } from "./fee-types";
-export {
-  Transaction,
-  OperatorAddress,
-  TransactionType,
-} from "./transaction-types";
+export { Transaction, OperatorAddress, TransactionType } from "./transaction-types";
 export {
   Validator,
   ValidatorStatus,
@@ -20,11 +16,6 @@ export {
   StakingSummary,
 } from "./staking-types";
 
-export {
-  SigningWithPrivateKey,
-  BaseSignArgs,
-  CompileArgs,
-  PrehashResult,
-} from "./sign-types";
+export { SigningWithPrivateKey, BaseSignArgs, CompileArgs, PrehashResult } from "./sign-types";
 
 export { GuardianServiceContract } from "./guardian-service-contract";

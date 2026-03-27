@@ -192,9 +192,7 @@ describe("StakingService", () => {
       const service = new StakingService(cache, stakingRpcClient as any, bnbRpcClient as any);
 
       const result = await service.getDelegations(delegatorAddress);
-      const pending = result.delegations.filter(
-        (d) => d.status === DelegationStatus.Pending
-      );
+      const pending = result.delegations.filter((d) => d.status === DelegationStatus.Pending);
 
       expect(pending).toHaveLength(1);
       expect(pending[0].amount).toBe(200n);
@@ -227,9 +225,7 @@ describe("StakingService", () => {
       const service = new StakingService(cache, stakingRpcClient as any, bnbRpcClient as any);
 
       const result = await service.getDelegations(delegatorAddress);
-      const claimable = result.delegations.filter(
-        (d) => d.status === DelegationStatus.Claimable
-      );
+      const claimable = result.delegations.filter((d) => d.status === DelegationStatus.Claimable);
 
       expect(claimable).toHaveLength(1);
       expect(claimable[0].amount).toBe(150n);

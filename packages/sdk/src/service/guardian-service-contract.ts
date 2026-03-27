@@ -1,15 +1,10 @@
-import { HexString } from "../entity/types";
-import { GuardianChain } from "../chain";
-import { Balance } from "./balance-types";
-import { Transaction } from "./transaction-types";
-import { Fee } from "./fee-types";
-import {
-  BaseSignArgs,
-  CompileArgs,
-  PrehashResult,
-  SigningWithPrivateKey,
-} from "./sign-types";
-import { Delegations, Validator } from "./staking-types";
+import type { HexString } from "../entity/types";
+import type { GuardianChain } from "../chain";
+import type { Balance } from "./balance-types";
+import type { Transaction } from "./transaction-types";
+import type { Fee } from "./fee-types";
+import type { BaseSignArgs, CompileArgs, PrehashResult, SigningWithPrivateKey } from "./sign-types";
+import type { Delegations, Validator } from "./staking-types";
 
 /** Chain-agnostic contract for the Guardian Service facade. Implemented by each chain package. */
 export interface GuardianServiceContract {

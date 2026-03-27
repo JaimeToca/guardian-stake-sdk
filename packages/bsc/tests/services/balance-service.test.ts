@@ -94,9 +94,7 @@ describe("BalanceService", () => {
   });
 
   it("aggregates claimable balance from claimable delegations", async () => {
-    const delegations = [
-      { status: DelegationStatus.Claimable, amount: 300n },
-    ];
+    const delegations = [{ status: DelegationStatus.Claimable, amount: 300n }];
 
     const service = new BalanceService(
       makePublicClient(0n) as any,
@@ -131,10 +129,7 @@ describe("BalanceService", () => {
   });
 
   it("returns zero for all staking balances when there are no delegations", async () => {
-    const service = new BalanceService(
-      makePublicClient(0n) as any,
-      makeStakingService([]) as any
-    );
+    const service = new BalanceService(makePublicClient(0n) as any, makeStakingService([]) as any);
 
     const balances = await service.getBalances(mockAddress);
 

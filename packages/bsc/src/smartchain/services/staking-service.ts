@@ -1,19 +1,11 @@
-import { Address, parseEther } from "viem";
-import { CacheContract } from "@guardian/sdk";
-import {
-  BNBChainValidator,
-  BNBRpcClientContract,
-  StakingRpcClientContract,
-} from "../rpc";
-import { MulticallResult, processSingleMulticallResult } from "../abi";
-import {
-  Delegation,
-  Delegations,
-  DelegationStatus,
-  StakingServiceContract,
-  Validator,
-  ValidatorStatus,
-} from "@guardian/sdk";
+import type { Address } from "viem";
+import { parseEther } from "viem";
+import type { CacheContract } from "@guardian/sdk";
+import type { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
+import type { MulticallResult } from "../abi";
+import { processSingleMulticallResult } from "../abi";
+import type { Delegation, Delegations, StakingServiceContract, Validator } from "@guardian/sdk";
+import { DelegationStatus, ValidatorStatus } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
 export class StakingService implements StakingServiceContract {
@@ -80,21 +72,14 @@ export class StakingService implements StakingServiceContract {
     const evmAddress = parseEvmAddress(address);
     const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
     const validators = await this.getValidators();
-    const activeDelegationsPromise = this.getActiveDelegations(
-      evmAddress,
-      validators
-    );
-    const pendingDelegationsPromise = this.getPendingOrClaimableDelegations(
-      evmAddress,
-      validators
-    );
+    const activeDelegationsPromise = this.getActiveDelegations(evmAddress, validators);
+    const pendingDelegationsPromise = this.getPendingOrClaimableDelegations(evmAddress, validators);
 
-    const [stakingSummary, activeDelegations, pendingDelegations] =
-      await Promise.all([
-        stakingSummaryPromise,
-        activeDelegationsPromise,
-        pendingDelegationsPromise,
-      ]);
+    const [stakingSummary, activeDelegations, pendingDelegations] = await Promise.all([
+      stakingSummaryPromise,
+      activeDelegationsPromise,
+      pendingDelegationsPromise,
+    ]);
 
     return {
       delegations: activeDelegations.concat(pendingDelegations),
@@ -114,8 +99,8 @@ export class StakingService implements StakingServiceContract {
     address: Address,
     validators: Validator[]
   ): Promise<Delegation[]> {
-    const creditContractValidators = validators.map(
-      (validator) => parseEvmAddress(validator.creditAddress)
+    const creditContractValidators = validators.map((validator) =>
+      parseEvmAddress(validator.creditAddress)
     );
 
     const pooledBNBData = await this.stakingRpcClient.getPooledBNBData(
@@ -146,15 +131,12 @@ export class StakingService implements StakingServiceContract {
     address: Address,
     validators: Validator[]
   ): Promise<Delegation[]> {
-    const creditAddresses = validators.map(
-      (validator) => parseEvmAddress(validator.creditAddress)
-    );
+    const creditAddresses = validators.map((validator) => parseEvmAddress(validator.creditAddress));
 
-    const pendingDelegations =
-      await this.stakingRpcClient.getPendingUnbondDelegation(
-        creditAddresses,
-        address
-      );
+    const pendingDelegations = await this.stakingRpcClient.getPendingUnbondDelegation(
+      creditAddresses,
+      address
+    );
 
     const delegationsPerValidator = await Promise.all(
       pendingDelegations.map((result, index) =>
@@ -163,9 +145,7 @@ export class StakingService implements StakingServiceContract {
     );
 
     return delegationsPerValidator
-      .filter(
-        (delegation): delegation is Delegation[] => delegation !== undefined
-      )
+      .filter((delegation): delegation is Delegation[] => delegation !== undefined)
       .flat();
   }
 
@@ -193,11 +173,7 @@ export class StakingService implements StakingServiceContract {
     validator: Validator
   ): Promise<Delegation[]> {
     const unbondRequestPromises = Array.from({ length: count }, (_, index) =>
-      this.stakingRpcClient.getUnbondRequestData(
-        creditAddress,
-        address,
-        BigInt(index)
-      )
+      this.stakingRpcClient.getUnbondRequestData(creditAddress, address, BigInt(index))
     );
 
     const unbondRequests = await Promise.all(unbondRequestPromises);
@@ -210,10 +186,7 @@ export class StakingService implements StakingServiceContract {
         id: `delegation_pending__${validator.creditAddress}_${index}`,
         validator,
         amount: req.amount,
-        status:
-          now > unlockTimeInMillis
-            ? DelegationStatus.Claimable
-            : DelegationStatus.Pending,
+        status: now > unlockTimeInMillis ? DelegationStatus.Claimable : DelegationStatus.Pending,
         delegationIndex: index,
         pendingUntil: now > unlockTimeInMillis ? 0 : Number(unlockTimeInMillis),
       };

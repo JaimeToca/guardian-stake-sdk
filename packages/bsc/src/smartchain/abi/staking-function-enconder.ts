@@ -1,5 +1,5 @@
 import { encodeFunctionCall } from "./abi-utils";
-import { Address, Hex } from "viem";
+import type { Address, Hex } from "viem";
 
 export function encodeGetValidatorsData(): Hex {
   return encodeFunctionCall(
@@ -28,10 +28,7 @@ export function encodeGetPooledBNBData(delegator: Address): Hex {
   );
 }
 
-export function encodeUnbondRequestData(
-  delegator: Address,
-  index: bigint
-): Hex {
+export function encodeUnbondRequestData(delegator: Address, index: bigint): Hex {
   return encodeFunctionCall(
     "unbondRequest(address,uint256)",
     [
@@ -61,10 +58,7 @@ export function encodeDelegate(operatorAddress: Address): Hex {
   );
 }
 
-export function encodeUndelegate(
-  operatorAddress: Address,
-  shares: bigint
-): Hex {
+export function encodeUndelegate(operatorAddress: Address, shares: bigint): Hex {
   return encodeFunctionCall(
     "undelegate(address,uint256)",
     [
