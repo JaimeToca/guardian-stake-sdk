@@ -78,6 +78,15 @@ Delegate ──► Active (earning rewards)
 | **Pending** | Unbonding initiated — 7-day lock before funds are accessible |
 | **Claimable** | Unbonding complete, BNB is ready to claim |
 
+**Real transaction examples on BSC mainnet:**
+
+| Operation | BSCScan |
+|---|---|
+| Delegate | [0xd8f236...](https://bscscan.com/tx/0xd8f2366b019588a3a55b296c7f79323f94cfa768cd9539920e5316840c581d9c) |
+| Undelegate | [0x204e31...](https://bscscan.com/tx/0x204e318cc87647ccc793de4e2e44061f53dcb5139563d2d2276fca92bc508a68) |
+| Redelegate | [0x5cb0f4...](https://bscscan.com/tx/0x5cb0f4e627c032031b8e022fba710e766648d880d95ce781f30d40aa5cfffcfa) |
+| Claim | [0x832c84...](https://bscscan.com/tx/0x832c8487166607ce234f36b572b4212661431bd3b54e883f636f574534eb6d56) |
+
 ### Key Protocol Parameters
 
 | Parameter | Value |

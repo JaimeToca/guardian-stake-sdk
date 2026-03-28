@@ -10,12 +10,11 @@ const sdk = new GuardianSDK([
 
 async function main() {
   // Fetch balances
-  const balances = await sdk.getBalances(
-    BSC_CHAIN,
-    "0xB137d0B9bE423952a70A275bc8f2357038901CB2"
-  );
-
-  console.log("Balances:", balances);
+  // const balances = await sdk.getBalances(
+  //  BSC_CHAIN,
+  //  "0xB137d0B9bE423952a70A275bc8f2357038901CB2"
+  // );
+  // console.log("Balances:", balances);
 
   // Fetch validators
   const validators = await sdk.getValidators(BSC_CHAIN);

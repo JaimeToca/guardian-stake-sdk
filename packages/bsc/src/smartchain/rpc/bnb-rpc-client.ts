@@ -35,6 +35,7 @@ export class BNBRpcClient implements BNBRpcClientContract {
     this.logger.debug("BNBRpcClient: validators fetched", {
       count: response.data.validators.length,
       ms: Date.now() - start,
+      response: response.data,
     });
     return response.data.validators;
   }
@@ -49,7 +50,10 @@ export class BNBRpcClient implements BNBRpcClientContract {
       method: "GET",
     });
 
-    this.logger.debug("BNBRpcClient: staking summary fetched", { ms: Date.now() - start });
+    this.logger.debug("BNBRpcClient: staking summary fetched", {
+      ms: Date.now() - start,
+      response: response.data,
+    });
     return response.data.summary;
   }
 }
