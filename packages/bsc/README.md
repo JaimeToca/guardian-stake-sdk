@@ -30,11 +30,13 @@ BNB Smart Chain uses **Proof-of-Staked-Authority (PoSA)** — a hybrid consensus
 
 ### Validators
 
-Up to **45 validators** are active at any time, ranked by total staked BNB:
+The validator set has grown beyond the original 45-slot design. As of early 2026, the network registers **50+ validators** in total. The active set is still capped by the protocol, ranked by total staked BNB:
 
 - **Top 21 (Cabinet)** — primary block producers, earn the highest rewards
-- **Positions 22–45 (Candidates)** — occasional block producers
-- **Below 45** — inactive, receive no rewards
+- **Candidates** — occasional block producers, fill slots above position 21
+- **Inactive / Jailed** — registered on-chain but not producing blocks
+
+`getValidators()` returns all registered validators — active, inactive, and jailed. Use `validator.status` to filter.
 
 Elections run daily after 00:00 UTC. Each validator sets a **commission rate** — the percentage of block rewards they keep before distributing the rest to delegators.
 
@@ -526,7 +528,7 @@ import { ValidationError, ValidationErrorCode } from "@guardian/bsc";
 | Code | Thrown when |
 |---|---|
 | `INVALID_ADDRESS` | An address string fails the chain's address format check — e.g. `getDelegations`, `getBalances`, `getNonce`, or a validator/account address inside a transaction |
-| `INVALID_AMOUNT` | A transaction `amount` is zero or negative (Claim transactions are exempt) |
+| `INVALID_AMOUNT` | A `Delegate` transaction `amount` is below the 1 BNB protocol minimum  |
 | `INVALID_NONCE` | The `nonce` passed to `sign`, `preHash`, or `compile` is negative or not an integer |
 | `INVALID_FEE` | The `fee.gasLimit` or `fee.gasPrice` passed to `sign`, `preHash`, or `compile` is zero or negative |
 
@@ -543,6 +545,7 @@ import { ConfigError, ConfigErrorCode } from "@guardian/bsc";
 | Code | Thrown when |
 |---|---|
 | `UNSUPPORTED_CHAIN` | The chain passed to any method has no registered service — check that you passed `bsc(...)` to the `GuardianSDK` constructor |
+| `INVALID_RPC_URL` | The `rpcUrl` passed to `bsc()` is not a valid URL or uses an unsupported protocol (must be `http`, `https`, `ws`, or `wss`) |
 
 ---
 

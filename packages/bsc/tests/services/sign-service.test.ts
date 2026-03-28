@@ -90,21 +90,23 @@ describe("SignService", () => {
     });
 
     describe("minimum amount validation", () => {
-      it.each([
-        { type: TransactionType.Delegate, extra: { isMaxAmount: false, validator: OPERATOR } },
-        { type: TransactionType.Undelegate, extra: { isMaxAmount: false, validator: OPERATOR } },
-        { type: TransactionType.Redelegate, extra: { isMaxAmount: false, fromValidator: FROM_OPERATOR, toValidator: TO_OPERATOR } },
-      ])("throws ValidationError for $type with amount below 1 BNB", ({ type, extra }) => {
+      it("throws ValidationError for Delegate with amount below 1 BNB", () => {
         expect.assertions(2);
         try {
-          service.buildCallData({ type, chain: BSC_CHAIN, amount: parseEther("0.5"), ...extra } as any);
+          service.buildCallData({
+            type: TransactionType.Delegate,
+            chain: BSC_CHAIN,
+            amount: parseEther("0.5"),
+            isMaxAmount: false,
+            validator: OPERATOR,
+          });
         } catch (err) {
           expect(err).toBeInstanceOf(ValidationError);
           expect((err as ValidationError).code).toBe(ValidationErrorCode.INVALID_AMOUNT);
         }
       });
 
-      it("allows exactly 1 BNB", () => {
+      it("allows exactly 1 BNB for Delegate", () => {
         expect(() =>
           service.buildCallData({
             type: TransactionType.Delegate,
@@ -113,6 +115,15 @@ describe("SignService", () => {
             isMaxAmount: false,
             validator: OPERATOR,
           })
+        ).not.toThrow();
+      });
+
+      it.each([
+        { type: TransactionType.Undelegate, extra: { isMaxAmount: false, validator: OPERATOR } },
+        { type: TransactionType.Redelegate, extra: { isMaxAmount: false, fromValidator: FROM_OPERATOR, toValidator: TO_OPERATOR } },
+      ])("does not enforce minimum for $type", ({ type, extra }) => {
+        expect(() =>
+          service.buildCallData({ type, chain: BSC_CHAIN, amount: parseEther("0.5"), ...extra } as any)
         ).not.toThrow();
       });
     });

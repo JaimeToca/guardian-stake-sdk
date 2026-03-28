@@ -1,5 +1,5 @@
 export interface BNBChainValidator {
-  apy: number;
+  apy: number | null; // jailed validators don't have an APY
   bcOperatorAddress: string;
   commission: number;
   createdAt: number;

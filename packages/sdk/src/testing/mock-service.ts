@@ -119,7 +119,7 @@ export function mockStakingSummary(overrides: Partial<StakingSummary> = {}): Sta
     maxApy: 8,
     minAmountToStake: BigInt("1000000000000000000"), // 1 token
     unboundPeriodInMillis: 604_800_000, // 7 days
-    redelegateFeeRate: 0.02,
+    redelegateFeeRate: 0.002,
     activeValidators: 21,
     totalValidators: 45,
     ...overrides,

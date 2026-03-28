@@ -144,29 +144,26 @@ export class SignService implements SignServiceContract {
     data: Hex;
     amount: bigint;
   } {
+    if (transaction.type === TransactionType.Delegate && transaction.amount < MIN_DELEGATION_AMOUNT) {
+      throw new ValidationError(
+        ValidationErrorCode.INVALID_AMOUNT,
+        `Amount must be at least 1 BNB — got ${formatEther(transaction.amount)} BNB`
+      );
+    }
+
     switch (transaction.type) {
       case TransactionType.Delegate: {
-        this.validateMinAmount(transaction.amount);
         const operatorAddress = this.getValidatorAddress(transaction.validator);
-        return {
-          data: encodeDelegate(operatorAddress),
-          amount: transaction.amount,
-        };
+        return { data: encodeDelegate(operatorAddress), amount: transaction.amount };
       }
       case TransactionType.Redelegate: {
         const from = this.getValidatorAddress(transaction.fromValidator);
         const to = this.getValidatorAddress(transaction.toValidator);
-        return {
-          data: encodeRedelegate(from, to, transaction.amount),
-          amount: 0n,
-        };
+        return { data: encodeRedelegate(from, to, transaction.amount), amount: 0n };
       }
       case TransactionType.Undelegate: {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
-        return {
-          data: encodeUndelegate(operatorAddress, transaction.amount),
-          amount: 0n,
-        };
+        return { data: encodeUndelegate(operatorAddress, transaction.amount), amount: 0n };
       }
       case TransactionType.Claim: {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
@@ -180,15 +177,6 @@ export class SignService implements SignServiceContract {
           SigningErrorCode.UNSUPPORTED_TRANSACTION_TYPE,
           `Cannot build call data: unsupported transaction type "${(transaction as Transaction).type}".`
         );
-    }
-  }
-
-  private validateMinAmount(amount: bigint): void {
-    if (amount < MIN_DELEGATION_AMOUNT) {
-      throw new ValidationError(
-        ValidationErrorCode.INVALID_AMOUNT,
-        `Amount must be at least 1 BNB — got ${formatEther(amount)} BNB`
-      );
     }
   }
 

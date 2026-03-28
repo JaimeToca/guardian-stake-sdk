@@ -11,7 +11,7 @@ import { parseEvmAddress } from "../validations";
 
 export class StakingService implements StakingServiceContract {
   private static readonly UNBOUND_PERIOD = 604800000; // 7 days in millis
-  private static readonly REDELEGATION_FEE = 0.02;
+  private static readonly REDELEGATION_FEE = 0.002; // percentage
   private static readonly MIN_AMOUNT_TO_STAKE = parseEther("1.0");
   private static readonly VALIDATOR_CACHE_KEY = "bsc-validators";
 
@@ -52,7 +52,7 @@ export class StakingService implements StakingServiceContract {
           name: bnbValidator.moniker,
           description: bnbValidator.miningStatus,
           image: this.getValidatorImage(operatorAddress),
-          apy: bnbValidator.apy * 100,
+          apy: (bnbValidator.apy ?? 0) * 100,
           delegators: bnbValidator.delegatorCount,
           operatorAddress: operatorAddress,
           creditAddress: parseEvmAddress(creditAddress),
