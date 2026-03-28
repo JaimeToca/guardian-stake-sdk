@@ -15,6 +15,8 @@ export async function fetchOrError<T>(requestConfig: AxiosRequestConfig): Promis
   try {
     const response: AxiosResponse<T> = await axios({
       timeout: 16000,
+      maxContentLength: 10 * 1024 * 1024, // 10 MB
+      maxBodyLength: 10 * 1024 * 1024,     // 10 MB
       ...requestConfig,
     });
     return response.data;
@@ -40,11 +42,7 @@ function handleServerResponseError(response: AxiosResponse): never {
   const { status, statusText, data: errorData } = response;
   const displayStatusText = statusText || `HTTP ${status} Error`;
 
-  const errorMessage = `API Request Failed: ${status} - ${displayStatusText}. ${
-    JSON.stringify(errorData) || "Something went wrong"
-  }`;
-
-  throw new ApiError(errorMessage, {
+  throw new ApiError(`API Request Failed: ${status} - ${displayStatusText}`, {
     status,
     statusText: displayStatusText,
     data: errorData,
@@ -59,8 +57,8 @@ function handleNetworkError(): never {
   );
 }
 
-function handleRequestSetupError(message: string): never {
-  throw new ApiError(`Request Setup Error: ${message}`, {
+function handleRequestSetupError(_message: string): never {
+  throw new ApiError("Request Setup Error: failed to send the request", {
     type: ApiErrorType.RequestSetupError,
   });
 }

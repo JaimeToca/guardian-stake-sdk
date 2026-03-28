@@ -35,20 +35,30 @@ export class StakingService implements StakingServiceContract {
       this.stakingRpcClient.getCreditContractValidators(),
     ]);
 
-    const validators = bnbValidators.map((bnbValidator, index) => {
-      const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
-      return {
-        id: `${bnbValidator.moniker}_${index}`,
-        status: this.getValidatorStatus(bnbValidator),
-        name: bnbValidator.moniker,
-        description: bnbValidator.miningStatus,
-        image: this.getValidatorImage(operatorAddress),
-        apy: bnbValidator.apy * 100,
-        delegators: bnbValidator.delegatorCount,
-        operatorAddress: operatorAddress,
-        creditAddress: parseEvmAddress(contractCallValidators.get(operatorAddress) ?? ""),
-      };
-    });
+    const validators = bnbValidators
+      .map((bnbValidator, index) => {
+        const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
+        const creditAddress = contractCallValidators.get(operatorAddress);
+        if (!creditAddress) {
+          this.logger.warn("StakingService: validator has no credit address — skipping", {
+            moniker: bnbValidator.moniker,
+            operatorAddress,
+          });
+          return undefined;
+        }
+        return {
+          id: `${bnbValidator.moniker}_${index}`,
+          status: this.getValidatorStatus(bnbValidator),
+          name: bnbValidator.moniker,
+          description: bnbValidator.miningStatus,
+          image: this.getValidatorImage(operatorAddress),
+          apy: bnbValidator.apy * 100,
+          delegators: bnbValidator.delegatorCount,
+          operatorAddress: operatorAddress,
+          creditAddress: parseEvmAddress(creditAddress),
+        };
+      })
+      .filter((v): v is NonNullable<typeof v> => v !== undefined);
 
     this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
     this.logger.debug("StakingService: validators cached", { count: validators.length });
