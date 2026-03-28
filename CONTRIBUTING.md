@@ -125,12 +125,21 @@ Examples:
 
 ## Adding a new chain package
 
-1. Create `packages/<chain>/` mirroring the structure of `packages/bsc/`.
-2. Implement `GuardianServiceContract` from `@guardian/sdk`.
-3. Export a factory function: `chainName({ rpcUrl, ...opts }): GuardianServiceContract`.
-4. Re-export everything from `@guardian/sdk` so consumers only need one import.
-5. Add the package to the root `eslint.config.mjs` `parserOptions.project` array.
-6. Update the root README packages table and roadmap.
+The full contributor guide lives at **[`docs/adding-a-chain.md`](./docs/adding-a-chain.md)**. It covers every required step: package structure, service contracts, CI requirements, testing strategy, sample code, and documentation standards.
+
+### Quick start
+
+Use the scaffold script to generate the complete package skeleton in one command (Python 3.8+ required):
+
+```bash
+# EVM chain
+python3 scripts/scaffold_chain.py ethereum --symbol ETH --chain-id 1 --explorer https://etherscan.io
+
+# Non-EVM chain
+python3 scripts/scaffold_chain.py tron --symbol TRX --chain-id 728126428 --no-viem
+```
+
+The script creates `packages/<chain>/` with all source files, configs, and test stubs, and patches `eslint.config.mjs` and the root `package.json` automatically. After running it, search for `TODO` in the generated files — those are the only places requiring chain-specific logic.
 
 > **Note:** New chain implementations must include their own disclaimer that the implementation is unaudited and experimental until a formal security review has been completed.
 
