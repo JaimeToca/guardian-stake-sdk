@@ -133,7 +133,9 @@ The same API surface is available on every supported chain. Pass the chain objec
 | [`estimateFee(transaction)`](#estimatefeetransaction) | `Fee` | Fee calculation for staking transaction types |
 | [`sign(signingArgs)`](#signsigningargs) | `string` | Sign a transaction directly with a private key |
 | [`preHash(args)`](#prehashhargs--compileargs) | `PrehashResult` | Serialize an unsigned transaction for external/MPC signing |
-| [`compile(args)`](#prehashhargs--compileargs) | `string` | Reassemble a signed transaction from `r`, `s`, `v` components |
+| [`compile(args)`](#prehashhargs--compileargs) | `string` | Reassemble a signed transaction |
+
+> **Note:** Some APIs — such as `getValidators` — may be extended in future releases (e.g. pagination support). The SDK initialization may also be extended to allow injecting additional configuration options per chain.
 
 ---
 
