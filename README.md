@@ -63,6 +63,7 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
   - [ConfigError](#configerror)
   - [SigningError](#signingerror)
 - [Roadmap](#roadmap)
+- [Contributing](#contributing)
 
 ---
 
@@ -680,3 +681,17 @@ Planned integrations follow the same architecture — each chain is an independe
 ### Beyond native staking
 
 The `@guardian/sdk` core is protocol-agnostic by design. Future releases may expand into other DeFi primitives — liquidity provisioning, lending, yield aggregation — expanding the chain-agnostic interfaces and signing flows.
+
+---
+
+## Contributing
+
+Contributions are welcome — bug fixes, new chain integrations, documentation improvements, and more.
+
+- **Adding a new chain** — read [`docs/adding-a-chain.md`](./docs/adding-a-chain.md) for the full guide. A scaffold script generates the entire package skeleton in one command:
+  ```bash
+  python3 scripts/scaffold_chain.py <chain-id> --symbol <SYM> --chain-id <id>
+  ```
+- **General contributions** — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for setup instructions, commit conventions, and the pull request process.
+- **Bug reports & feature requests** — open an issue using the templates in `.github/ISSUE_TEMPLATE/`.
+- **Security vulnerabilities** — see [`SECURITY.md`](./SECURITY.md). Do not open a public issue.
