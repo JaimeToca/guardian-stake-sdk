@@ -124,6 +124,19 @@ No chain IDs to configure manually, no internal wiring — install the package, 
 
 The same API surface is available on every supported chain. Pass the chain object as the first argument to scope each call.
 
+| Method | Returns | Description |
+|--------|---------|-------------|
+| [`getValidators(chain)`](#getvalidatorschain) | `Validator[]` | All validators — active, inactive, and jailed |
+| [`getDelegations(chain, address)`](#getdelegationschain-address) | `Delegations` | All delegations for an address plus a protocol-level summary if available |
+| [`getBalances(chain, address)`](#getbalanceschain-address) | `Balance[]` | Available, staked, pending, and claimable balances |
+| [`getNonce(chain, address)`](#getnoncechain-address) | `number` | Current transaction nonce, required before signing |
+| [`estimateFee(transaction)`](#estimatefeetransaction) | `Fee` | Fee calculation for staking transaction types |
+| [`sign(signingArgs)`](#signsigningargs) | `string` | Sign a transaction directly with a private key |
+| [`preHash(args)`](#prehashhargs--compileargs) | `PrehashResult` | Serialize an unsigned transaction for external/MPC signing |
+| [`compile(args)`](#prehashhargs--compileargs) | `string` | Reassemble a signed transaction from `r`, `s`, `v` components |
+
+---
+
 ### `getValidators(chain)`
 
 Returns all validators on the network — active, inactive, and jailed.
