@@ -149,7 +149,7 @@ describe("SignService", () => {
     it("returns a serialized transaction and the original sign args", async () => {
       const signArgs = {
         transaction: {
-          type: TransactionType.Delegate,
+          type: TransactionType.Delegate as const,
           chain: BSC_CHAIN,
           amount: parseEther("1"),
           isMaxAmount: false,
@@ -167,10 +167,10 @@ describe("SignService", () => {
   });
 
   describe("compile", () => {
-    it("produces a valid signed transaction hex from r, s, v components", async () => {
+    it("produces a valid signed transaction hex from a raw signature", async () => {
       const signArgs = {
         transaction: {
-          type: TransactionType.Delegate,
+          type: TransactionType.Delegate as const,
           chain: BSC_CHAIN,
           amount: parseEther("1"),
           isMaxAmount: false,
@@ -180,12 +180,11 @@ describe("SignService", () => {
         nonce: 1,
       };
 
-      const compiled = await service.compile({
-        signArgs,
-        r: "0x1234567890123456789012345678901234567890123456789012345678901234",
-        s: "0x1234567890123456789012345678901234567890123456789012345678901234",
-        v: 27n,
-      });
+      // 65-byte secp256k1 signature: r (32 bytes) + s (32 bytes) + v (1 byte = 0x1b for 27)
+      const signature =
+        `0x${"1234567890123456789012345678901234567890123456789012345678901234"}${"1234567890123456789012345678901234567890123456789012345678901234"}1b` as `0x${string}`;
+
+      const compiled = await service.compile({ signArgs, signature });
 
       expect(compiled).toMatch(/^0x/);
     });

@@ -334,6 +334,8 @@ interface PrehashResult {
 
 **`compile` returns:** `Promise<string>` — the final signed raw transaction.
 
+`compile` accepts a `signature` field — a hex-encoded raw signature string produced by your external signer. Each chain package decodes this into whatever format it needs internally (e.g. BSC splits it into `r`, `s`, `v`).
+
 ```typescript
 // Step 1 — serialize
 const { serializedTransaction, signArgs } = await sdk.preHash({
@@ -342,10 +344,10 @@ const { serializedTransaction, signArgs } = await sdk.preHash({
   nonce,
 });
 
-// Send serializedTransaction to your external signer → get back r, s, v
+// Send serializedTransaction to your external signer → get back a raw hex signature
 
 // Step 2 — assemble
-const rawTx = await sdk.compile({ signArgs, r: "0x...", s: "0x...", v: 27n });
+const rawTx = await sdk.compile({ signArgs, signature: "0x<hex-signature>" });
 ```
 
 ---
@@ -417,7 +419,7 @@ For chain-specific details (protocol parameters, transaction shapes, error codes
 
 ![Signing Flows](./signing-flows.svg)
 
-The MPC flow is designed for setups where the private key is managed externally — hardware wallets, MPC servers, or custodians. `preHash()` serializes the transaction and returns it ready to sign. `compile()` assembles the final signed transaction from the ECDSA components (`r`, `s`, `v`).
+The MPC flow is designed for setups where the private key is managed externally — hardware wallets, MPC servers, or custodians. `preHash()` serializes the transaction and returns it ready to sign. `compile()` assembles the final signed transaction from a raw hex signature string — chain-agnostic by design, each chain package handles the internal decoding.
 
 ---
 

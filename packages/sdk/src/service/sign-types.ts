@@ -13,9 +13,7 @@ export type SigningWithPrivateKey = BaseSignArgs & { privateKey: PrivateKey };
 
 export type CompileArgs = {
   signArgs: BaseSignArgs;
-  r: HexString;
-  s: HexString;
-  v: bigint;
+  signature: HexString;
 };
 
 export type PrehashResult = {

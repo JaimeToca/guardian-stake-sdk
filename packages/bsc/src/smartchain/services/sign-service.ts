@@ -1,5 +1,5 @@
 import type { Address, Hex, TransactionSerializable } from "viem";
-import { serializeTransaction, parseEther, formatEther } from "viem";
+import { serializeTransaction, parseEther, formatEther, parseSignature } from "viem";
 import {
   encodeClaim,
   encodeDelegate,
@@ -91,13 +91,11 @@ export class SignService implements SignServiceContract {
     const transaction = compileArgs.signArgs.transaction;
     const fee = compileArgs.signArgs.fee;
     const nonce = compileArgs.signArgs.nonce;
-    const r = compileArgs.r;
-    const s = compileArgs.s;
-    const v = compileArgs.v;
 
     const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
+    const sig = parseSignature(compileArgs.signature as Hex);
 
-    const compiled = serializeTransaction(unsignedTransaction, { r, s, v });
+    const compiled = serializeTransaction(unsignedTransaction, sig);
     this.logger.info("SignService: transaction compiled");
     return compiled;
   }

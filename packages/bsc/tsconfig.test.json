@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": ".",
+    "noEmit": true,
     "paths": {
       "@guardian/sdk": ["../sdk/src/index.ts"],
       "@guardian/sdk/testing": ["../sdk/src/testing/index.ts"]
