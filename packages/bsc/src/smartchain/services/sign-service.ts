@@ -1,5 +1,5 @@
 import type { Address, Hex, TransactionSerializable } from "viem";
-import { serializeTransaction } from "viem";
+import { serializeTransaction, parseEther, formatEther } from "viem";
 import {
   encodeClaim,
   encodeDelegate,
@@ -20,7 +20,9 @@ import type {
   Transaction,
   Logger,
 } from "@guardian/sdk";
-import { SigningError, SigningErrorCode, TransactionType, NoopLogger } from "@guardian/sdk";
+import { SigningError, SigningErrorCode, TransactionType, NoopLogger, ValidationError, ValidationErrorCode } from "@guardian/sdk";
+
+const MIN_DELEGATION_AMOUNT = parseEther("1");
 import type { SigningWithAccount } from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
 import { parseEvmAddress } from "../validations";
@@ -144,6 +146,7 @@ export class SignService implements SignServiceContract {
   } {
     switch (transaction.type) {
       case TransactionType.Delegate: {
+        this.validateMinAmount(transaction.amount);
         const operatorAddress = this.getValidatorAddress(transaction.validator);
         return {
           data: encodeDelegate(operatorAddress),
@@ -177,6 +180,15 @@ export class SignService implements SignServiceContract {
           SigningErrorCode.UNSUPPORTED_TRANSACTION_TYPE,
           `Cannot build call data: unsupported transaction type "${(transaction as Transaction).type}".`
         );
+    }
+  }
+
+  private validateMinAmount(amount: bigint): void {
+    if (amount < MIN_DELEGATION_AMOUNT) {
+      throw new ValidationError(
+        ValidationErrorCode.INVALID_AMOUNT,
+        `Amount must be at least 1 BNB — got ${formatEther(amount)} BNB`
+      );
     }
   }
 

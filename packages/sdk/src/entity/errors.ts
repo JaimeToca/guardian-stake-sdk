@@ -26,6 +26,7 @@ export enum ValidationErrorCode {
 
 export enum ConfigErrorCode {
   UNSUPPORTED_CHAIN = "UNSUPPORTED_CHAIN",
+  INVALID_RPC_URL = "INVALID_RPC_URL",
 }
 
 export enum SigningErrorCode {

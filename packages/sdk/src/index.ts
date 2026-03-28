@@ -9,6 +9,7 @@ export * from "./chain";
 
 // Errors
 export * from "./entity/errors";
+export { validateRpcUrl } from "./entity/config-validation";
 
 // RPC utilities
 export * from "./rpc";

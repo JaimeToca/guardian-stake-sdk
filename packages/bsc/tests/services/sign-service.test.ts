@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseEther, getAddress } from "viem";
 import { SignService } from "../../src/smartchain/services/sign-service";
-import { TransactionType, FeeType } from "@guardian/sdk";
+import { TransactionType, FeeType, ValidationError, ValidationErrorCode } from "@guardian/sdk";
 import { BSC_CHAIN } from "../../src/chain";
 
 const OPERATOR = getAddress("0x1234567890123456789012345678901234567890");
@@ -87,6 +87,34 @@ describe("SignService", () => {
       expect(data).toMatch(/^0x/);
       expect(data.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
       expect(amount).toBe(0n);
+    });
+
+    describe("minimum amount validation", () => {
+      it.each([
+        { type: TransactionType.Delegate, extra: { isMaxAmount: false, validator: OPERATOR } },
+        { type: TransactionType.Undelegate, extra: { isMaxAmount: false, validator: OPERATOR } },
+        { type: TransactionType.Redelegate, extra: { isMaxAmount: false, fromValidator: FROM_OPERATOR, toValidator: TO_OPERATOR } },
+      ])("throws ValidationError for $type with amount below 1 BNB", ({ type, extra }) => {
+        expect.assertions(2);
+        try {
+          service.buildCallData({ type, chain: BSC_CHAIN, amount: parseEther("0.5"), ...extra } as any);
+        } catch (err) {
+          expect(err).toBeInstanceOf(ValidationError);
+          expect((err as ValidationError).code).toBe(ValidationErrorCode.INVALID_AMOUNT);
+        }
+      });
+
+      it("allows exactly 1 BNB", () => {
+        expect(() =>
+          service.buildCallData({
+            type: TransactionType.Delegate,
+            chain: BSC_CHAIN,
+            amount: parseEther("1"),
+            isMaxAmount: false,
+            validator: OPERATOR,
+          })
+        ).not.toThrow();
+      });
     });
 
     it("produces consistent output for the same inputs", () => {

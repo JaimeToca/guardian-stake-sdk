@@ -39,6 +39,8 @@ They typically:
 
 As a result, developers are still burdened with deep staking knowledge, even when using an SDK. **Guardian SDK aims to abstract staking mechanics through a unified, generic API.**
 
+Beyond the code itself, the Guardian SDK is designed to serve as both a reference implementation and a knowledge resource for staking across the blockchain ecosystem. Exploring the SDK—especially the READMEs for each supported chain—delivers deeper, more practical insight than traditional documentation, offering real-world examples of how staking is implemented in practice.
+
 ## Table of Contents
 
 - [Packages](#packages)
