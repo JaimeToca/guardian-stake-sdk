@@ -164,8 +164,6 @@ const validators = await sdk.getValidators(BSC_CHAIN);
 // validators[0] → { name, apy, status, operatorAddress, ... }
 ```
 
-> Validator data is cached for 3 minutes.
-
 ---
 
 ### `getDelegations(chain, address)`
