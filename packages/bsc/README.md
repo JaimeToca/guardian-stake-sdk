@@ -122,6 +122,8 @@ Both `delegate` and `redelegate` accept a `bool delegateVotePower` parameter. Wh
 
 Each `undelegate` call creates a numbered **unbond request** on the `StakeCredit` contract, indexed from 0. The index is what `Delegation.delegationIndex` tracks, and it is the value you pass as `index` when building a `ClaimTransaction`. A single address can have multiple concurrent unbond requests against the same validator, each with its own index and unlock time.
 
+> **Single claim only:** The SDK currently supports `claim(address, uint256)` — one unbond request per transaction. The contract also exposes `claimBatch(address[], uint256[])` for claiming multiple requests in one transaction, but this is not yet supported. To claim multiple positions, submit one `ClaimTransaction` per `delegationIndex`.
+
 ### Fee Model
 
 BSC staking transactions use the **legacy (pre-EIP-1559) gas model**. The total fee is:
@@ -152,7 +154,6 @@ The SDK adds a **15% buffer** on top of the simulated gas estimate to reduce the
 | Delegate | [0x1c255c...](https://bscscan.com/tx/0x1c255ca858b7adaf826b6ede919d91292712866b6a6879406672038cc6919cb0) |
 | Undelegate | [0x7fa095...](https://bscscan.com/tx/0x7fa095c5308f415a9b54d1f99e58d65475704f6dba8520faa63ae87aa82226bc) |
 | Redelegate | [0xfa5135...](https://bscscan.com/tx/0xfa513546ace1fe31e9e8bd856ccb30bfd73135cf09b8a64f8d0f3bff77c339a2) |
-| Claim (batch) | [0xb74d25...](https://bscscan.com/tx/0xb74d25e4c3fd3f1c5fb23136c75994afcf4c019f114c9656e7956d79418bdc39) |
 
 ### Key Protocol Parameters
 
@@ -448,8 +449,9 @@ const fee = await sdk.estimateFee({
   toValidator: validators[1],
 });
 
-// Claim — withdraw BNB after the unbonding period completes
-// `index` is the unbond request number from delegation.delegationIndex
+// Claim — withdraw BNB for a single unbond request after the unbonding period completes.
+// `index` is the unbond request number from delegation.delegationIndex.
+// To claim multiple positions, submit one ClaimTransaction per delegationIndex.
 const fee = await sdk.estimateFee({
   type: TransactionType.Claim,
   chain: BSC_CHAIN,
@@ -552,7 +554,7 @@ const { serializedTransaction, signArgs } = await sdk.preHash({
 });
 
 // Send `serializedTransaction` to your MPC server or hardware wallet.
-// It returns the ECDSA signature components: r, s, v.
+// It returns a hex-encoded ECDSA signature string.
 ```
 
 **Step 2 — compile the final transaction:**
@@ -560,9 +562,7 @@ const { serializedTransaction, signArgs } = await sdk.preHash({
 ```typescript
 const rawTx = await sdk.compile({
   signArgs,
-  r: "0x...",
-  s: "0x...",
-  v: 27n,
+  signature: "0x<hex-signature>", // raw hex signature from your external signer
 });
 
 // Broadcast rawTx via your RPC node
