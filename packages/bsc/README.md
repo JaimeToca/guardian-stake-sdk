@@ -28,6 +28,24 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
 
 BNB Smart Chain uses **Proof-of-Staked-Authority (PoSA)** — a hybrid consensus model where validators are elected based on the amount of BNB staked with them. BNB holders can delegate their tokens to validators to participate in network security and earn a share of block rewards.
 
+### Contract Architecture
+
+BNB native staking is split across two contract layers:
+
+**StakeHub** (`0x0000000000000000000000000000000000002002`) is the entry point for all staking operations. It is a system genesis contract — hardcoded into the BSC protocol — and handles validator registration, delegation routing, unbonding queues, slashing, and reward distribution. All `delegate`, `undelegate`, `redelegate`, and `claim` transactions go to this address.
+
+**StakeCredit** — each validator has its own dedicated credit contract deployed by StakeHub at registration time. These contracts hold the delegated BNB and manage the share accounting for their validator. The credit contract address is available on every `Validator` object as `creditAddress`.
+
+```
+User ──► StakeHub (0x...2002)
+              │
+              ├──► StakeCredit_ValidatorA  (holds delegated BNB, issues shares)
+              ├──► StakeCredit_ValidatorB
+              └──► StakeCredit_ValidatorC  ...
+```
+
+The SDK talks to both layers: write operations go through `StakeHub`, and read operations (`getPooledBNB`, `pendingUnbondRequest`, `unbondRequest`) query the per-validator `StakeCredit` contracts directly via multicall.
+
 ### Validators
 
 The validator set has grown beyond the original 45-slot design. As of early 2026, the network registers **50+ validators** in total. The active set is still capped by the protocol, ranked by total staked BNB:
@@ -38,23 +56,29 @@ The validator set has grown beyond the original 45-slot design. As of early 2026
 
 `getValidators()` returns all registered validators — active, inactive, and jailed. Use `validator.status` to filter.
 
-Elections run daily after 00:00 UTC. Each validator sets a **commission rate** — the percentage of block rewards they keep before distributing the rest to delegators.
+Elections run daily after 00:00 UTC. Each validator sets a **commission rate** — the percentage of block rewards they keep before distributing the rest to delegators. The full validator metadata available on-chain includes moniker, identity, website, details, consensus address, vote address, commission rate, and election info — the SDK surfaces the subset most relevant to delegation UIs.
 
-### Staking Credits
+### Staking Credits and Shares
 
-When you delegate BNB to a validator, you receive **staking credit tokens** unique to that validator (e.g., `stBNB_ValidatorName`). These credits:
+When you delegate BNB to a validator, the `StakeCredit` contract mints **shares** representing your proportional stake. These shares:
 
 - Are **non-transferable** and specific to each validator
-- **Auto-compound** — their BNB value grows as the validator earns block rewards
+- **Auto-compound** — their BNB value grows as the validator earns block rewards, without any action required
 - Are burned when you undelegate
 
 Your BNB value at any point is calculated as:
 
 ```
-Your BNB = (your credit balance × total pooled BNB) ÷ total credit supply
+Your BNB = (your shares × total pooled BNB) ÷ total share supply
 ```
 
-This means you never need to manually claim rewards — your stake simply becomes worth more over time.
+Because rewards continuously accrue, the **share:BNB ratio drifts over time** — 1 share is worth slightly more BNB each day. This has a direct impact on `undelegate` and `redelegate` transactions: the contract takes a `uint256 shares` argument, not a BNB amount. The SDK handles this conversion internally — you always pass a BNB amount in wei, and the SDK queries the `StakeCredit` contract to resolve the correct share count before encoding the transaction.
+
+To read the current BNB value of a delegated position, the SDK calls `getPooledBNB(delegatorAddress)` on the `StakeCredit` contract, which returns the current BNB equivalent. This is what `getDelegations()` exposes as `delegation.amount`.
+
+### Governance Voting Power
+
+Both `delegate` and `redelegate` accept a `bool delegateVotePower` parameter. When set to `true`, the delegated BNB counts toward the validator's governance voting weight in on-chain proposals. The SDK always sets this to `false` — staking rewards are identical regardless, and governance participation is typically handled separately.
 
 ### Lifecycle of a Stake
 
@@ -74,40 +98,70 @@ Delegate ──► Active (earning rewards)
 
 | Stage | Description |
 |---|---|
-| **Active** | BNB is staked and earning auto-compounding rewards |
-| **Pending** | Unbonding initiated — 7-day lock before funds are accessible |
-| **Claimable** | Unbonding complete, BNB is ready to claim |
+| **Active** | BNB is delegated and earning auto-compounding rewards via the StakeCredit contract |
+| **Pending** | Unbonding initiated — a 7-day lock is enforced before funds are accessible |
+| **Claimable** | Unbonding complete, BNB is held in the StakeCredit contract and ready to withdraw |
+
+Each `undelegate` call creates a numbered **unbond request** on the `StakeCredit` contract, indexed from 0. The index is what `Delegation.delegationIndex` tracks, and it is the value you pass as `index` when building a `ClaimTransaction`. A single address can have multiple concurrent unbond requests against the same validator, each with its own index and unlock time.
+
+### Fee Model
+
+BSC staking transactions use the **legacy (pre-EIP-1559) gas model**. The total fee is:
+
+```
+fee = gasPrice × gasUsed
+```
+
+- The gas price is a **network-enforced floor** — validators reject transactions below the minimum (currently 1 Gwei on mainnet). There is no tip or priority fee mechanism.
+- **EIP-1559 type-2 transactions cannot be used** — `StakeHub` is a system contract running inside the consensus layer and rejects `maxFeePerGas`/`maxPriorityFeePerGas` style transactions. All staking transactions must be legacy type-0.
+- **Gas price cannot be bumped after broadcast** — BSC does not support replace-by-fee (RBF). Once a staking transaction is submitted you cannot accelerate it by resubmitting with a higher gas price.
+
+Typical gas usage observed on mainnet:
+
+| Operation | Gas Used | Notes |
+|---|---|---|
+| Delegate | ~269,000 | Scales slightly with validator count |
+| Undelegate | ~331,000 | Creates an unbond request entry |
+| Redelegate | ~405,000 | Highest cost — burns and re-mints shares across two credit contracts |
+| Claim | ~70,000 | Cheapest operation |
+
+The SDK adds a **15% buffer** on top of the simulated gas estimate to reduce the risk of out-of-gas failures.
 
 **Real transaction examples on BSC mainnet:**
 
 | Operation | BSCScan |
 |---|---|
-| Delegate | [0xd8f236...](https://bscscan.com/tx/0xd8f2366b019588a3a55b296c7f79323f94cfa768cd9539920e5316840c581d9c) |
-| Undelegate | [0x204e31...](https://bscscan.com/tx/0x204e318cc87647ccc793de4e2e44061f53dcb5139563d2d2276fca92bc508a68) |
-| Redelegate | [0x5cb0f4...](https://bscscan.com/tx/0x5cb0f4e627c032031b8e022fba710e766648d880d95ce781f30d40aa5cfffcfa) |
-| Claim | [0x832c84...](https://bscscan.com/tx/0x832c8487166607ce234f36b572b4212661431bd3b54e883f636f574534eb6d56) |
+| Delegate | [0x1c255c...](https://bscscan.com/tx/0x1c255ca858b7adaf826b6ede919d91292712866b6a6879406672038cc6919cb0) |
+| Undelegate | [0x7fa095...](https://bscscan.com/tx/0x7fa095c5308f415a9b54d1f99e58d65475704f6dba8520faa63ae87aa82226bc) |
+| Redelegate | [0xfa5135...](https://bscscan.com/tx/0xfa513546ace1fe31e9e8bd856ccb30bfd73135cf09b8a64f8d0f3bff77c339a2) |
+| Claim (batch) | [0xb74d25...](https://bscscan.com/tx/0xb74d25e4c3fd3f1c5fb23136c75994afcf4c019f114c9656e7956d79418bdc39) |
 
 ### Key Protocol Parameters
 
 | Parameter | Value |
 |---|---|
 | Unbonding period | 7 days |
-| Redelegation fee | 0.002% |
+| Redelegation fee | 0.002% of redelegated amount, deducted in shares |
+| Min delegation amount | 1 BNB |
 | Min validator self-stake | 2,000 BNB |
-| StakeHub contract | `0x0000000000000000000000000000000000002002` |
+| Validator election cadence | Daily at 00:00 UTC |
+| Max validators fetched per call | 100 (SDK default, matches current set size) |
+| StakeHub contract | [`0x0000000000000000000000000000000000002002`](https://bscscan.com/address/0x0000000000000000000000000000000000002002) |
 | Mainnet chain ID | 56 |
 | Mainnet staking UI | https://www.bnbchain.org/en/bnb-staking |
 | Testnet staking UI | https://testnet-staking.bnbchain.org/en/bnb-staking |
 
 ### Slashing
 
-Validators can be penalised for misbehaviour, which affects delegators proportionally:
+Validators can be penalised for misbehaviour. Slashing reduces the total pooled BNB in the validator's `StakeCredit` contract, which means all delegators absorb the loss proportionally through a lower share:BNB ratio.
 
-| Offence | Slash | Jail |
+| Offence | Slash | Jail duration |
 |---|---|---|
 | Double-signing | 200 BNB | 30 days |
 | Malicious fast-finality vote | 200 BNB | 30 days |
 | Downtime (150+ missed blocks/day) | 10 BNB | 2 days |
+
+Jailed validators cannot receive new delegations. Existing delegations remain active but earn no rewards until the validator is unjailed. You can redelegate away from a jailed validator at any time without waiting for the unbonding period.
 
 ---
 
@@ -216,7 +270,9 @@ enum ValidatorStatus {
 }
 ```
 
-> Validator data is cached for 3 minutes. Validators are a fixed, slowly-changing set — elections run once per day at most.
+> **Caching:** Validator data is cached in memory for the lifetime of the SDK instance. Validators are a slowly-changing set — elections run once per day at most — so cache invalidation is rarely needed in practice.
+
+> **On-chain data not surfaced here:** The `StakeHub` contract exposes additional per-validator data via `getValidatorCommission`, `getValidatorDescription`, `getValidatorRewardRecord`, `getValidatorElectionInfo`, and `getValidatorConsensusAddress`. These are available for direct RPC calls if your application needs them.
 
 ---
 
@@ -242,29 +298,32 @@ interface Delegations {
 interface Delegation {
   id: string;
   validator: Validator;
-  amount: bigint;              // Current BNB value of credits, in wei
+  amount: bigint;              // Current BNB value of the position, in wei (from getPooledBNB)
   status: DelegationStatus;   // Active | Pending | Claimable | Inactive
-  delegationIndex: number;    // Index of the unbond request — required for claim()
-  pendingUntil: number;       // Unix timestamp (ms) when unbonding completes
+  delegationIndex: number;    // Unbond request index — pass as `index` in ClaimTransaction
+                               // Active delegations have delegationIndex: -1
+  pendingUntil: number;       // Unix timestamp (ms) when unbonding completes; 0 if claimable
 }
 
 enum DelegationStatus {
-  Active,     // Staked and earning
-  Pending,    // In the 7-day unbonding window
-  Claimable,  // Ready to claim
+  Active,     // Staked and earning auto-compounding rewards
+  Pending,    // In the 7-day unbonding window — not yet withdrawable
+  Claimable,  // Unbonding complete — BNB held in StakeCredit, ready to claim
   Inactive,
 }
 
 interface StakingSummary {
-  totalProtocolStake: number;
-  maxApy: number;
-  minAmountToStake: bigint;       // In wei
+  totalProtocolStake: number;     // Total BNB staked across all validators
+  maxApy: number;                 // Best APY across all active validators
+  minAmountToStake: bigint;       // Protocol minimum — currently 1 BNB (in wei)
   unboundPeriodInMillis: number;  // 604800000 (7 days)
-  redelegateFeeRate: number;      // 0.002%
+  redelegateFeeRate: number;      // 0.002 — deducted in shares from the source position
   activeValidators: number;
   totalValidators: number;
 }
 ```
+
+> `delegation.amount` is the **BNB value** of the position (result of `getPooledBNB` on the `StakeCredit` contract). You can pass it directly as `amount` in `Undelegate` and `Redelegate` transactions — the SDK resolves the share equivalent internally before encoding the contract call.
 
 ---
 
@@ -338,6 +397,7 @@ Accepts any of the four transaction types:
 
 ```typescript
 // Delegate — stake BNB with a validator
+// `amount` is BNB in wei, sent as transaction value to StakeHub
 const fee = await sdk.estimateFee({
   type: TransactionType.Delegate,
   chain: BSC_CHAIN,
@@ -348,20 +408,22 @@ const fee = await sdk.estimateFee({
 });
 
 // Undelegate — begin the 7-day unbonding process
+// `amount` is BNB in wei — the SDK converts to shares internally before encoding
 const fee = await sdk.estimateFee({
   type: TransactionType.Undelegate,
   chain: BSC_CHAIN,
-  amount: parseEther("5"),
+  amount: parseEther("5"),    // BNB in wei
   account: "0xYourAddress",
   isMaxAmount: false,
   validator: validators[0],
 });
 
 // Redelegate — move stake from one validator to another (0.002% fee applies)
+// `amount` is BNB in wei — the SDK converts to shares on the source validator internally
 const fee = await sdk.estimateFee({
   type: TransactionType.Redelegate,
   chain: BSC_CHAIN,
-  amount: parseEther("5"),
+  amount: parseEther("5"),    // BNB in wei
   account: "0xYourAddress",
   isMaxAmount: false,
   fromValidator: validators[0],
@@ -369,13 +431,14 @@ const fee = await sdk.estimateFee({
 });
 
 // Claim — withdraw BNB after the unbonding period completes
+// `index` is the unbond request number from delegation.delegationIndex
 const fee = await sdk.estimateFee({
   type: TransactionType.Claim,
   chain: BSC_CHAIN,
   amount: 0n,
   account: "0xYourAddress",
   validator: validators[0],
-  index: 0n,    // delegationIndex from getDelegations()
+  index: BigInt(delegation.delegationIndex),
 });
 ```
 
