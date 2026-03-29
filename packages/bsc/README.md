@@ -42,19 +42,14 @@ BNB native staking is split across two contract layers:
         ▼
   @guardian/bsc SDK
         │
-        ├─── writes (signed legacy tx) ────────────────────────────────────────►
-        │       delegate / undelegate / redelegate / claim
-        │                                                  StakeHub
-        │                                                  0x0000000000000000000000000000000000002002
-        │                                                  (system genesis contract)
-        │                                                        │
-        │                                                        │ deployed at
-        │                                                        │ validator registration
-        │                                                        ▼
-        └─── reads (multicall) ────────────────────────────────────────────────►
-                getPooledBNB / pendingUnbondRequest / unbondRequest
-                                                           StakeCredit contracts
-                                                           one per validator
+        ├── writes (signed legacy tx) ──────────────────────────► StakeHub
+        │   delegate / undelegate / redelegate / claim            0x0000...2002
+        │                                                              │
+        │                                               deploys at registration
+        │                                                              │
+        │                                                              ▼
+        └── reads (multicall) ───────────────────────────────► StakeCredit
+            getPooledBNB / pendingUnbondRequest / unbondRequest  (one per validator)
 ```
 
 The SDK talks to both layers: write operations go through `StakeHub`, and read operations (`getPooledBNB`, `pendingUnbondRequest`, `unbondRequest`) query the per-validator `StakeCredit` contracts directly via multicall.
