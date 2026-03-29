@@ -36,17 +36,25 @@ BNB native staking is split across two contract layers:
 
 **StakeCredit** — each validator has its own dedicated credit contract deployed by StakeHub at registration time. These contracts hold the delegated BNB and manage the share accounting for their validator. The credit contract address is available on every `Validator` object as `creditAddress`.
 
-```mermaid
-graph TD
-    App["Your Application"]
-    SDK["@guardian/bsc SDK"]
-    Hub["StakeHub\n0x0000000000000000000000000000000000002002\n(system genesis contract)"]
-    Credits["StakeCredit Contracts\none per validator — holds BNB, issues shares"]
-
-    App -- "all operations" --> SDK
-    SDK -- "delegate / undelegate\nredelegate / claim\n(signed legacy tx)" --> Hub
-    SDK -- "getPooledBNB\npendingUnbondRequest\nunbondRequest\n(multicall reads)" --> Credits
-    Hub -. "deployed at validator registration" .-> Credits
+```
+  Your Application
+        │
+        ▼
+  @guardian/bsc SDK
+        │
+        ├─── writes (signed legacy tx) ────────────────────────────────────────►
+        │       delegate / undelegate / redelegate / claim
+        │                                                  StakeHub
+        │                                                  0x0000000000000000000000000000000000002002
+        │                                                  (system genesis contract)
+        │                                                        │
+        │                                                        │ deployed at
+        │                                                        │ validator registration
+        │                                                        ▼
+        └─── reads (multicall) ────────────────────────────────────────────────►
+                getPooledBNB / pendingUnbondRequest / unbondRequest
+                                                           StakeCredit contracts
+                                                           one per validator
 ```
 
 The SDK talks to both layers: write operations go through `StakeHub`, and read operations (`getPooledBNB`, `pendingUnbondRequest`, `unbondRequest`) query the per-validator `StakeCredit` contracts directly via multicall.
@@ -79,14 +87,11 @@ Your BNB = (your shares × total pooled BNB) ÷ total share supply
 
 Because rewards continuously accrue, the **share:BNB ratio drifts over time** — 1 share is worth slightly more BNB each day. This has a direct impact on `undelegate` and `redelegate` transactions: the contract takes a `uint256 shares` argument, not a BNB amount. The SDK handles this conversion internally — you always pass a BNB amount in wei, and the SDK queries the `StakeCredit` contract to resolve the correct share count before encoding the transaction.
 
-```mermaid
-graph LR
-    A["amount: parseEther('5')\n(BNB in wei — what you pass)"]
-    B["SDK"]
-    C["StakeCredit.getSharesByPooledBNB()\n(on-chain conversion)"]
-    D["uint256 shares\n(encoded in the tx)"]
-
-    A --> B --> C --> D
+```
+  You pass                SDK                      Contract call                  Encoded in tx
+  ─────────────────────────────────────────────────────────────────────────────────────────────
+  amount (BNB wei)  ──►  @guardian/bsc  ──►  StakeCredit.getSharesByPooledBNB()  ──►  shares
+  parseEther("5")                             (per-validator credit contract)          uint256
 ```
 
 To read the current BNB value of a delegated position, the SDK calls `getPooledBNB(delegatorAddress)` on the `StakeCredit` contract, which returns the current BNB equivalent. This is what `getDelegations()` exposes as `delegation.amount`.
@@ -97,23 +102,16 @@ Both `delegate` and `redelegate` accept a `bool delegateVotePower` parameter. Wh
 
 ### Lifecycle of a Stake
 
-```mermaid
-flowchart LR
-    DG(["delegate()"])
-    AC["Active\nEarning rewards"]
-    RD(["redelegate()"])
-    AC2["Active\nNew validator"]
-    UD(["undelegate()"])
-    PE["Pending\n7-day unbonding"]
-    CL["Claimable\nReady to withdraw"]
-    CM(["claim()"])
-    WL(["BNB returned\nto wallet"])
-
-    DG --> AC
-    AC -- "switch validator" --> RD --> AC2
-    AC --> UD --> PE
-    PE -- "7 days pass" --> CL
-    CL --> CM --> WL
+```
+                                    redelegate()
+                              ┌─────────────────────┐
+                              │                      ▼
+  delegate() ──► [ Active ]   │             [ Active — new validator ]
+                      │       │
+                 undelegate() ┘
+                      │
+                      ▼
+                 [ Pending ]  ── 7 days pass ──►  [ Claimable ]  ── claim() ──►  BNB in wallet
 ```
 
 | Stage | Description |
@@ -506,21 +504,36 @@ const rawTx = await sdk.sign({
 
 For **MPC wallets, hardware wallets, or any setup where the private key is not directly available**. Splits signing into two steps:
 
-```mermaid
-sequenceDiagram
-    participant App
-    participant SDK
-    participant Signer as External Signer<br/>(MPC / HSM / HW wallet)
-    participant BSC as BSC Node
-
-    App->>SDK: preHash(transaction, fee, nonce)
-    SDK-->>App: { serializedTransaction, signArgs }
-    App->>Signer: serializedTransaction
-    Signer-->>App: signature (hex)
-    App->>SDK: compile({ signArgs, signature })
-    SDK-->>App: rawTx (signed hex)
-    App->>BSC: broadcast rawTx
-    BSC-->>App: txHash
+```
+  Your App                  SDK                  External Signer          BSC Node
+                                                 (MPC / HSM / HW)
+     │                       │                        │                      │
+     │  preHash(tx, fee,     │                        │                      │
+     │    nonce)             │                        │                      │
+     │ ─────────────────────►│                        │                      │
+     │                       │                        │                      │
+     │  { serializedTx,      │                        │                      │
+     │    signArgs }         │                        │                      │
+     │ ◄─────────────────────│                        │                      │
+     │                       │                        │                      │
+     │  serializedTx         │                        │                      │
+     │ ──────────────────────────────────────────────►│                      │
+     │                       │                        │                      │
+     │  signature (hex)      │                        │                      │
+     │ ◄──────────────────────────────────────────────│                      │
+     │                       │                        │                      │
+     │  compile({ signArgs,  │                        │                      │
+     │    signature })       │                        │                      │
+     │ ─────────────────────►│                        │                      │
+     │                       │                        │                      │
+     │  rawTx (signed hex)   │                        │                      │
+     │ ◄─────────────────────│                        │                      │
+     │                       │                        │                      │
+     │  broadcast rawTx      │                        │                      │
+     │ ────────────────────────────────────────────────────────────────────► │
+     │                       │                        │                      │
+     │  txHash               │                        │                      │
+     │ ◄──────────────────────────────────────────────────────────────────── │
 ```
 
 **Step 1 — serialize the transaction:**
