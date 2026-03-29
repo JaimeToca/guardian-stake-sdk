@@ -72,8 +72,8 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | Package | Chain | Status | Docs |
 |---|---|---|---|
 | [`@guardian/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
-| `@guardian/tron` | Tron | In Progress | — |
-| `@guardian/sui` | SUI | Planned | — |
+| `@guardian/sui` | SUI | In Progress | — |
+| `@guardian/tron` | Tron | Planned | — |
 | `@guardian/solana` | Solana | Planned | — |
 | `@guardian/aptos` | Aptos | Planned | — |
 | `@guardian/cardano` | Cardano | Planned | — |
@@ -687,11 +687,21 @@ Planned integrations follow the same architecture — each chain is an independe
 | Chain | Package | Status |
 |---|---|---|
 | BNB Smart Chain | [`@guardian/bsc`](./packages/bsc/README.md) | Available |
-| Tron | `@guardian/tron` | In Progress |
-| SUI | `@guardian/sui` | Planned |
+| SUI | `@guardian/sui` | In Progress |
+| Tron | `@guardian/tron` | Planned |
 | Solana | `@guardian/solana` | Planned |
 | Aptos | `@guardian/aptos` | Planned |
 | Cardano | `@guardian/cardano` | Planned |
+
+### SDK improvements
+
+Beyond new chains, the SDK core is being extended with features that apply across all supported networks:
+
+| Feature | Description | Status |
+|---|---|---|
+| Dashboard | Unified staking dashboard — aggregate positions, rewards, and claimable balances across all connected chains in a single view | Planned |
+| Extended validator API | Richer validator data — pagination, filtering by status/APY, historical performance, and commission history | Planned |
+| Client-injected validators | Allow consumers to supply their own validator list at SDK initialization, overriding or supplementing the on-chain data for whitelabelled or curated validator sets | Planned |
 
 ### Beyond native staking
 
