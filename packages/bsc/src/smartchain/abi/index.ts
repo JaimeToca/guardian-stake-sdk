@@ -3,6 +3,7 @@ export type { DecodedValidators, DecodedUnbondRequest, MulticallResult } from ".
 export { STAKING_CONTRACT, multicallStakeAbi } from "./multicall-stake-abi";
 export { decodeGetValidators, decodeUnbond } from "./staking-function-decoder";
 export {
+  encodeBalanceOf,
   encodeGetValidatorsData,
   encodeGetSharesByPooledBNBData,
   encodeGetPooledBNBData,

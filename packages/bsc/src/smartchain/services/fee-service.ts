@@ -57,7 +57,7 @@ export class FeeService implements FeeServiceContract {
       );
     }
 
-    const callDataResult = this.signService.buildCallData(transaction);
+    const callDataResult = await this.signService.buildCallData(transaction);
 
     const gasPricePromise = this.client.getGasPrice();
     const gasLimitPromise = this.client.estimateGas({

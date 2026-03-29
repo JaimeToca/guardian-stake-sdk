@@ -13,5 +13,6 @@ export interface StakingRpcClientContract {
     delegator: Address,
     index: bigint
   ): Promise<DecodedUnbondRequest>;
-  getSharesByPooledBNBData(contract: Address, amount: bigint): void;
+  getSharesByPooledBNBData(contract: Address, amount: bigint): Promise<bigint>;
+  getShareBalance(creditContract: Address, delegator: Address): Promise<bigint>;
 }

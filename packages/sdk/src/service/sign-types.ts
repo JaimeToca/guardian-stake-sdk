@@ -9,6 +9,11 @@ export type BaseSignArgs = {
   nonce: number;
 };
 
+export type CallData = {
+  data: HexString;
+  amount: bigint;
+};
+
 export type SigningWithPrivateKey = BaseSignArgs & { privateKey: PrivateKey };
 
 export type CompileArgs = {

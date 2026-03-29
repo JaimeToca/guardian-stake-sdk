@@ -12,6 +12,14 @@ export function encodeGetValidatorsData(): Hex {
   );
 }
 
+export function encodeBalanceOf(delegator: Address): Hex {
+  return encodeFunctionCall(
+    "balanceOf(address)",
+    [{ name: "account", type: "address" }],
+    [delegator]
+  );
+}
+
 export function encodeGetSharesByPooledBNBData(amount: bigint): Hex {
   return encodeFunctionCall(
     "getSharesByPooledBNB(uint256)",

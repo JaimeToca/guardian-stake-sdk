@@ -40,10 +40,14 @@ function provideGuarService(chain: GuardianChain, rpcUrl: string, logger: Logger
       multicall: true,
     },
   });
-  const stakingService = provideStakingService(client, logger);
+  const cache = new InMemoryCache<string, Validator[]>();
+  const stakingRpcClient = new StakingRpcClient(client, logger);
+  const bnbRpcClient = new BNBRpcClient(logger);
+  const stakingService = new StakingService(cache, stakingRpcClient, bnbRpcClient, logger);
+
   const balanceService = new BalanceService(client, stakingService);
   const nonceService = new NonceService(client);
-  const signService = new SignService(logger);
+  const signService = new SignService(stakingRpcClient, logger);
   const feeService = new FeeService(client, signService, logger);
 
   return new GuardianService(
@@ -54,11 +58,4 @@ function provideGuarService(chain: GuardianChain, rpcUrl: string, logger: Logger
     signService,
     stakingService
   );
-}
-
-function provideStakingService(client: PublicClient, logger: Logger): StakingServiceContract {
-  const cache = new InMemoryCache<string, Validator[]>();
-  const stakingRpcClient = new StakingRpcClient(client, logger);
-  const bnbRpcClient = new BNBRpcClient(logger);
-  return new StakingService(cache, stakingRpcClient, bnbRpcClient, logger);
 }

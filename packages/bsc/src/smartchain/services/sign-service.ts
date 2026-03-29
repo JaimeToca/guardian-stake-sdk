@@ -18,9 +18,13 @@ import type {
   PrehashResult,
   SigningWithPrivateKey,
   Transaction,
+  UndelegateTransaction,
+  RedelegateTransaction,
   Logger,
 } from "@guardian/sdk";
 import { SigningError, SigningErrorCode, TransactionType, NoopLogger, ValidationError, ValidationErrorCode } from "@guardian/sdk";
+import type { CallData } from "@guardian/sdk";
+import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 
 const MIN_DELEGATION_AMOUNT = parseEther("1");
 import type { SigningWithAccount } from "../sign-types";
@@ -31,7 +35,10 @@ import { parseEvmAddress } from "../validations";
  * Service responsible for handling various aspects of transaction signing on BSC.
  */
 export class SignService implements SignServiceContract {
-  constructor(private readonly logger: Logger = new NoopLogger()) {}
+  constructor(
+    private readonly stakingRpcClient: StakingRpcClientContract,
+    private readonly logger: Logger = new NoopLogger()
+  ) {}
 
   async sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<Hex> {
     this.logger.info("SignService: signing transaction", {
@@ -42,7 +49,7 @@ export class SignService implements SignServiceContract {
     const nonce = signingArgs.nonce;
     const transaction = signingArgs.transaction;
 
-    const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
+    const unsignedTransaction = await this.buildUnsignedTransaction(transaction, fee, nonce);
 
     let signedTransaction: Hex;
 
@@ -72,7 +79,7 @@ export class SignService implements SignServiceContract {
     const fee = preHasArgs.fee;
     const nonce = preHasArgs.nonce;
 
-    const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
+    const unsignedTransaction = await this.buildUnsignedTransaction(transaction, fee, nonce);
 
     const result = {
       serializedTransaction: serializeTransaction(unsignedTransaction),
@@ -92,7 +99,7 @@ export class SignService implements SignServiceContract {
     const fee = compileArgs.signArgs.fee;
     const nonce = compileArgs.signArgs.nonce;
 
-    const unsignedTransaction = this.buildUnsignedTransaction(transaction, fee, nonce);
+    const unsignedTransaction = await this.buildUnsignedTransaction(transaction, fee, nonce);
     const sig = parseSignature(compileArgs.signature as Hex);
 
     const compiled = serializeTransaction(unsignedTransaction, sig);
@@ -100,12 +107,12 @@ export class SignService implements SignServiceContract {
     return compiled;
   }
 
-  private buildUnsignedTransaction(
+  private async buildUnsignedTransaction(
     transaction: Transaction,
     fee: Fee,
     nonce: number
-  ): TransactionSerializable {
-    const { data, amount } = this.buildCallData(transaction);
+  ): Promise<TransactionSerializable> {
+    const { data, amount } = await this.buildCallData(transaction);
 
     return this.buildBaseTransaction(
       {
@@ -138,10 +145,7 @@ export class SignService implements SignServiceContract {
     };
   }
 
-  buildCallData(transaction: Transaction): {
-    data: Hex;
-    amount: bigint;
-  } {
+  async buildCallData(transaction: Transaction): Promise<CallData> {
     if (transaction.type === TransactionType.Delegate && transaction.amount < MIN_DELEGATION_AMOUNT) {
       throw new ValidationError(
         ValidationErrorCode.INVALID_AMOUNT,
@@ -157,11 +161,13 @@ export class SignService implements SignServiceContract {
       case TransactionType.Redelegate: {
         const from = this.getValidatorAddress(transaction.fromValidator);
         const to = this.getValidatorAddress(transaction.toValidator);
-        return { data: encodeRedelegate(from, to, transaction.amount), amount: 0n };
+        const shares = await this.bnbToShares(transaction);
+        return { data: encodeRedelegate(from, to, shares), amount: 0n };
       }
       case TransactionType.Undelegate: {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
-        return { data: encodeUndelegate(operatorAddress, transaction.amount), amount: 0n };
+        const shares = await this.bnbToShares(transaction);
+        return { data: encodeUndelegate(operatorAddress, shares), amount: 0n };
       }
       case TransactionType.Claim: {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
@@ -176,6 +182,51 @@ export class SignService implements SignServiceContract {
           `Cannot build call data: unsupported transaction type "${(transaction as Transaction).type}".`
         );
     }
+  }
+
+  /**
+   * Resolves the share count to pass to the StakeCredit contract for undelegate/redelegate.
+   *
+   * Two paths depending on isMaxAmount:
+   *
+   * - isMaxAmount: true  → calls balanceOf(account) on the StakeCredit contract, returning the
+   *   exact share balance with no arithmetic. This is the only safe approach for "undelegate all"
+   *   because the BNB→shares round-trip (getPooledBNB → getSharesByPooledBNB) can lose 1 share
+   *   to integer rounding, leaving a dust residual staked forever.
+   *
+   * - isMaxAmount: false → calls getSharesByPooledBNB(amount) to convert the given BNB wei amount
+   *   to the equivalent share count at the current exchange rate.
+   *
+   * Requires a full Validator object (not a bare operator address string) because the credit contract
+   * address is needed. Use getValidators() to obtain the Validator object.
+   */
+  private async bnbToShares(transaction: UndelegateTransaction | RedelegateTransaction): Promise<bigint> {
+    const validator = transaction.type === TransactionType.Undelegate
+      ? transaction.validator
+      : transaction.fromValidator;
+
+    if (typeof validator === "string") {
+      throw new SigningError(
+        SigningErrorCode.INVALID_SIGNING_ARGS,
+        "Undelegate and Redelegate require a Validator object (not just an operator address string) " +
+          "so the SDK can resolve the credit contract and convert the BNB amount to shares. " +
+          "Use getValidators() to obtain the full Validator object."
+      );
+    }
+
+    const creditAddress = parseEvmAddress(validator.creditAddress);
+
+    if (transaction.isMaxAmount) {
+      if (transaction.account === undefined) {
+        throw new ValidationError(
+          ValidationErrorCode.INVALID_ADDRESS,
+          "account is required when isMaxAmount is true — it is used to read the exact share balance."
+        );
+      }
+      return this.stakingRpcClient.getShareBalance(creditAddress, parseEvmAddress(transaction.account));
+    }
+
+    return this.stakingRpcClient.getSharesByPooledBNBData(creditAddress, transaction.amount);
   }
 
   private getValidatorAddress(validator: Validator | OperatorAddress): Address {

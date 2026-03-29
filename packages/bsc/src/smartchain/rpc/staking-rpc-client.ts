@@ -6,6 +6,7 @@ import {
   multicallStakeAbi,
   STAKING_CONTRACT,
   decodeGetValidators,
+  encodeBalanceOf,
   encodeGetSharesByPooledBNBData,
   encodeGetValidatorsData,
   encodeUnbondRequestData,
@@ -109,15 +110,26 @@ export class StakingRpcClient implements StakingRpcClientContract {
     };
   }
 
-  async getSharesByPooledBNBData(
-    creditContract: Address,
-    amount: bigint
-  ): Promise<bigint | undefined> {
+  async getShareBalance(creditContract: Address, delegator: Address): Promise<bigint> {
+    const response = await this.client.call({
+      to: creditContract,
+      data: encodeBalanceOf(delegator),
+    });
+    if (!response.data) {
+      throw new Error(`Missing data for call balanceOf(${delegator}) on ${creditContract}`);
+    }
+    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data);
+    return decoded[0];
+  }
+
+  async getSharesByPooledBNBData(creditContract: Address, amount: bigint): Promise<bigint> {
     const response = await this.client.call({
       to: creditContract,
       data: encodeGetSharesByPooledBNBData(amount),
     });
-    if (!response.data) return undefined;
+    if (!response.data) {
+      throw new Error(`Missing data for call getSharesByPooledBNB(${amount}) on ${creditContract}`);
+    }
     const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data);
     return decoded[0];
   }
