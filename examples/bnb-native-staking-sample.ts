@@ -10,15 +10,15 @@ const sdk = new GuardianSDK([
 
 async function main() {
   // Fetch balances
-  // const balances = await sdk.getBalances(
-  //  BSC_CHAIN,
-  //  "0xB137d0B9bE423952a70A275bc8f2357038901CB2"
-  // );
-  // console.log("Balances:", balances);
+   const balances = await sdk.getBalances(
+    BSC_CHAIN,
+    "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b"
+   );
+   console.log("Balances:", balances);
 
   // Fetch validators
-  const validators = await sdk.getValidators(BSC_CHAIN);
-  console.log("Validators:", validators);
+  // const validators = await sdk.getValidators(BSC_CHAIN);
+  // console.log("Validators:", validators);
 
   /*// Estimate fee for a delegate transaction
   const fee = await sdk.estimateFee({
