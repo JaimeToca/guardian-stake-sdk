@@ -376,55 +376,27 @@ End-to-end example using direct signing:
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
 import { bsc, BSC_CHAIN, TransactionType, PrivateKey, Curve } from "@guardian/bsc";
-import { parseEther, formatEther } from "viem";
+import { parseEther } from "viem";
 
-const sdk = new GuardianSDK([
-  bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
-]);
+const sdk = new GuardianSDK([bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" })]);
 
-const ADDRESS = "0xYourAddress";
-const PRIVATE_KEY = PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1);
-
-// 1. Pick a validator
 const validators = await sdk.getValidators(BSC_CHAIN);
-const validator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
-console.log(`Staking with ${validator.name} — APY: ${validator.apy}%`);
-
-// 2. Check available balance
-const balances = await sdk.getBalances(BSC_CHAIN, ADDRESS);
-const available = balances.find((b) => b.type === "Available")!;
-console.log(`Available: ${formatEther(available.amount)} BNB`);
-
-// 3. Estimate fee
-const amount = parseEther("1");
 const fee = await sdk.estimateFee({
   type: TransactionType.Delegate,
   chain: BSC_CHAIN,
-  amount,
-  account: ADDRESS,
+  amount: parseEther("1"),
+  account: "0xYourAddress",
   isMaxAmount: false,
-  validator,
+  validator: validators[0],
 });
-console.log(`Estimated fee: ${formatEther(fee.total)} BNB`);
-
-// 4. Sign
-const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
 const rawTx = await sdk.sign({
-  transaction: {
-    type: TransactionType.Delegate,
-    chain: BSC_CHAIN,
-    amount,
-    isMaxAmount: false,
-    validator,
-  },
+  transaction: { type: TransactionType.Delegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: validators[0] },
   fee,
   nonce,
-  privateKey: PRIVATE_KEY,
+  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
 });
-
-// 5. Broadcast
 const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
-console.log(`Transaction hash: ${txHash}`);
 ```
 
 For chain-specific details (protocol parameters, transaction shapes, error codes) see:
