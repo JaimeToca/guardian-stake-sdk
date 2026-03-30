@@ -50,7 +50,7 @@ function provideGuarService(chain: GuardianChain, rpcUrl: string, logger: Logger
   const nonceService = new NonceService(client);
   const signService = new SignService(stakingRpcClient, logger);
   const feeService = new FeeService(client, signService, logger);
-  const broadcastService = new BroadcastService(client);
+  const broadcastService = new BroadcastService(client, logger);
 
   return new GuardianService(
     chain,

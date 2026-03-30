@@ -2,7 +2,7 @@ import { parseUnits, toHex } from "viem";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
 import { GuardianSDK, BSC_CHAIN, TransactionType, bsc, ConsoleLogger, PrivateKey, Curve } from "@guardian/bsc";
-import type { DelegateTransaction } from "@guardian/bsc";
+import type { DelegateTransaction, RedelegateTransaction, UndelegateTransaction } from "@guardian/bsc";
 
 const sdk = new GuardianSDK([                                                                                                                                                                                      
     bsc({                                                                                                                                                                                                            
@@ -50,7 +50,7 @@ async function sample_check_delegations() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_delegate_transaction() {
-  const MNEMONIC = "";
+  const MNEMONIC = "<use your memonic>"; 
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
@@ -88,6 +88,111 @@ async function sample_delegate_transaction() {
   // Sign — returns a signed raw transaction hex string ready to broadcast
   const rawTx = await sdk.sign({ transaction, fee, nonce, privateKey: PRIVATE_KEY });
   console.log(`Signed tx: ${rawTx}`);
+
+  // broadcast
+  const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+  console.log(`Broadcasted tx hash: ${txHash}`);
+}
+
+/**
+ * Demonstrates a full redelegate flow:
+ * 1. Pick a new validator from the active set
+ * 2. Estimate the gas fee for the transaction
+ * 3. Fetch the current nonce for the sender
+ * 4. Sign the transaction with a private key
+ *
+ * The resulting rawTx is a signed hex string ready to broadcast to the network.
+ */
+async function sample_redelegate_transaction() {
+  const MNEMONIC = "<use your memonic>"; 
+  const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
+  const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
+  const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
+
+  // Pick a validator — use getValidators() to browse the full set
+  const validators = await sdk.getValidators(BSC_CHAIN);
+
+  // From Validator A to Validator B
+  const fromValidator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
+  const toValidator = validators.find((v) => v.name === "Ankr Staking") ?? validators[1];
+  console.log(`Redelegating from: ${fromValidator.name} (${fromValidator.operatorAddress})`);
+  console.log(`Redelegating to: ${toValidator.name} (${toValidator.operatorAddress})`);
+
+  // Build the transaction object
+  const transaction: RedelegateTransaction = {
+    type: TransactionType.Redelegate,
+    chain: BSC_CHAIN,
+    amount: AMOUNT,
+    account: ADDRESS,
+    isMaxAmount: true, // IMPORTANT to set for max amount
+    fromValidator: fromValidator,
+    toValidator: toValidator,
+  };
+
+  // Estimate fee
+  const fee = await sdk.estimateFee(transaction);
+  console.log(`Fee: ${fee.total} wei (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})`);
+
+  // Fetch nonce
+  const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+  console.log(`Nonce: ${nonce}`);
+
+  // Sign — returns a signed raw transaction hex string ready to broadcast
+  const rawTx = await sdk.sign({ transaction, fee, nonce, privateKey: PRIVATE_KEY });
+  console.log(`Signed tx: ${rawTx}`);
+
+  // broadcast
+  const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+  console.log(`Broadcasted tx hash: ${txHash}`);
+}
+
+/**
+ * Demonstrates a full undelegate flow:
+ * 1. Pick a validator from the active set
+ * 2. Estimate the gas fee for the transaction
+ * 3. Fetch the current nonce for the sender
+ * 4. Sign the transaction with a private key
+ *
+ * The resulting rawTx is a signed hex string ready to broadcast to the network.
+ */
+async function sample_undelegate_transaction() {
+  const MNEMONIC = "<use your memonic>"; 
+  const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
+  const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
+  const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
+
+  // Pick a validator — use getValidators() to browse the full set
+  const validators = await sdk.getValidators(BSC_CHAIN);
+
+  // From Validator A to Validator B
+  const validator = validators.find((v) => v.name === "Ankr Staking") ?? validators[1];
+  console.log(`Undelegating from: ${validator.name} (${validator.operatorAddress})`);
+
+  // Build the undelegatetransaction object
+  const transaction: UndelegateTransaction = {
+    type: TransactionType.Undelegate,
+    chain: BSC_CHAIN,
+    amount: AMOUNT,
+    account: ADDRESS,
+    isMaxAmount: true, 
+    validator: validator,
+  };
+
+  // Estimate fee
+  const fee = await sdk.estimateFee(transaction);
+  console.log(`Fee: ${fee.total} wei (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})`);
+
+  // Fetch nonce
+  const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+  console.log(`Nonce: ${nonce}`);
+
+  // Sign — returns a signed raw transaction hex string ready to broadcast
+  const rawTx = await sdk.sign({ transaction, fee, nonce, privateKey: PRIVATE_KEY });
+  console.log(`Signed tx: ${rawTx}`);
+
+  // broadcast
+  const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+  console.log(`Broadcasted tx hash: ${txHash}`);
 }
 
 /**
@@ -107,4 +212,4 @@ function privateKeyFromMnemonic(mnemonic: string, addressIndex = 0): PrivateKey 
   return PrivateKey.from(hex, Curve.Secp256k1);
 }
 
-sample_delegate_transaction();
+sample_undelegate_transaction();
