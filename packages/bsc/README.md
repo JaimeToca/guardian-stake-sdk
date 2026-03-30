@@ -613,44 +613,7 @@ Plug in any logger that implements the `Logger` interface (`debug`, `info`, `war
 
 ## Error Handling
 
-Every error thrown by the SDK extends `GuardianError`, so you can catch the base class or narrow to a specific subclass depending on how much detail you need.
-
-```typescript
-import {
-  GuardianError,
-  ValidationError,
-  ConfigError,
-  SigningError,
-} from "@guardian/bsc"; // re-exported from @guardian/sdk
-
-try {
-  await sdk.getDelegations(BSC_CHAIN, address);
-} catch (err) {
-  if (err instanceof ValidationError) {
-    console.error(err.code, err.message);
-    // e.g. "INVALID_ADDRESS" "0xbad is not a valid address for chain 56."
-  } else if (err instanceof ConfigError) {
-    console.error(err.code, err.message);
-  } else if (err instanceof SigningError) {
-    console.error(err.code, err.message);
-  } else if (err instanceof GuardianError) {
-    // catch-all for any SDK error
-    console.error(err.code, err.message);
-  } else {
-    throw err; // re-throw anything not from the SDK
-  }
-}
-```
-
-Every `GuardianError` instance exposes:
-
-| Property | Type | Description |
-|---|---|---|
-| `message` | `string` | Human-readable description of what went wrong |
-| `code` | `ErrorCode` | Machine-readable code (see tables below) |
-| `name` | `string` | Class name (`"ValidationError"`, `"ConfigError"`, `"SigningError"`) |
-
----
+Every error thrown by the SDK extends `GuardianError`. See the [main README Error Handling section](../../README.md#error-handling) for the catch pattern and base class reference. BSC-specific codes are listed below.
 
 ### `ValidationError`
 
