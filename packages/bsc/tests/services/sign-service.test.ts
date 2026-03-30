@@ -46,113 +46,51 @@ describe("SignService", () => {
   const service = new SignService(mockStakingRpcClient);
 
   describe("sign", () => {
-    it("delegate", async () => {
-      const rawTx = await service.sign({
-        transaction: {
-          type: TransactionType.Delegate,
-          chain: BSC_CHAIN,
-          amount: parseEther("1"),
-          isMaxAmount: false,
-          validator: VALIDATOR,
-        },
-        fee: mockFee,
+    it.each([
+      {
+        name: "delegate",
         nonce: 1,
-        privateKey: TEST_PRIVATE_KEY,
-      });
+        transaction: { type: TransactionType.Delegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: VALIDATOR },
+        expectedHex: "0xf8b20185012a05f200825208940000000000000000000000000000000000002002880de0b6b3a7640000b844982ef0a7000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000008193a073b31800d2b2de7c7881324090fc069a01d0801b8b4e0dcf4bdb88478753b61fa070270d13b7ac554d4fcfe90de6482cbacbea4f695c474ef69c2510be97aef450",
+        expectedValue: parseEther("1"),
+        expectedAddresses: [OPERATOR],
+      },
+      {
+        name: "undelegate",
+        nonce: 2,
+        transaction: { type: TransactionType.Undelegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: VALIDATOR },
+        expectedHex: "0xf8aa0285012a05f20082520894000000000000000000000000000000000000200280b8444d99dd16000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b10000000000000000000000000000000000000000000000000dbd2fc137a300008194a0689fb80ec15d8ee08b82dd07fe4796ba8ab94f4ce26e80c662909ec0469b8fe3a05c6f32f1f5553e07987ded87502bf49c869c989c58d0a5aea0b9bc24fdb67dc2",
+        expectedValue: 0n,
+        expectedAddresses: [OPERATOR],
+      },
+      {
+        name: "redelegate",
+        nonce: 3,
+        transaction: { type: TransactionType.Redelegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, fromValidator: FROM_VALIDATOR, toValidator: TO_VALIDATOR },
+        expectedHex: "0xf8ea0385012a05f20082520894000000000000000000000000000000000000200280b88459491871000000000000000000000000343da7ff0446247ca47aa41e2a25c5bbb230ed0a000000000000000000000000f2b1d86dc7459887b1f7ce8d840db1d87613ce7f0000000000000000000000000000000000000000000000000dbd2fc137a3000000000000000000000000000000000000000000000000000000000000000000008194a0f7c2352bc160c3b699eb5e4bfd037b0817d53cd0b4017a6ab0b6f2c704cf16e0a042a9454bff941f65f3efe30a6434ad460b2c68b1d1ff2781fc8f5f23a65c00b1",
+        expectedValue: 0n,
+        expectedAddresses: [FROM_OPERATOR, TO_OPERATOR],
+      },
+      {
+        name: "claim",
+        nonce: 4,
+        transaction: { type: TransactionType.Claim, chain: BSC_CHAIN, amount: 0n, validator: VALIDATOR, index: 3n },
+        expectedHex: "0xf8aa0485012a05f20082520894000000000000000000000000000000000000200280b844aad3ec96000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000038193a08bc7f022c9867390b85ef8ff70558a1c6b920c4bf1928d06e66e2b41817fa918a0494c23a4ae173529d0e6cfa794ff636851873faa86ccb83b12c624b2ac77abdd",
+        expectedValue: 0n,
+        expectedAddresses: [OPERATOR],
+      },
+    ])("$name", async ({ nonce, transaction, expectedHex, expectedValue, expectedAddresses }) => {
+      const rawTx = await service.sign({ transaction: transaction as any, fee: mockFee, nonce, privateKey: TEST_PRIVATE_KEY });
 
-      expect(rawTx).toMatchInlineSnapshot(`"0xf8b20185012a05f200825208940000000000000000000000000000000000002002880de0b6b3a7640000b844982ef0a7000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000008193a073b31800d2b2de7c7881324090fc069a01d0801b8b4e0dcf4bdb88478753b61fa070270d13b7ac554d4fcfe90de6482cbacbea4f695c474ef69c2510be97aef450"`);
+      expect(rawTx).toBe(expectedHex);
       const tx = parseTransaction(rawTx as `0x${string}`);
       expect(tx.chainId).toBe(Number(BSC_CHAIN.chainId));
-      expect(tx.nonce).toBe(1);
+      expect(tx.nonce).toBe(nonce);
       expect(tx.gasPrice).toBe(mockFee.gasPrice);
       expect(tx.gas).toBe(mockFee.gasLimit);
       expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
-      expect(tx.value).toBe(parseEther("1"));
-      expect(tx.data?.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
-    });
-
-    it("undelegate", async () => {
-      const rawTx = await service.sign({
-        transaction: {
-          type: TransactionType.Undelegate,
-          chain: BSC_CHAIN,
-          amount: parseEther("1"),
-          isMaxAmount: false,
-          validator: VALIDATOR,
-        },
-        fee: mockFee,
-        nonce: 2,
-        privateKey: TEST_PRIVATE_KEY,
-      });
-
-      expect(rawTx).toMatchInlineSnapshot(`"0xf8aa0285012a05f20082520894000000000000000000000000000000000000200280b8444d99dd16000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b10000000000000000000000000000000000000000000000000dbd2fc137a300008194a0689fb80ec15d8ee08b82dd07fe4796ba8ab94f4ce26e80c662909ec0469b8fe3a05c6f32f1f5553e07987ded87502bf49c869c989c58d0a5aea0b9bc24fdb67dc2"`);
-      const tx = parseTransaction(rawTx as `0x${string}`);
-      expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
-      expect(tx.value ?? 0n).toBe(0n);
-      expect(tx.data?.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
-    });
-
-    it("redelegate", async () => {
-      const rawTx = await service.sign({
-        transaction: {
-          type: TransactionType.Redelegate,
-          chain: BSC_CHAIN,
-          amount: parseEther("1"),
-          isMaxAmount: false,
-          fromValidator: FROM_VALIDATOR,
-          toValidator: TO_VALIDATOR,
-        },
-        fee: mockFee,
-        nonce: 3,
-        privateKey: TEST_PRIVATE_KEY,
-      });
-
-      expect(rawTx).toMatchInlineSnapshot(`"0xf8ea0385012a05f20082520894000000000000000000000000000000000000200280b88459491871000000000000000000000000343da7ff0446247ca47aa41e2a25c5bbb230ed0a000000000000000000000000f2b1d86dc7459887b1f7ce8d840db1d87613ce7f0000000000000000000000000000000000000000000000000dbd2fc137a3000000000000000000000000000000000000000000000000000000000000000000008194a0f7c2352bc160c3b699eb5e4bfd037b0817d53cd0b4017a6ab0b6f2c704cf16e0a042a9454bff941f65f3efe30a6434ad460b2c68b1d1ff2781fc8f5f23a65c00b1"`);
-      const tx = parseTransaction(rawTx as `0x${string}`);
-      expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
-      expect(tx.value ?? 0n).toBe(0n);
-      expect(tx.data?.toLowerCase()).toContain(FROM_OPERATOR.slice(2).toLowerCase());
-      expect(tx.data?.toLowerCase()).toContain(TO_OPERATOR.slice(2).toLowerCase());
-    });
-
-    it("claim", async () => {
-      const rawTx = await service.sign({
-        transaction: {
-          type: TransactionType.Claim,
-          chain: BSC_CHAIN,
-          amount: 0n,
-          validator: VALIDATOR,
-          index: 3n,
-        },
-        fee: mockFee,
-        nonce: 4,
-        privateKey: TEST_PRIVATE_KEY,
-      });
-
-      expect(rawTx).toMatchInlineSnapshot(`"0xf8aa0485012a05f20082520894000000000000000000000000000000000000200280b844aad3ec96000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000038193a08bc7f022c9867390b85ef8ff70558a1c6b920c4bf1928d06e66e2b41817fa918a0494c23a4ae173529d0e6cfa794ff636851873faa86ccb83b12c624b2ac77abdd"`);
-      const tx = parseTransaction(rawTx as `0x${string}`);
-      expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
-      expect(tx.value ?? 0n).toBe(0n);
-      expect(tx.data?.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
-    });
-
-    it("is deterministic", async () => {
-      const args = {
-        transaction: {
-          type: TransactionType.Delegate as const,
-          chain: BSC_CHAIN,
-          amount: parseEther("1"),
-          isMaxAmount: false,
-          validator: VALIDATOR,
-        },
-        fee: mockFee,
-        nonce: 1,
-        privateKey: TEST_PRIVATE_KEY,
-      };
-
-      const [first, second] = await Promise.all([service.sign(args), service.sign(args)]);
-
-      expect(first).toBe(second);
+      expect(tx.value ?? 0n).toBe(expectedValue);
+      expectedAddresses.forEach((addr) => expect(tx.data?.toLowerCase()).toContain(addr.slice(2).toLowerCase()));
     });
 
     it("throws on delegate amount below 1 BNB", async () => {
@@ -193,7 +131,7 @@ describe("SignService", () => {
 
       const result = await service.prehash(signArgs);
 
-      expect(result.serializedTransaction).toMatch(/^0x/);
+      expect(result.serializedTransaction).toEqual("0xf8710585012a05f200825208940000000000000000000000000000000000002002880de0b6b3a7640000b844982ef0a7000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b10000000000000000000000000000000000000000000000000000000000000000388080");
       expect(result.signArgs).toEqual(signArgs);
     });
   });
