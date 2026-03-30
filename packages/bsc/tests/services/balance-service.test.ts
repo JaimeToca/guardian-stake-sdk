@@ -2,8 +2,11 @@ import { describe, it, expect } from "vitest";
 import { getAddress } from "viem";
 import { BalanceService } from "../../src/smartchain/services/balance-service";
 import { BalanceType, DelegationStatus } from "@guardian/sdk";
+import getBalanceFixture from "../fixtures/eth_getBalance.json";
 
-const mockAddress = getAddress("0x1234567890123456789012345678901234567890");
+const REAL_BALANCE = BigInt(getBalanceFixture.result);
+
+const mockAddress = getAddress("0x773760b0708a5cc369c346993a0c225d8e4043b1");
 
 const mockStakingSummary = {
   totalProtocolStake: 0,
@@ -34,7 +37,7 @@ function makePublicClient(balance: bigint) {
 describe("BalanceService", () => {
   it("returns all four balance types", async () => {
     const service = new BalanceService(
-      makePublicClient(100n) as any,
+      makePublicClient(REAL_BALANCE) as any,
       makeStakingService([]) as any
     );
 
@@ -47,16 +50,16 @@ describe("BalanceService", () => {
     expect(types).toContain(BalanceType.Claimable);
   });
 
-  it("maps the available balance from the client", async () => {
+  it("maps the available balance from the rpc response", async () => {
     const service = new BalanceService(
-      makePublicClient(500n) as any,
+      makePublicClient(REAL_BALANCE) as any,
       makeStakingService([]) as any
     );
 
     const balances = await service.getBalances(mockAddress);
     const available = balances.find((b) => b.type === BalanceType.Available);
 
-    expect(available?.amount).toBe(500n);
+    expect(available?.amount).toBe(REAL_BALANCE);
   });
 
   it("aggregates staked balance from active delegations", async () => {
@@ -66,7 +69,7 @@ describe("BalanceService", () => {
     ];
 
     const service = new BalanceService(
-      makePublicClient(0n) as any,
+      makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
 
@@ -83,7 +86,7 @@ describe("BalanceService", () => {
     ];
 
     const service = new BalanceService(
-      makePublicClient(0n) as any,
+      makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
 
@@ -97,7 +100,7 @@ describe("BalanceService", () => {
     const delegations = [{ status: DelegationStatus.Claimable, amount: 300n }];
 
     const service = new BalanceService(
-      makePublicClient(0n) as any,
+      makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
 
@@ -116,20 +119,23 @@ describe("BalanceService", () => {
     ];
 
     const service = new BalanceService(
-      makePublicClient(1000n) as any,
+      makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
 
     const balances = await service.getBalances(mockAddress);
 
-    expect(balances.find((b) => b.type === BalanceType.Available)?.amount).toBe(1000n);
+    expect(balances.find((b) => b.type === BalanceType.Available)?.amount).toBe(REAL_BALANCE);
     expect(balances.find((b) => b.type === BalanceType.Staked)?.amount).toBe(110n);
     expect(balances.find((b) => b.type === BalanceType.Pending)?.amount).toBe(50n);
     expect(balances.find((b) => b.type === BalanceType.Claimable)?.amount).toBe(25n);
   });
 
   it("returns zero for all staking balances when there are no delegations", async () => {
-    const service = new BalanceService(makePublicClient(0n) as any, makeStakingService([]) as any);
+    const service = new BalanceService(
+      makePublicClient(REAL_BALANCE) as any,
+      makeStakingService([]) as any
+    );
 
     const balances = await service.getBalances(mockAddress);
 
