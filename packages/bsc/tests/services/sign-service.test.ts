@@ -1,16 +1,24 @@
 import { describe, it, expect, vi } from "vitest";
-import { parseEther, getAddress } from "viem";
+import { parseEther, getAddress, parseTransaction } from "viem";
 import { SignService } from "../../src/smartchain/services/sign-service";
-import { TransactionType, FeeType, ValidationError, ValidationErrorCode } from "@guardian/sdk";
+import { TransactionType, FeeType, ValidationError, ValidationErrorCode, PrivateKey, Curve } from "@guardian/sdk";
 import { BSC_CHAIN } from "../../src/chain";
+import { STAKING_CONTRACT } from "../../src/smartchain/abi/multicall-stake-abi";
 import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-rpc-client-contract";
 
-const OPERATOR = getAddress("0x1234567890123456789012345678901234567890");
-const CREDIT_ADDRESS = getAddress("0xcccccccccccccccccccccccccccccccccccccccc");
-const FROM_OPERATOR = getAddress("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-const FROM_CREDIT = getAddress("0xdddddddddddddddddddddddddddddddddddddddd");
-const TO_OPERATOR = getAddress("0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
-const TO_CREDIT = getAddress("0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee");
+// Hardhat/Anvil account #0 — well-known test key, never use in production
+const TEST_PRIVATE_KEY = PrivateKey.from(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+  Curve.Secp256k1
+);
+
+// Real BSC mainnet validators fetched from StakeHub (0x0000000000000000000000000000000000002002)
+const OPERATOR = getAddress("0x773760b0708a5cc369c346993a0c225d8e4043b1");
+const CREDIT_ADDRESS = getAddress("0x4afc633e7b6beb8e552ccddbe06cca3754991e9a");
+const FROM_OPERATOR = getAddress("0x343da7ff0446247ca47aa41e2a25c5bbb230ed0a");
+const FROM_CREDIT = getAddress("0xec06cb25d9add4bdd67b61432163aff9028aa921");
+const TO_OPERATOR = getAddress("0xf2b1d86dc7459887b1f7ce8d840db1d87613ce7f");
+const TO_CREDIT = getAddress("0x2804ada1c219e50898e75b2bd052030580f4fbac");
 
 const VALIDATOR = { operatorAddress: OPERATOR, creditAddress: CREDIT_ADDRESS } as any;
 const FROM_VALIDATOR = { operatorAddress: FROM_OPERATOR, creditAddress: FROM_CREDIT } as any;
@@ -29,145 +37,148 @@ const mockStakingRpcClient: StakingRpcClientContract = {
 
 const mockFee = {
   type: FeeType.GasFee,
-  gasPrice: 5000000000n,
-  gasLimit: 21000n,
-  total: 5000000000n * 21000n,
+  gasPrice: 5_000_000_000n,
+  gasLimit: 21_000n,
+  total: 5_000_000_000n * 21_000n,
 };
 
 describe("SignService", () => {
   const service = new SignService(mockStakingRpcClient);
 
-  describe("buildCallData", () => {
-    it("encodes a Delegate transaction using the validator object", async () => {
-      const { data, amount } = await service.buildCallData({
-        type: TransactionType.Delegate,
-        chain: BSC_CHAIN,
-        amount: parseEther("1"),
-        isMaxAmount: false,
-        validator: VALIDATOR,
+  describe("sign", () => {
+    it("delegate", async () => {
+      const rawTx = await service.sign({
+        transaction: {
+          type: TransactionType.Delegate,
+          chain: BSC_CHAIN,
+          amount: parseEther("1"),
+          isMaxAmount: false,
+          validator: VALIDATOR,
+        },
+        fee: mockFee,
+        nonce: 1,
+        privateKey: TEST_PRIVATE_KEY,
       });
 
-      expect(data).toMatch(/^0x/);
-      expect(data.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
-      expect(amount).toBe(parseEther("1"));
+      expect(rawTx).toMatchInlineSnapshot(`"0xf8b20185012a05f200825208940000000000000000000000000000000000002002880de0b6b3a7640000b844982ef0a7000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000008193a073b31800d2b2de7c7881324090fc069a01d0801b8b4e0dcf4bdb88478753b61fa070270d13b7ac554d4fcfe90de6482cbacbea4f695c474ef69c2510be97aef450"`);
+      const tx = parseTransaction(rawTx as `0x${string}`);
+      expect(tx.chainId).toBe(Number(BSC_CHAIN.chainId));
+      expect(tx.nonce).toBe(1);
+      expect(tx.gasPrice).toBe(mockFee.gasPrice);
+      expect(tx.gas).toBe(mockFee.gasLimit);
+      expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
+      expect(tx.value).toBe(parseEther("1"));
+      expect(tx.data?.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
     });
 
-    it("encodes a Delegate transaction using a raw operator address", async () => {
-      const { data, amount } = await service.buildCallData({
-        type: TransactionType.Delegate,
-        chain: BSC_CHAIN,
-        amount: parseEther("2"),
-        isMaxAmount: false,
-        validator: OPERATOR,
+    it("undelegate", async () => {
+      const rawTx = await service.sign({
+        transaction: {
+          type: TransactionType.Undelegate,
+          chain: BSC_CHAIN,
+          amount: parseEther("1"),
+          isMaxAmount: false,
+          validator: VALIDATOR,
+        },
+        fee: mockFee,
+        nonce: 2,
+        privateKey: TEST_PRIVATE_KEY,
       });
 
-      expect(data.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
-      expect(amount).toBe(parseEther("2"));
+      expect(rawTx).toMatchInlineSnapshot(`"0xf8aa0285012a05f20082520894000000000000000000000000000000000000200280b8444d99dd16000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b10000000000000000000000000000000000000000000000000dbd2fc137a300008194a0689fb80ec15d8ee08b82dd07fe4796ba8ab94f4ce26e80c662909ec0469b8fe3a05c6f32f1f5553e07987ded87502bf49c869c989c58d0a5aea0b9bc24fdb67dc2"`);
+      const tx = parseTransaction(rawTx as `0x${string}`);
+      expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
+      expect(tx.value ?? 0n).toBe(0n);
+      expect(tx.data?.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
     });
 
-    it("encodes an Undelegate transaction — converts BNB to shares", async () => {
-      const { data, amount } = await service.buildCallData({
-        type: TransactionType.Undelegate,
-        chain: BSC_CHAIN,
-        amount: parseEther("1"),
-        isMaxAmount: false,
-        validator: VALIDATOR,
+    it("redelegate", async () => {
+      const rawTx = await service.sign({
+        transaction: {
+          type: TransactionType.Redelegate,
+          chain: BSC_CHAIN,
+          amount: parseEther("1"),
+          isMaxAmount: false,
+          fromValidator: FROM_VALIDATOR,
+          toValidator: TO_VALIDATOR,
+        },
+        fee: mockFee,
+        nonce: 3,
+        privateKey: TEST_PRIVATE_KEY,
       });
 
-      expect(data).toMatch(/^0x/);
-      expect(data.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
-      expect(amount).toBe(0n);
+      expect(rawTx).toMatchInlineSnapshot(`"0xf8ea0385012a05f20082520894000000000000000000000000000000000000200280b88459491871000000000000000000000000343da7ff0446247ca47aa41e2a25c5bbb230ed0a000000000000000000000000f2b1d86dc7459887b1f7ce8d840db1d87613ce7f0000000000000000000000000000000000000000000000000dbd2fc137a3000000000000000000000000000000000000000000000000000000000000000000008194a0f7c2352bc160c3b699eb5e4bfd037b0817d53cd0b4017a6ab0b6f2c704cf16e0a042a9454bff941f65f3efe30a6434ad460b2c68b1d1ff2781fc8f5f23a65c00b1"`);
+      const tx = parseTransaction(rawTx as `0x${string}`);
+      expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
+      expect(tx.value ?? 0n).toBe(0n);
+      expect(tx.data?.toLowerCase()).toContain(FROM_OPERATOR.slice(2).toLowerCase());
+      expect(tx.data?.toLowerCase()).toContain(TO_OPERATOR.slice(2).toLowerCase());
     });
 
-    it("encodes a Redelegate transaction with both validator addresses", async () => {
-      const { data, amount } = await service.buildCallData({
-        type: TransactionType.Redelegate,
-        chain: BSC_CHAIN,
-        amount: parseEther("1"),
-        isMaxAmount: false,
-        fromValidator: FROM_VALIDATOR,
-        toValidator: TO_VALIDATOR,
+    it("claim", async () => {
+      const rawTx = await service.sign({
+        transaction: {
+          type: TransactionType.Claim,
+          chain: BSC_CHAIN,
+          amount: 0n,
+          validator: VALIDATOR,
+          index: 3n,
+        },
+        fee: mockFee,
+        nonce: 4,
+        privateKey: TEST_PRIVATE_KEY,
       });
 
-      expect(data.toLowerCase()).toContain(FROM_OPERATOR.slice(2).toLowerCase());
-      expect(data.toLowerCase()).toContain(TO_OPERATOR.slice(2).toLowerCase());
-      expect(amount).toBe(0n);
+      expect(rawTx).toMatchInlineSnapshot(`"0xf8aa0485012a05f20082520894000000000000000000000000000000000000200280b844aad3ec96000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000038193a08bc7f022c9867390b85ef8ff70558a1c6b920c4bf1928d06e66e2b41817fa918a0494c23a4ae173529d0e6cfa794ff636851873faa86ccb83b12c624b2ac77abdd"`);
+      const tx = parseTransaction(rawTx as `0x${string}`);
+      expect(tx.to?.toLowerCase()).toBe(STAKING_CONTRACT.toLowerCase());
+      expect(tx.value ?? 0n).toBe(0n);
+      expect(tx.data?.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
     });
 
-    it("encodes a Claim transaction with the correct index", async () => {
-      const { data, amount } = await service.buildCallData({
-        type: TransactionType.Claim,
-        chain: BSC_CHAIN,
-        amount: 0n,
-        validator: OPERATOR,
-        index: 3n,
-      });
+    it("is deterministic", async () => {
+      const args = {
+        transaction: {
+          type: TransactionType.Delegate as const,
+          chain: BSC_CHAIN,
+          amount: parseEther("1"),
+          isMaxAmount: false,
+          validator: VALIDATOR,
+        },
+        fee: mockFee,
+        nonce: 1,
+        privateKey: TEST_PRIVATE_KEY,
+      };
 
-      expect(data).toMatch(/^0x/);
-      expect(data.toLowerCase()).toContain(OPERATOR.slice(2).toLowerCase());
-      expect(amount).toBe(0n);
+      const [first, second] = await Promise.all([service.sign(args), service.sign(args)]);
+
+      expect(first).toBe(second);
     });
 
-    describe("minimum amount validation", () => {
-      it("throws ValidationError for Delegate with amount below 1 BNB", async () => {
-        await expect(
-          service.buildCallData({
+    it("throws on delegate amount below 1 BNB", async () => {
+      await expect(
+        service.sign({
+          transaction: {
             type: TransactionType.Delegate,
             chain: BSC_CHAIN,
             amount: parseEther("0.5"),
             isMaxAmount: false,
             validator: OPERATOR,
-          })
-        ).rejects.toSatisfy((err: unknown) => {
-          expect(err).toBeInstanceOf(ValidationError);
-          expect((err as ValidationError).code).toBe(ValidationErrorCode.INVALID_AMOUNT);
-          return true;
-        });
+          },
+          fee: mockFee,
+          nonce: 1,
+          privateKey: TEST_PRIVATE_KEY,
+        })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe(ValidationErrorCode.INVALID_AMOUNT);
+        return true;
       });
-
-      it("allows exactly 1 BNB for Delegate", async () => {
-        await expect(
-          service.buildCallData({
-            type: TransactionType.Delegate,
-            chain: BSC_CHAIN,
-            amount: parseEther("1"),
-            isMaxAmount: false,
-            validator: OPERATOR,
-          })
-        ).resolves.toBeDefined();
-      });
-
-      it.each([
-        { type: TransactionType.Undelegate, extra: { isMaxAmount: false, validator: VALIDATOR } },
-        { type: TransactionType.Redelegate, extra: { isMaxAmount: false, fromValidator: FROM_VALIDATOR, toValidator: TO_VALIDATOR } },
-      ])("does not enforce minimum for $type", async ({ type, extra }) => {
-        await expect(
-          service.buildCallData({ type, chain: BSC_CHAIN, amount: parseEther("0.5"), ...extra } as any)
-        ).resolves.toBeDefined();
-      });
-    });
-
-    it("produces consistent output for the same inputs", async () => {
-      const input = {
-        type: TransactionType.Delegate,
-        chain: BSC_CHAIN,
-        amount: parseEther("1"),
-        isMaxAmount: false,
-        validator: OPERATOR,
-      } as const;
-
-      const [first, second] = await Promise.all([
-        service.buildCallData(input),
-        service.buildCallData(input),
-      ]);
-
-      expect(first.data).toBe(second.data);
-      expect(first.amount).toBe(second.amount);
     });
   });
 
   describe("prehash", () => {
-    it("returns a serialized transaction and the original sign args", async () => {
+    it("returns serialized tx and sign args", async () => {
       const signArgs = {
         transaction: {
           type: TransactionType.Delegate as const,
@@ -188,7 +199,7 @@ describe("SignService", () => {
   });
 
   describe("compile", () => {
-    it("produces a valid signed transaction hex from a raw signature", async () => {
+    it("produces a signed tx from a raw signature", async () => {
       const signArgs = {
         transaction: {
           type: TransactionType.Delegate as const,
