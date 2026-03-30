@@ -278,9 +278,9 @@ interface Validator {
 }
 
 enum ValidatorStatus {
-  Active,
-  Inactive,
-  Jailed,
+  Active   = "Active",
+  Inactive = "Inactive",
+  Jailed   = "Jailed",
 }
 ```
 
@@ -314,16 +314,16 @@ interface Delegation {
   validator: Validator;
   amount: bigint;              // Current BNB value of the position, in wei (from getPooledBNB)
   status: DelegationStatus;   // Active | Pending | Claimable | Inactive
-  delegationIndex: number;    // Unbond request index — pass as `index` in ClaimTransaction
-                               // Active delegations have delegationIndex: -1
+  delegationIndex: bigint;    // Unbond request index — pass as `index` in ClaimTransaction
+                               // Active delegations have delegationIndex: -1n
   pendingUntil: number;       // Unix timestamp (ms) when unbonding completes; 0 if claimable
 }
 
 enum DelegationStatus {
-  Active,     // Staked and earning auto-compounding rewards
-  Pending,    // In the 7-day unbonding window — not yet withdrawable
-  Claimable,  // Unbonding complete — BNB held in StakeCredit, ready to claim
-  Inactive,
+  Active    = "Active",     // Staked and earning auto-compounding rewards
+  Pending   = "Pending",    // In the 7-day unbonding window — not yet withdrawable
+  Claimable = "Claimable",  // Unbonding complete — BNB held in StakeCredit, ready to claim
+  Inactive  = "Inactive",
 }
 
 interface StakingSummary {
@@ -453,7 +453,7 @@ const fee = await sdk.estimateFee({
   amount: 0n,
   account: "0xYourAddress",
   validator: validators[0],
-  index: BigInt(delegation.delegationIndex),
+  index: delegation.delegationIndex,
 });
 ```
 
