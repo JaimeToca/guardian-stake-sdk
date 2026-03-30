@@ -61,6 +61,7 @@ export function createMockService(
     sign: () => Promise.resolve("0x"),
     prehash: (args) => Promise.resolve({ serializedTransaction: "0x", signArgs: args }),
     compile: () => Promise.resolve("0x"),
+    broadcast: () => Promise.resolve("0x"),
     ...overrides,
   };
 }

@@ -67,6 +67,10 @@ export class GuardianSDK {
     return this.getService(compileArgs.signArgs.transaction.chain).compile(compileArgs);
   }
 
+  broadcast(chain: GuardianChain, rawTx: string): Promise<string> {
+    return this.getService(chain).broadcast(rawTx);
+  }
+
   private getService(chain: GuardianChain): GuardianServiceContract {
     const service = this.services.get(chain.id);
     if (!service) {

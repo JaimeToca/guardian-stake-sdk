@@ -12,6 +12,7 @@ import { StakingRpcClient } from "./rpc/staking-rpc-client";
 import { NonceService } from "./services/nonce-service";
 import { FeeService } from "./services/fee-service";
 import { SignService } from "./services/sign-service";
+import { BroadcastService } from "./services/broadcast-service";
 
 /**
  * Creates a GuardianServiceContract for BNB Smart Chain.
@@ -49,6 +50,7 @@ function provideGuarService(chain: GuardianChain, rpcUrl: string, logger: Logger
   const nonceService = new NonceService(client);
   const signService = new SignService(stakingRpcClient, logger);
   const feeService = new FeeService(client, signService, logger);
+  const broadcastService = new BroadcastService(client);
 
   return new GuardianService(
     chain,
@@ -56,6 +58,7 @@ function provideGuarService(chain: GuardianChain, rpcUrl: string, logger: Logger
     nonceService,
     feeService,
     signService,
-    stakingService
+    stakingService,
+    broadcastService
   );
 }

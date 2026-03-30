@@ -1,4 +1,3 @@
-import type { HexString } from "../entity/types";
 import type { PrivateKey } from "../entity/private-key";
 import type { Fee } from "./fee-types";
 import type { Transaction } from "./transaction-types";
@@ -9,19 +8,14 @@ export type BaseSignArgs = {
   nonce: number;
 };
 
-export type CallData = {
-  data: HexString;
-  amount: bigint;
-};
-
 export type SigningWithPrivateKey = BaseSignArgs & { privateKey: PrivateKey };
 
 export type CompileArgs = {
   signArgs: BaseSignArgs;
-  signature: HexString;
+  signature: string;
 };
 
 export type PrehashResult = {
-  serializedTransaction: HexString;
+  serializedTransaction: string;
   signArgs: BaseSignArgs;
 };

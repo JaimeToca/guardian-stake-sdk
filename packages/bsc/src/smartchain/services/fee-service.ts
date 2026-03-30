@@ -1,6 +1,7 @@
 import type { PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
-import type { FeeServiceContract, SignServiceContract, Fee, Transaction, Logger } from "@guardian/sdk";
+import type { FeeServiceContract, Fee, Transaction, Logger } from "@guardian/sdk";
+import type { BscSignServiceContract } from "../sign-types";
 import { FeeType, ValidationError, ValidationErrorCode, NoopLogger } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
@@ -37,7 +38,7 @@ import { parseEvmAddress } from "../validations";
 export class FeeService implements FeeServiceContract {
   constructor(
     private readonly client: PublicClient,
-    private readonly signService: SignServiceContract,
+    private readonly signService: BscSignServiceContract,
     private readonly logger: Logger = new NoopLogger()
   ) {}
 

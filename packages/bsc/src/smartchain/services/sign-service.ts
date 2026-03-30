@@ -9,7 +9,6 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 import type {
-  SignServiceContract,
   Fee,
   Validator,
   OperatorAddress,
@@ -23,18 +22,17 @@ import type {
   Logger,
 } from "@guardian/sdk";
 import { SigningError, SigningErrorCode, TransactionType, NoopLogger, ValidationError, ValidationErrorCode } from "@guardian/sdk";
-import type { CallData } from "@guardian/sdk";
 import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
+import type { BscSignServiceContract, CallData, SigningWithAccount } from "../sign-types";
+import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
 
 const MIN_DELEGATION_AMOUNT = parseEther("1");
-import type { SigningWithAccount } from "../sign-types";
-import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
 import { parseEvmAddress } from "../validations";
 
 /**
  * Service responsible for handling various aspects of transaction signing on BSC.
  */
-export class SignService implements SignServiceContract {
+export class SignService implements BscSignServiceContract {
   constructor(
     private readonly stakingRpcClient: StakingRpcClientContract,
     private readonly logger: Logger = new NoopLogger()

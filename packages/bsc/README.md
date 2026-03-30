@@ -17,6 +17,7 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
   - [estimateFee](#estimatefee)
   - [sign](#sign)
   - [preHash / compile](#prehash--compile)
+  - [broadcast](#broadcast)
 - [Signing Flows](#signing-flows)
 - [Logging](#logging)
 - [Error Handling](#error-handling)
@@ -193,7 +194,7 @@ npm install @guardian/bsc viem
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, TransactionType } from "@guardian/bsc";
+import { bsc, BSC_CHAIN, TransactionType, PrivateKey, Curve } from "@guardian/bsc";
 import { formatEther, parseEther } from "viem";
 
 const sdk = new GuardianSDK([
@@ -233,7 +234,7 @@ const fee = await sdk.estimateFee({
 // 5. Get nonce
 const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
 
-// 6. Sign and broadcast
+// 6. Sign
 const rawTx = await sdk.sign({
   transaction: {
     type: TransactionType.Delegate,
@@ -244,10 +245,12 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: "0xYourPrivateKey",
+  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
 });
 
-// rawTx is ready to broadcast via your RPC node
+// 7. Broadcast
+const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+console.log(`Transaction hash: ${txHash}`);
 ```
 
 ---
@@ -466,6 +469,8 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 **With a private key:**
 
 ```typescript
+import { PrivateKey, Curve } from "@guardian/bsc";
+
 const rawTx = await sdk.sign({
   transaction: {
     type: TransactionType.Delegate,
@@ -476,7 +481,7 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: "0xYourPrivateKey",
+  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
 });
 ```
 
@@ -560,8 +565,21 @@ const rawTx = await sdk.compile({
   signature: "0x<hex-signature>", // raw hex signature from your external signer
 });
 
-// Broadcast rawTx via your RPC node
+---
+
+### `broadcast`
+
+Broadcasts a signed raw transaction to the BSC network and returns the transaction hash.
+
+```typescript
+const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+console.log(`Transaction hash: ${txHash}`);
+// → https://bscscan.com/tx/${txHash}
 ```
+
+`rawTx` is the string returned by either `sign()` or `compile()`.
+
+> Once broadcast, BSC transactions cannot be accelerated via replace-by-fee (RBF). See [Fee Model](#fee-model) for details.
 
 ---
 

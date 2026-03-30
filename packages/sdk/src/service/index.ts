@@ -1,4 +1,5 @@
 export { BalanceServiceContract } from "./balance-service-contract";
+export { BroadcastServiceContract } from "./broadcast-service-contract";
 export { FeeServiceContract } from "./fee-service-contract";
 export { SignServiceContract } from "./sign-service-contract";
 export { StakingServiceContract } from "./staking-service-contract";
@@ -24,6 +25,6 @@ export {
   StakingSummary,
 } from "./staking-types";
 
-export { SigningWithPrivateKey, BaseSignArgs, CompileArgs, PrehashResult, CallData } from "./sign-types";
+export { SigningWithPrivateKey, BaseSignArgs, CompileArgs, PrehashResult } from "./sign-types";
 
 export { GuardianServiceContract } from "./guardian-service-contract";

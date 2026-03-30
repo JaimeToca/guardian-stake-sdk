@@ -4,8 +4,6 @@ import type { Transaction } from "./transaction-types";
 import type { Fee } from "./fee-types";
 import type { BaseSignArgs, CompileArgs, PrehashResult, SigningWithPrivateKey } from "./sign-types";
 import type { Delegations, Validator } from "./staking-types";
-import type { HexString } from "../entity/types";
-
 /** Chain-agnostic contract for the Guardian Service facade. Implemented by each chain package. */
 export interface GuardianServiceContract {
   getValidators(): Promise<Validator[]>;
@@ -13,8 +11,9 @@ export interface GuardianServiceContract {
   getBalances(address: string): Promise<Balance[]>;
   getNonce(address: string): Promise<number>;
   estimateFee(transaction: Transaction): Promise<Fee>;
-  sign(signingArgs: SigningWithPrivateKey): Promise<HexString>;
+  sign(signingArgs: SigningWithPrivateKey): Promise<string>;
   prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult>;
-  compile(compileArgs: CompileArgs): Promise<HexString>;
+  compile(compileArgs: CompileArgs): Promise<string>;
+  broadcast(rawTx: string): Promise<string>;
   getChainInfo(): GuardianChain;
 }

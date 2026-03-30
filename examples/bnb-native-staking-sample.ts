@@ -50,10 +50,17 @@ async function sample_check_delegations() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_delegate_transaction() {
-  const MNEMONIC = "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12";
+  const MNEMONIC = "";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
-  const ADDRESS = "0xf8eb1dbab94aa705e2aaf734d7140ee3bb49cf0d";
-  const AMOUNT = parseUnits("1.1", 18); // 1.1 BNB
+  const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
+  const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
+
+   // Fetch balances
+   const balances = await sdk.getBalances(
+    BSC_CHAIN,
+    ADDRESS
+   );
+   console.log("Balances:", balances);
 
   // Pick a validator — use getValidators() to browse the full set
   const validators = await sdk.getValidators(BSC_CHAIN);
@@ -100,4 +107,4 @@ function privateKeyFromMnemonic(mnemonic: string, addressIndex = 0): PrivateKey 
   return PrivateKey.from(hex, Curve.Secp256k1);
 }
 
-sample_check_delegations();
+sample_delegate_transaction();

@@ -55,6 +55,7 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
   - [sign](#signsigningargs)
   - [preHash / compile](#prehashhargs--compileargs)
 - [Sample — Delegate on BNB Smart Chain](#sample--delegate-on-bnb-smart-chain)
+  - [broadcast](#broadcastchain-rawtx)
 - [Signing Flows](#signing-flows)
 - [Logging](#logging)
 - [Testing](#testing)
@@ -134,6 +135,7 @@ The same API surface is available on every supported chain. Pass the chain objec
 | [`sign(signingArgs)`](#signsigningargs) | `string` | Sign a transaction directly with a private key |
 | [`preHash(args)`](#prehashhargs--compileargs) | `PrehashResult` | Serialize an unsigned transaction for external/MPC signing |
 | [`compile(args)`](#prehashhargs--compileargs) | `string` | Reassemble a signed transaction |
+| [`broadcast(chain, rawTx)`](#broadcastchain-rawtx) | `string` | Broadcast a signed raw transaction and return the tx hash |
 
 > **Note:** Some APIs — such as `getValidators` — may be extended in future releases (e.g. pagination support). The SDK initialization may also be extended to allow injecting additional configuration options per chain.
 
@@ -183,7 +185,7 @@ interface Delegation {
   validator: Validator;
   amount: bigint;               // Current value in wei
   status: DelegationStatus;    // Active | Pending | Claimable | Inactive
-  delegationIndex: number;     // Required for Claim transactions
+  delegationIndex: bigint;     // Required for Claim transactions
   pendingUntil: number;        // Unix timestamp (ms) when unbonding completes
 }
 
@@ -327,14 +329,14 @@ For MPC wallets, hardware wallets, or any setup where the private key is not dir
 
 ```typescript
 interface PrehashResult {
-  serializedTransaction: string;  // Hex-encoded transaction to send to the external signer
+  serializedTransaction: string;  // Chain-encoded transaction to send to the external signer
   signArgs: BaseSignArgs;         // Passed through to compile()
 }
 ```
 
 **`compile` returns:** `Promise<string>` — the final signed raw transaction.
 
-`compile` accepts a `signature` field — a hex-encoded raw signature string produced by your external signer. Each chain package decodes this into whatever format it needs internally (e.g. BSC splits it into `r`, `s`, `v`).
+`compile` accepts a `signature` field — a raw signature string produced by your external signer. The format is chain-specific (e.g. hex for BSC, base64 for Solana). Each chain package handles the decoding internally.
 
 ```typescript
 // Step 1 — serialize
@@ -352,13 +354,28 @@ const rawTx = await sdk.compile({ signArgs, signature: "0x<hex-signature>" });
 
 ---
 
+### `broadcast(chain, rawTx)`
+
+Broadcasts a signed raw transaction to the network and returns the transaction hash.
+
+**Returns:** `Promise<string>`
+
+```typescript
+const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+console.log(`Transaction hash: ${txHash}`);
+```
+
+`rawTx` is the string returned by either `sign()` or `compile()`.
+
+---
+
 ## Sample — Delegate on BNB Smart Chain
 
 End-to-end example using direct signing:
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, TransactionType } from "@guardian/bsc";
+import { bsc, BSC_CHAIN, TransactionType, PrivateKey, Curve } from "@guardian/bsc";
 import { parseEther, formatEther } from "viem";
 
 const sdk = new GuardianSDK([
@@ -366,11 +383,11 @@ const sdk = new GuardianSDK([
 ]);
 
 const ADDRESS = "0xYourAddress";
-const PRIVATE_KEY = "0xYourPrivateKey";
+const PRIVATE_KEY = PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1);
 
 // 1. Pick a validator
 const validators = await sdk.getValidators(BSC_CHAIN);
-const validator = validators.find((v) => v.name === "TWStaking")!;
+const validator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
 console.log(`Staking with ${validator.name} — APY: ${validator.apy}%`);
 
 // 2. Check available balance
@@ -405,8 +422,9 @@ const rawTx = await sdk.sign({
   privateKey: PRIVATE_KEY,
 });
 
-console.log("Signed tx:", rawTx);
-// → broadcast rawTx via your RPC node
+// 5. Broadcast
+const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+console.log(`Transaction hash: ${txHash}`);
 ```
 
 For chain-specific details (protocol parameters, transaction shapes, error codes) see:
