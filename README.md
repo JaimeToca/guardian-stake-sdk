@@ -27,32 +27,6 @@
 
 The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (`@guardian/sdk`) and one package per supported chain. Install only the chain you need.
 
-```typescript
-import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, TransactionType, PrivateKey, Curve } from "@guardian/bsc";
-import { parseEther } from "viem";
-
-const sdk = new GuardianSDK([bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" })]);
-
-const validators = await sdk.getValidators(BSC_CHAIN);
-const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
-  chain: BSC_CHAIN,
-  amount: parseEther("1"),
-  account: "0xYourAddress",
-  isMaxAmount: false,
-  validator: validators[0],
-});
-const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
-const rawTx = await sdk.sign({
-  transaction: { type: TransactionType.Delegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: validators[0] },
-  fee,
-  nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
-});
-const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
-```
-
 ## Why Guardian SDK
 
 Most SDKs today expose **low-level primitives**, but stop short of solving the real developer problem.
