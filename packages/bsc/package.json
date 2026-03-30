@@ -1,6 +1,6 @@
 {
   "name": "@guardian/bsc",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Guardian SDK for BNB Smart Chain",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -12,6 +12,7 @@
       "require": "./dist/cjs/index.js"
     }
   },
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -30,7 +31,7 @@
   },
   "devDependencies": {
     "viem": "^2.47.6",
-    "vitest": "^3.0.0"
+    "vitest": "^4.1.2"
   },
   "engines": {
     "node": ">=18"

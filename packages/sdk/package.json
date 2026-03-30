@@ -1,6 +1,7 @@
 {
   "name": "@guardian/sdk",
-  "version": "1.0.0",
+  "version": "0.1.0",
+  "private": true,
   "description": "Chain-agnostic core for the Guardian SDK",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
