@@ -6,7 +6,7 @@ import type { DelegateTransaction, RedelegateTransaction, UndelegateTransaction 
 
 const sdk = new GuardianSDK([                                                                                                                                                                                      
     bsc({                                                                                                                                                                                                            
-      rpcUrl: "https://bsc.twnodes.com",                                                                                                                                                                           
+      rpcUrl: "https://bsc.meowrpc.com", // public RPC https://chainlist.org/chain/56                                                                                                                                                                          
       logger: new ConsoleLogger("debug"),
     }),                                                                                                                                                                                                              
   ]);
