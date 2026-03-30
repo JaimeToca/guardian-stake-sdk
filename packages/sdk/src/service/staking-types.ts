@@ -11,9 +11,9 @@ export interface Validator {
 }
 
 export enum ValidatorStatus {
-  Active,
-  Inactive,
-  Jailed,
+  Active = "Active",
+  Inactive = "Inactive",
+  Jailed = "Jailed",
 }
 
 export interface Delegations {
@@ -26,15 +26,15 @@ export interface Delegation {
   validator: Validator;
   amount: bigint;
   status: DelegationStatus;
-  delegationIndex: number;
+  delegationIndex: bigint;
   pendingUntil: number;
 }
 
 export enum DelegationStatus {
-  Active,
-  Pending,
-  Claimable,
-  Inactive,
+  Active = "Active",
+  Pending = "Pending",
+  Claimable = "Claimable",
+  Inactive = "Inactive",
 }
 
 export interface StakingSummary {

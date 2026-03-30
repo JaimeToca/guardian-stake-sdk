@@ -7,6 +7,7 @@ import type {
   BaseSignArgs,
   PrehashResult,
   CompileArgs,
+  HexString,
 } from "@guardian/sdk";
 import type { Transaction } from "@guardian/sdk";
 import type {
@@ -59,7 +60,7 @@ export class GuardianService implements GuardianServiceContract {
     return this.feeService.estimateFee(transaction);
   }
 
-  sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<string> {
+  sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<HexString> {
     return this.signService.sign(signingArgs);
   }
 
@@ -67,7 +68,7 @@ export class GuardianService implements GuardianServiceContract {
     return this.signService.prehash(preHashArgs);
   }
 
-  compile(compileArgs: CompileArgs): Promise<string> {
+  compile(compileArgs: CompileArgs): Promise<HexString> {
     return this.signService.compile(compileArgs);
   }
 }

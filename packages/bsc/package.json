@@ -37,21 +37,14 @@
     "node": ">=18"
   },
   "keywords": [
-    "bnb",
-    "bsc",
-    "binance",
-    "staking",
-    "web3",
-    "blockchain",
-    "sdk",
-    "guardian",
-    "native-staking",
-    "bnb-smart-chain"
+    "bnb", "bsc", "binance", "staking", "native-staking",
+    "bnb-smart-chain", "web3", "blockchain", "sdk",
+    "guardian", "guardian-sdk", "guardian-stake-sdk"
   ],
   "author": "JaimeToca",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JaimeToca/bnb-native-staking.git"
+    "url": "https://github.com/JaimeToca/guardian-stake-sdk.git"
   },
   "license": "MIT"
 }

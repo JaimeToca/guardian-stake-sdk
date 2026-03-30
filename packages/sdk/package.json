@@ -32,17 +32,11 @@
   "engines": {
     "node": ">=18"
   },
-  "keywords": [
-    "guardian",
-    "sdk",
-    "staking",
-    "blockchain",
-    "web3"
-  ],
+  "keywords": [],
   "author": "JaimeToca",
   "repository": {
     "type": "git",
-    "url": "https://github.com/JaimeToca/bnb-native-staking.git"
+    "url": "https://github.com/JaimeToca/guardian-stake-sdk.git"
   },
   "license": "MIT"
 }

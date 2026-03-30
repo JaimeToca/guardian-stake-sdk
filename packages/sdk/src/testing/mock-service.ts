@@ -104,7 +104,7 @@ export function mockDelegation(overrides: Partial<Delegation> = {}): Delegation 
     validator: mockValidator(),
     amount: BigInt("1000000000000000000"), // 1 token
     status: DelegationStatus.Active,
-    delegationIndex: 0,
+    delegationIndex: 0n,
     pendingUntil: 0,
     ...overrides,
   };

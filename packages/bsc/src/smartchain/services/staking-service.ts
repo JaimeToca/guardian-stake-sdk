@@ -137,7 +137,7 @@ export class StakingService implements StakingServiceContract {
           validator: validators[index],
           amount: stakedAmount,
           status: DelegationStatus.Active,
-          delegationIndex: -1,
+          delegationIndex: -1n,
           pendingUntil: 0,
         };
       })
@@ -204,7 +204,7 @@ export class StakingService implements StakingServiceContract {
         validator,
         amount: req.amount,
         status: now > unlockTimeInMillis ? DelegationStatus.Claimable : DelegationStatus.Pending,
-        delegationIndex: index,
+        delegationIndex: BigInt(index),
         pendingUntil: now > unlockTimeInMillis ? 0 : Number(unlockTimeInMillis),
       };
     });
