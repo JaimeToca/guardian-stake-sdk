@@ -2,14 +2,14 @@
   "name": "@guardian/bsc",
   "version": "0.1.0",
   "description": "Guardian SDK for BNB Smart Chain",
-  "main": "./dist/cjs/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/cjs/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/cjs/index.d.ts",
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "sideEffects": false,
@@ -17,19 +17,16 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json",
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "peerDependencies": {
     "viem": "^2.47.5"
   },
-  "dependencies": {
-    "@guardian/sdk": "*"
-  },
-  "devDependencies": {
+"devDependencies": {
+    "tsup": "^8.5.1",
     "viem": "^2.47.6",
     "vitest": "^4.1.2"
   },
@@ -37,9 +34,18 @@
     "node": ">=18"
   },
   "keywords": [
-    "bnb", "bsc", "binance", "staking", "native-staking",
-    "bnb-smart-chain", "web3", "blockchain", "sdk",
-    "guardian", "guardian-sdk", "guardian-stake-sdk"
+    "bnb",
+    "bsc",
+    "binance",
+    "staking",
+    "native-staking",
+    "bnb-smart-chain",
+    "web3",
+    "blockchain",
+    "sdk",
+    "guardian",
+    "guardian-sdk",
+    "guardian-stake-sdk"
   ],
   "author": "JaimeToca",
   "repository": {
