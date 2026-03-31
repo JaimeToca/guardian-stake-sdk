@@ -371,6 +371,8 @@ console.log(`Transaction hash: ${txHash}`);
 
 ## Sample — Delegate on BNB Smart Chain
 
+Full example: [`examples/bnb-native-staking-sample.ts`](./examples/bnb-native-staking-sample.ts)
+
 End-to-end example using direct signing:
 
 ```typescript
