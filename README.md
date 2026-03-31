@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./Logo.png" alt="Guardian SDK" width="500" />
+  <img src="./docs/images/Logo3.png" alt="Guardian SDK" width="500" />
 </p>
 
 <p align="center">
@@ -87,7 +87,7 @@ Each chain ships as an independent package — install only what you need, your 
 
 > The diagram above shows how `@guardian/bsc` plugs into the SDK. Each chain package implements `GuardianServiceContract` independently — it can expose any number of services and RPC clients suited to that chain's protocol. `GuardianSDK` only ever sees the contract interface and routes calls by `chain.id`.
 
-![Architecture](./architecture.svg)
+![Architecture](./docs/images/architecture.svg)
 
 ---
 
@@ -407,7 +407,7 @@ For chain-specific details (protocol parameters, transaction shapes, error codes
 
 ## Signing Flows
 
-![Signing Flows](./signing-flows.svg)
+![Signing Flows](./docs/images/signing-flows.svg)
 
 The MPC flow is designed for setups where the private key is managed externally — hardware wallets, MPC servers, or custodians. `preHash()` serializes the transaction and returns it ready to sign. `compile()` assembles the final signed transaction from a raw hex signature string — chain-agnostic by design, each chain package handles the internal decoding.
 
