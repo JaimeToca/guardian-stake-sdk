@@ -2,7 +2,7 @@ import type { PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 import type { FeeServiceContract, Fee, Transaction, Logger } from "@guardian/sdk";
 import type { BscSignServiceContract } from "../sign-types";
-import { ValidationError, ValidationErrorCode, NoopLogger } from "@guardian/sdk";
+import { ValidationError, NoopLogger } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**
@@ -53,7 +53,7 @@ export class FeeService implements FeeServiceContract {
 
     if (account === undefined) {
       throw new ValidationError(
-        ValidationErrorCode.INVALID_ADDRESS,
+        "INVALID_ADDRESS",
         "Account address is required to estimate fee"
       );
     }

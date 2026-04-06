@@ -21,7 +21,7 @@ import type {
   RedelegateTransaction,
   Logger,
 } from "@guardian/sdk";
-import { SigningError, SigningErrorCode, NoopLogger, ValidationError, ValidationErrorCode } from "@guardian/sdk";
+import { SigningError, NoopLogger, ValidationError } from "@guardian/sdk";
 import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import type { BscSignServiceContract, CallData, SigningWithAccount } from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
@@ -59,7 +59,7 @@ export class SignService implements BscSignServiceContract {
       signedTransaction = await account.signTransaction(unsignedTransaction);
     } else {
       throw new SigningError(
-        SigningErrorCode.INVALID_SIGNING_ARGS,
+        "INVALID_SIGNING_ARGS",
         "signingArgs must contain either a privateKey (SigningWithPrivateKey) or an account (SigningWithAccount)."
       );
     }
@@ -146,7 +146,7 @@ export class SignService implements BscSignServiceContract {
   async buildCallData(transaction: Transaction): Promise<CallData> {
     if (transaction.type === "Delegate" && transaction.amount < MIN_DELEGATION_AMOUNT) {
       throw new ValidationError(
-        ValidationErrorCode.INVALID_AMOUNT,
+        "INVALID_AMOUNT",
         `Amount must be at least 1 BNB — got ${formatEther(transaction.amount)} BNB`
       );
     }
@@ -176,7 +176,7 @@ export class SignService implements BscSignServiceContract {
       }
       default:
         throw new SigningError(
-          SigningErrorCode.UNSUPPORTED_TRANSACTION_TYPE,
+          "UNSUPPORTED_TRANSACTION_TYPE",
           `Cannot build call data: unsupported transaction type "${(transaction as Transaction).type}".`
         );
     }
@@ -205,7 +205,7 @@ export class SignService implements BscSignServiceContract {
 
     if (typeof validator === "string") {
       throw new SigningError(
-        SigningErrorCode.INVALID_SIGNING_ARGS,
+        "INVALID_SIGNING_ARGS",
         "Undelegate and Redelegate require a Validator object (not just an operator address string) " +
           "so the SDK can resolve the credit contract and convert the BNB amount to shares. " +
           "Use getValidators() to obtain the full Validator object."
@@ -217,7 +217,7 @@ export class SignService implements BscSignServiceContract {
     if (transaction.isMaxAmount) {
       if (transaction.account === undefined) {
         throw new ValidationError(
-          ValidationErrorCode.INVALID_ADDRESS,
+          "INVALID_ADDRESS",
           "account is required when isMaxAmount is true — it is used to read the exact share balance."
         );
       }

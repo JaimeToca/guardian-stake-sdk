@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { getAddress } from "viem";
 import { FeeService } from "../../src/smartchain/services/fee-service";
-import { ValidationError, ValidationErrorCode } from "@guardian/sdk";
+import { ValidationError } from "@guardian/sdk";
 import { BSC_CHAIN } from "../../src/chain";
 import gasPriceFixture from "../fixtures/eth_gasPrice.json";
 import estimateGasFixture from "../fixtures/eth_estimateGas.json";
@@ -76,7 +76,7 @@ describe("FeeService", () => {
       })
     ).rejects.toSatisfy((err: unknown) => {
       expect(err).toBeInstanceOf(ValidationError);
-      expect((err as ValidationError).code).toBe(ValidationErrorCode.INVALID_ADDRESS);
+      expect((err as ValidationError).code).toBe("INVALID_ADDRESS");
       return true;
     });
   });

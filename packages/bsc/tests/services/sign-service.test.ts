@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { parseEther, getAddress, parseTransaction } from "viem";
 import { SignService } from "../../src/smartchain/services/sign-service";
-import { ValidationError, ValidationErrorCode, PrivateKey } from "@guardian/sdk";
+import { ValidationError, PrivateKey } from "@guardian/sdk";
 import { BSC_CHAIN } from "../../src/chain";
 import { STAKING_CONTRACT } from "../../src/smartchain/abi/multicall-stake-abi";
 import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-rpc-client-contract";
@@ -109,7 +109,7 @@ describe("SignService", () => {
         })
       ).rejects.toSatisfy((err: unknown) => {
         expect(err).toBeInstanceOf(ValidationError);
-        expect((err as ValidationError).code).toBe(ValidationErrorCode.INVALID_AMOUNT);
+        expect((err as ValidationError).code).toBe("INVALID_AMOUNT");
         return true;
       });
     });

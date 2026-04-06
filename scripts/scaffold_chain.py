@@ -481,7 +481,7 @@ export {{ {chain_const}, SUPPORTED_CHAINS, getChainById, isSupportedChain }} fro
 
 def make_config_test(slug: str, factory_fn: str) -> str:
     return f"""import {{ describe, it, expect }} from "vitest";
-import {{ ConfigError, ConfigErrorCode }} from "@guardian/sdk";
+import {{ ConfigError }} from "@guardian/sdk";
 import {{ {factory_fn} }} from "../src/mainnet";
 
 describe("{factory_fn}()", () => {{
@@ -491,7 +491,7 @@ describe("{factory_fn}()", () => {{
       {factory_fn}({{ rpcUrl: "not-a-url" }});
     }} catch (err) {{
       expect(err).toBeInstanceOf(ConfigError);
-      expect((err as ConfigError).code).toBe(ConfigErrorCode.INVALID_RPC_URL);
+      expect((err as ConfigError).code).toBe("INVALID_RPC_URL");
     }}
   }});
 
@@ -501,7 +501,7 @@ describe("{factory_fn}()", () => {{
       {factory_fn}({{ rpcUrl: "ftp://example.com" }});
     }} catch (err) {{
       expect(err).toBeInstanceOf(ConfigError);
-      expect((err as ConfigError).code).toBe(ConfigErrorCode.INVALID_RPC_URL);
+      expect((err as ConfigError).code).toBe("INVALID_RPC_URL");
     }}
   }});
 

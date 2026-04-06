@@ -365,7 +365,7 @@ export default defineConfig({
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { ConfigError, ConfigErrorCode } from "@guardian/sdk";
+import { ConfigError } from "@guardian/sdk";
 import { <chain> } from "../src/<network>";
 
 describe("<chain>()", () => {
@@ -375,7 +375,7 @@ describe("<chain>()", () => {
       <chain>({ rpcUrl: "not-a-url" });
     } catch (err) {
       expect(err).toBeInstanceOf(ConfigError);
-      expect((err as ConfigError).code).toBe(ConfigErrorCode.INVALID_RPC_URL);
+      expect((err as ConfigError).code).toBe("INVALID_RPC_URL");
     }
   });
 });

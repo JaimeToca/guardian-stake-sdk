@@ -551,14 +551,14 @@ import { SigningError, SigningErrorCode } from "@guardian/bsc";
 If you only want to handle one specific condition:
 
 ```typescript
-import { ValidationError, ValidationErrorCode } from "@guardian/bsc";
+import { ValidationError } from "@guardian/bsc";
 
 try {
   await sdk.getBalances(BSC_CHAIN, rawInput);
 } catch (err) {
   if (
     err instanceof ValidationError &&
-    err.code === ValidationErrorCode.INVALID_ADDRESS
+    err.code === "INVALID_ADDRESS"
   ) {
     showAddressError("Please enter a valid wallet address.");
   }

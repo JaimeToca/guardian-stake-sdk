@@ -1,5 +1,5 @@
 import type { GuardianChain } from "../chain";
-import { ConfigError, ConfigErrorCode } from "../entity/errors";
+import { ConfigError } from "../entity/errors";
 import type { Balance } from "../service/balance-types";
 import type { Fee } from "../service/fee-types";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
@@ -75,7 +75,7 @@ export class GuardianSDK {
     const service = this.services.get(chain.id);
     if (!service) {
       throw new ConfigError(
-        ConfigErrorCode.UNSUPPORTED_CHAIN,
+        "UNSUPPORTED_CHAIN",
         `No service registered for chain "${chain.id}". Did you pass it to the GuardianSDK constructor?`
       );
     }

@@ -1,4 +1,4 @@
-import { ConfigError, ConfigErrorCode } from "./errors";
+import { ConfigError } from "./errors";
 
 const ALLOWED_PROTOCOLS = new Set(["http:", "https:", "ws:", "wss:"]);
 
@@ -15,14 +15,14 @@ export function validateRpcUrl(rpcUrl: string): void {
     parsed = new URL(rpcUrl);
   } catch {
     throw new ConfigError(
-      ConfigErrorCode.INVALID_RPC_URL,
+      "INVALID_RPC_URL",
       `Invalid rpcUrl: "${rpcUrl}" is not a valid URL`
     );
   }
 
   if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) {
     throw new ConfigError(
-      ConfigErrorCode.INVALID_RPC_URL,
+      "INVALID_RPC_URL",
       `Invalid rpcUrl: protocol must be http, https, ws, or wss — got "${parsed.protocol.replace(":", "")}"`
     );
   }

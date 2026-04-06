@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateRpcUrl, ConfigError, ConfigErrorCode } from "@guardian/sdk";
+import { validateRpcUrl, ConfigError } from "@guardian/sdk";
 
 describe("validateRpcUrl", () => {
   it.each(["http://example.com", "https://example.com", "ws://example.com", "wss://example.com"])(
@@ -17,7 +17,7 @@ describe("validateRpcUrl", () => {
         validateRpcUrl(url);
       } catch (err) {
         expect(err).toBeInstanceOf(ConfigError);
-        expect((err as ConfigError).code).toBe(ConfigErrorCode.INVALID_RPC_URL);
+        expect((err as ConfigError).code).toBe("INVALID_RPC_URL");
       }
     }
   );
@@ -30,7 +30,7 @@ describe("validateRpcUrl", () => {
         validateRpcUrl(url);
       } catch (err) {
         expect(err).toBeInstanceOf(ConfigError);
-        expect((err as ConfigError).code).toBe(ConfigErrorCode.INVALID_RPC_URL);
+        expect((err as ConfigError).code).toBe("INVALID_RPC_URL");
       }
     }
   );

@@ -17,25 +17,11 @@
 
 // ─── Error codes ─────────────────────────────────────────────────────────────
 
-export const ValidationErrorCode = {
-  INVALID_ADDRESS: "INVALID_ADDRESS",
-  INVALID_AMOUNT: "INVALID_AMOUNT",
-  INVALID_NONCE: "INVALID_NONCE",
-  INVALID_FEE: "INVALID_FEE",
-} as const;
-export type ValidationErrorCode = (typeof ValidationErrorCode)[keyof typeof ValidationErrorCode];
+export type ValidationErrorCode = "INVALID_ADDRESS" | "INVALID_AMOUNT" | "INVALID_NONCE" | "INVALID_FEE";
 
-export const ConfigErrorCode = {
-  UNSUPPORTED_CHAIN: "UNSUPPORTED_CHAIN",
-  INVALID_RPC_URL: "INVALID_RPC_URL",
-} as const;
-export type ConfigErrorCode = (typeof ConfigErrorCode)[keyof typeof ConfigErrorCode];
+export type ConfigErrorCode = "UNSUPPORTED_CHAIN" | "INVALID_RPC_URL";
 
-export const SigningErrorCode = {
-  INVALID_SIGNING_ARGS: "INVALID_SIGNING_ARGS",
-  UNSUPPORTED_TRANSACTION_TYPE: "UNSUPPORTED_TRANSACTION_TYPE",
-} as const;
-export type SigningErrorCode = (typeof SigningErrorCode)[keyof typeof SigningErrorCode];
+export type SigningErrorCode = "INVALID_SIGNING_ARGS" | "UNSUPPORTED_TRANSACTION_TYPE";
 
 export type ErrorCode = ValidationErrorCode | ConfigErrorCode | SigningErrorCode;
 
