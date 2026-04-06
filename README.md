@@ -78,6 +78,10 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | `@guardian/solana` | Solana | Planned | — |
 | `@guardian/aptos` | Aptos | Planned | — |
 | `@guardian/cardano` | Cardano | Planned | — |
+| `@guardian/polkadot` | Polkadot | Planned | — |
+| `@guardian/near` | NEAR | Planned | — |
+| `@guardian/ethereum` | Ethereum | Planned | — |
+| `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — |
 
 Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian/sdk` is included automatically as a dependency of each chain package.
 
@@ -122,6 +126,8 @@ No chain IDs to configure manually, no internal wiring — install the package, 
 ---
 
 ## Staking API
+
+> **Beta notice:** The public API is currently in beta. Method signatures, return types, and behaviours may change between minor versions until a stable 1.0 release is declared. Pin your dependency to a specific version and review the [CHANGELOG](./CHANGELOG.md) before upgrading.
 
 The same API surface is available on every supported chain. Pass the chain object as the first argument to scope each call.
 
@@ -684,6 +690,10 @@ Planned integrations follow the same architecture — each chain is an independe
 | Solana | `@guardian/solana` | Planned |
 | Aptos | `@guardian/aptos` | Planned |
 | Cardano | `@guardian/cardano` | Planned |
+| Polkadot | `@guardian/polkadot` | Planned |
+| NEAR | `@guardian/near` | Planned |
+| Ethereum | `@guardian/ethereum` | Planned |
+| Bitcoin (Babylon) | `@guardian/btc-babylon` | Planned |
 
 ### SDK improvements
 
