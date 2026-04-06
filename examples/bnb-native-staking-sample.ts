@@ -2,14 +2,18 @@ import { parseUnits, toHex } from "viem";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
 import { GuardianSDK, BSC_CHAIN, bsc, ConsoleLogger, PrivateKey } from "@guardian/bsc";
-import type { DelegateTransaction, RedelegateTransaction, UndelegateTransaction } from "@guardian/bsc";
+import type {
+  DelegateTransaction,
+  RedelegateTransaction,
+  UndelegateTransaction,
+} from "@guardian/bsc";
 
-const sdk = new GuardianSDK([                                                                                                                                                                                      
-    bsc({                                                                                                                                                                                                            
-      rpcUrl: "https://bsc.api.pocket.network", // public RPC https://chainlist.org/chain/56                                                                                                                                                                          
-      logger: new ConsoleLogger("debug"),
-    }),                                                                                                                                                                                                              
-  ]);
+const sdk = new GuardianSDK([
+  bsc({
+    rpcUrl: "https://bsc.api.pocket.network", // public RPC https://chainlist.org/chain/56
+    logger: new ConsoleLogger("debug"),
+  }),
+]);
 
 /**
  * Demonstrates how to read staking data for a given address:
@@ -19,24 +23,23 @@ const sdk = new GuardianSDK([
  *   each position is staked with, its current BNB value, and its status
  */
 async function sample_check_delegations() {
-   // Fetch balances
-   const balances = await sdk.getBalances(
-    BSC_CHAIN,
-    "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b"
-   );
-   console.log("Balances:", balances);
+  // Fetch balances
+  const balances = await sdk.getBalances(BSC_CHAIN, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
+  console.log("Balances:", balances);
 
-   // Fetch validators
-   const validators = await sdk.getValidators(BSC_CHAIN);
-   console.log("Validators:", validators);
+  // Fetch validators
+  const validators = await sdk.getValidators(BSC_CHAIN);
+  console.log("Validators:", validators);
 
-   // Fetch delegations for an address
+  // Fetch delegations for an address
   const delegations = await sdk.getDelegations(
     BSC_CHAIN,
     "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b"
   );
   for (const delegation of delegations.delegations) {
-    console.log(`Validator: ${delegation.validator.name} (${delegation.validator.operatorAddress}) | Status: ${delegation.status} | Amount: ${delegation.amount}`);
+    console.log(
+      `Validator: ${delegation.validator.name} (${delegation.validator.operatorAddress}) | Status: ${delegation.status} | Amount: ${delegation.amount}`
+    );
   }
 }
 
@@ -50,17 +53,14 @@ async function sample_check_delegations() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_delegate_transaction() {
-  const MNEMONIC = "<use your memonic>"; 
+  const MNEMONIC = "<use your memonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
 
-   // Fetch balances
-   const balances = await sdk.getBalances(
-    BSC_CHAIN,
-    ADDRESS
-   );
-   console.log("Balances:", balances);
+  // Fetch balances
+  const balances = await sdk.getBalances(BSC_CHAIN, ADDRESS);
+  console.log("Balances:", balances);
 
   // Pick a validator — use getValidators() to browse the full set
   const validators = await sdk.getValidators(BSC_CHAIN);
@@ -104,7 +104,7 @@ async function sample_delegate_transaction() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_redelegate_transaction() {
-  const MNEMONIC = "<use your memonic>"; 
+  const MNEMONIC = "<use your memonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
@@ -156,7 +156,7 @@ async function sample_redelegate_transaction() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_undelegate_transaction() {
-  const MNEMONIC = "<use your memonic>"; 
+  const MNEMONIC = "<use your memonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
@@ -174,7 +174,7 @@ async function sample_undelegate_transaction() {
     chain: BSC_CHAIN,
     amount: AMOUNT,
     account: ADDRESS,
-    isMaxAmount: true, 
+    isMaxAmount: true,
     validator: validator,
   };
 
@@ -196,8 +196,8 @@ async function sample_undelegate_transaction() {
 }
 
 /**
- * This does not belong to Guardian SDK, it is up to the consumer to implement private key management and signing. 
- * In this particular case, given a mnemonic, we derive the private key using the popular bip39 and bip32 libraries. 
+ * This does not belong to Guardian SDK, it is up to the consumer to implement private key management and signing.
+ * In this particular case, given a mnemonic, we derive the private key using the popular bip39 and bip32 libraries.
  * The resulting private key is then used to sign transactions with the Guardian SDK.
  *
  * @scure/bip32 and @scure/bip39 ship as transitive dependencies of viem —
