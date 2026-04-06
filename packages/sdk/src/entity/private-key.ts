@@ -12,10 +12,7 @@ const SECP256K1_ORDER = BigInt(
  *
  * - Secp256k1: BSC, Ethereum, TRON, and most EVM-compatible chains.
  */
-export const Curve = {
-  Secp256k1: "secp256k1",
-} as const;
-export type Curve = typeof Curve[keyof typeof Curve];
+export type Curve = "secp256k1";
 
 /**
  * A validated private key value object, curve-aware.
@@ -37,7 +34,7 @@ export class PrivateKey {
 
   static from(value: string, curve: Curve): PrivateKey {
     switch (curve) {
-      case Curve.Secp256k1:
+      case "secp256k1":
         return PrivateKey.fromSecp256k1(value);
     }
   }
@@ -59,7 +56,7 @@ export class PrivateKey {
       throw new Error("Invalid secp256k1 private key: value exceeds curve order");
     }
 
-    return new PrivateKey(stripped, Curve.Secp256k1);
+    return new PrivateKey(stripped, "secp256k1");
   }
 
   /**

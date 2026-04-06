@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getAddress } from "viem";
 import { BalanceService } from "../../src/smartchain/services/balance-service";
-import { BalanceType, DelegationStatus } from "@guardian/sdk";
 import getBalanceFixture from "../fixtures/eth_getBalance.json";
 
 const REAL_BALANCE = BigInt(getBalanceFixture.result);
@@ -44,10 +43,10 @@ describe("BalanceService", () => {
     const balances = await service.getBalances(mockAddress);
     const types = balances.map((b) => b.type);
 
-    expect(types).toContain(BalanceType.Available);
-    expect(types).toContain(BalanceType.Staked);
-    expect(types).toContain(BalanceType.Pending);
-    expect(types).toContain(BalanceType.Claimable);
+    expect(types).toContain("Available");
+    expect(types).toContain("Staked");
+    expect(types).toContain("Pending");
+    expect(types).toContain("Claimable");
   });
 
   it("maps the available balance from the rpc response", async () => {
@@ -57,15 +56,15 @@ describe("BalanceService", () => {
     );
 
     const balances = await service.getBalances(mockAddress);
-    const available = balances.find((b) => b.type === BalanceType.Available);
+    const available = balances.find((b) => b.type === "Available");
 
     expect(available?.amount).toBe(REAL_BALANCE);
   });
 
   it("aggregates staked balance from active delegations", async () => {
     const delegations = [
-      { status: DelegationStatus.Active, amount: 100n },
-      { status: DelegationStatus.Active, amount: 200n },
+      { status: "Active", amount: 100n },
+      { status: "Active", amount: 200n },
     ];
 
     const service = new BalanceService(
@@ -74,15 +73,15 @@ describe("BalanceService", () => {
     );
 
     const balances = await service.getBalances(mockAddress);
-    const staked = balances.find((b) => b.type === BalanceType.Staked);
+    const staked = balances.find((b) => b.type === "Staked");
 
     expect(staked?.amount).toBe(300n);
   });
 
   it("aggregates pending balance from pending delegations", async () => {
     const delegations = [
-      { status: DelegationStatus.Pending, amount: 50n },
-      { status: DelegationStatus.Pending, amount: 75n },
+      { status: "Pending", amount: 50n },
+      { status: "Pending", amount: 75n },
     ];
 
     const service = new BalanceService(
@@ -91,13 +90,13 @@ describe("BalanceService", () => {
     );
 
     const balances = await service.getBalances(mockAddress);
-    const pending = balances.find((b) => b.type === BalanceType.Pending);
+    const pending = balances.find((b) => b.type === "Pending");
 
     expect(pending?.amount).toBe(125n);
   });
 
   it("aggregates claimable balance from claimable delegations", async () => {
-    const delegations = [{ status: DelegationStatus.Claimable, amount: 300n }];
+    const delegations = [{ status: "Claimable", amount: 300n }];
 
     const service = new BalanceService(
       makePublicClient(REAL_BALANCE) as any,
@@ -105,17 +104,17 @@ describe("BalanceService", () => {
     );
 
     const balances = await service.getBalances(mockAddress);
-    const claimable = balances.find((b) => b.type === BalanceType.Claimable);
+    const claimable = balances.find((b) => b.type === "Claimable");
 
     expect(claimable?.amount).toBe(300n);
   });
 
   it("correctly buckets mixed delegation statuses", async () => {
     const delegations = [
-      { status: DelegationStatus.Active, amount: 100n },
-      { status: DelegationStatus.Pending, amount: 50n },
-      { status: DelegationStatus.Claimable, amount: 25n },
-      { status: DelegationStatus.Inactive, amount: 10n },
+      { status: "Active", amount: 100n },
+      { status: "Pending", amount: 50n },
+      { status: "Claimable", amount: 25n },
+      { status: "Inactive", amount: 10n },
     ];
 
     const service = new BalanceService(
@@ -125,10 +124,10 @@ describe("BalanceService", () => {
 
     const balances = await service.getBalances(mockAddress);
 
-    expect(balances.find((b) => b.type === BalanceType.Available)?.amount).toBe(REAL_BALANCE);
-    expect(balances.find((b) => b.type === BalanceType.Staked)?.amount).toBe(110n);
-    expect(balances.find((b) => b.type === BalanceType.Pending)?.amount).toBe(50n);
-    expect(balances.find((b) => b.type === BalanceType.Claimable)?.amount).toBe(25n);
+    expect(balances.find((b) => b.type === "Available")?.amount).toBe(REAL_BALANCE);
+    expect(balances.find((b) => b.type === "Staked")?.amount).toBe(110n);
+    expect(balances.find((b) => b.type === "Pending")?.amount).toBe(50n);
+    expect(balances.find((b) => b.type === "Claimable")?.amount).toBe(25n);
   });
 
   it("returns zero for all staking balances when there are no delegations", async () => {
@@ -139,8 +138,8 @@ describe("BalanceService", () => {
 
     const balances = await service.getBalances(mockAddress);
 
-    expect(balances.find((b) => b.type === BalanceType.Staked)?.amount).toBe(0n);
-    expect(balances.find((b) => b.type === BalanceType.Pending)?.amount).toBe(0n);
-    expect(balances.find((b) => b.type === BalanceType.Claimable)?.amount).toBe(0n);
+    expect(balances.find((b) => b.type === "Staked")?.amount).toBe(0n);
+    expect(balances.find((b) => b.type === "Pending")?.amount).toBe(0n);
+    expect(balances.find((b) => b.type === "Claimable")?.amount).toBe(0n);
   });
 });

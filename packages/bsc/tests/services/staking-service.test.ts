@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { getAddress } from "viem";
 import { StakingService } from "../../src/smartchain/services/staking-service";
-import { InMemoryCache, DelegationStatus, ValidatorStatus } from "@guardian/sdk";
+import { InMemoryCache } from "@guardian/sdk";
 import validatorsFixture from "../fixtures/bnb_validators.json";
 import summaryFixture from "../fixtures/bnb_staking_summary.json";
 import creditContractsFixture from "../fixtures/staking_credit_contracts.json";
@@ -72,30 +72,30 @@ describe("StakingService", () => {
 
       expect(validators).toHaveLength(3);
       expect(validators[0].name).toBe("TWStaking");
-      expect(validators[0].status).toBe(ValidatorStatus.Active);
+      expect(validators[0].status).toBe("Active");
       expect(validators[0].operatorAddress).toBe(getAddress("0x5c38FF8Ca2b16099C086bF36546e99b13D152C4c"));
       expect(validators[0].creditAddress).toBe(getAddress("0xc437593d9c296bf9a5002522a86dad8a4d4af808"));
       expect(validators[0].apy).toBeCloseTo(VALIDATORS[0].apy! * 100, 5);
     });
 
-    it("maps INACTIVE status to ValidatorStatus.Inactive", async () => {
+    it('maps INACTIVE status to "Inactive"', async () => {
       const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
       const stakingRpcClient = makeStakingRpcClient();
       const service = new StakingService(new InMemoryCache(), stakingRpcClient as any, bnbRpcClient as any);
 
       const validators = await service.getValidators();
 
-      validators.forEach((v) => expect(v.status).toBe(ValidatorStatus.Inactive));
+      validators.forEach((v) => expect(v.status).toBe("Inactive"));
     });
 
-    it("maps JAILED status to ValidatorStatus.Jailed", async () => {
+    it('maps JAILED status to "Jailed"', async () => {
       const bnbRpcClient = makeBNBRpcClient({ status: "JAILED" });
       const stakingRpcClient = makeStakingRpcClient();
       const service = new StakingService(new InMemoryCache(), stakingRpcClient as any, bnbRpcClient as any);
 
       const validators = await service.getValidators();
 
-      validators.forEach((v) => expect(v.status).toBe(ValidatorStatus.Jailed));
+      validators.forEach((v) => expect(v.status).toBe("Jailed"));
     });
 
     it("skips validators with no matching credit address", async () => {
@@ -127,7 +127,7 @@ describe("StakingService", () => {
       const service = new StakingService(new InMemoryCache(), stakingRpcClient as any, bnbRpcClient as any);
 
       const result = await service.getDelegations(delegatorAddress);
-      const active = result.delegations.filter((d) => d.status === DelegationStatus.Active);
+      const active = result.delegations.filter((d) => d.status === "Active");
 
       expect(active).toHaveLength(1);
       expect(active[0].amount).toBe(5_000_000_000_000_000_000n);
@@ -153,7 +153,7 @@ describe("StakingService", () => {
       const service = new StakingService(new InMemoryCache(), stakingRpcClient as any, bnbRpcClient as any);
 
       const result = await service.getDelegations(delegatorAddress);
-      const pending = result.delegations.filter((d) => d.status === DelegationStatus.Pending);
+      const pending = result.delegations.filter((d) => d.status === "Pending");
 
       expect(pending).toHaveLength(1);
       expect(pending[0].amount).toBe(2_000_000_000_000_000_000n);
@@ -178,7 +178,7 @@ describe("StakingService", () => {
       const service = new StakingService(new InMemoryCache(), stakingRpcClient as any, bnbRpcClient as any);
 
       const result = await service.getDelegations(delegatorAddress);
-      const claimable = result.delegations.filter((d) => d.status === DelegationStatus.Claimable);
+      const claimable = result.delegations.filter((d) => d.status === "Claimable");
 
       expect(claimable).toHaveLength(1);
       expect(claimable[0].amount).toBe(1_500_000_000_000_000_000n);

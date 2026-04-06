@@ -3,19 +3,13 @@ export type GuardianChainIdentifier = string;
 /**
  * The types of Guardian chains. Currently, only Smartchain is supported.
  */
-export const GuardianChainType = {
-  Smartchain: "Smartchain",
-} as const;
-export type GuardianChainType = typeof GuardianChainType[keyof typeof GuardianChainType];
+export type GuardianChainType = "Smartchain";
 
 /**
  * The broader blockchain ecosystem types.
  * Currently, only Ethereum is listed, though this could expand to include others like Polkadot, Solana, etc.
  */
-export const ChainEcosystemType = {
-  Ethereum: "Ethereum", // EVM-compatible chains
-} as const;
-export type ChainEcosystemType = typeof ChainEcosystemType[keyof typeof ChainEcosystemType];
+export type ChainEcosystemType = "Ethereum"; // EVM-compatible chains
 
 /**
  * Interface defining the structure for a Guardian chain.

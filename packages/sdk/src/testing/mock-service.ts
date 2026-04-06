@@ -1,12 +1,8 @@
 import type { GuardianChain } from "../chain";
-import { GuardianChainType, ChainEcosystemType } from "../chain";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
 import type { Validator, Delegation, Delegations, StakingSummary } from "../service/staking-types";
-import { ValidatorStatus, DelegationStatus } from "../service/staking-types";
-import type { Balance } from "../service/balance-types";
-import { BalanceType } from "../service/balance-types";
+import type { Balance, BalanceType } from "../service/balance-types";
 import type { Fee } from "../service/fee-types";
-import { FeeType } from "../service/fee-types";
 import type {
   Transaction,
   DelegateTransaction,
@@ -14,17 +10,16 @@ import type {
   RedelegateTransaction,
   ClaimTransaction,
 } from "../service/transaction-types";
-import { TransactionType } from "../service/transaction-types";
 
 // ─── Chain ───────────────────────────────────────────────────────────────────
 
 /** A minimal `GuardianChain` fixture for use in tests. */
 export const MOCK_CHAIN: GuardianChain = {
   id: "mock-chain",
-  type: GuardianChainType.Smartchain,
+  type: "Smartchain",
   symbol: "MOCK",
   decimals: 18,
-  ecosystem: ChainEcosystemType.Ethereum,
+  ecosystem: "Ethereum",
   chainId: "0",
   explorer: "",
 };
@@ -79,7 +74,7 @@ export function createMockService(
 export function mockValidator(overrides: Partial<Validator> = {}): Validator {
   return {
     id: "mock_validator_0",
-    status: ValidatorStatus.Active,
+    status: "Active",
     name: "Mock Validator",
     description: "CABINET",
     image: undefined,
@@ -104,7 +99,7 @@ export function mockDelegation(overrides: Partial<Delegation> = {}): Delegation 
     id: "mock_delegation_0",
     validator: mockValidator(),
     amount: BigInt("1000000000000000000"), // 1 token
-    status: DelegationStatus.Active,
+    status: "Active",
     delegationIndex: 0n,
     pendingUntil: 0,
     ...overrides,
@@ -156,7 +151,7 @@ export function mockDelegations(overrides: Partial<Delegations> = {}): Delegatio
  * ```
  */
 export function mockBalance(
-  type: BalanceType = BalanceType.Available,
+  type: BalanceType = "Available",
   overrides: { amount?: bigint } = {}
 ): Balance {
   return { type, amount: overrides.amount ?? BigInt("1000000000000000000") } as Balance;
@@ -176,7 +171,7 @@ export function mockFee(overrides: { gasPrice?: bigint; gasLimit?: bigint } = {}
   const gasPrice = overrides.gasPrice ?? 3_000_000_000n; // 3 gwei
   const gasLimit = overrides.gasLimit ?? 150_000n;
   return {
-    type: FeeType.GasFee,
+    type: "GasFee",
     gasPrice,
     gasLimit,
     total: gasPrice * gasLimit,
@@ -198,7 +193,7 @@ export function mockDelegateTransaction(
   chain: GuardianChain = MOCK_CHAIN
 ): DelegateTransaction {
   return {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain,
     amount: BigInt("1000000000000000000"),
     isMaxAmount: false,
@@ -215,7 +210,7 @@ export function mockUndelegateTransaction(
   chain: GuardianChain = MOCK_CHAIN
 ): UndelegateTransaction {
   return {
-    type: TransactionType.Undelegate,
+    type: "Undelegate",
     chain,
     amount: BigInt("1000000000000000000"),
     isMaxAmount: false,
@@ -232,7 +227,7 @@ export function mockRedelegateTransaction(
   chain: GuardianChain = MOCK_CHAIN
 ): RedelegateTransaction {
   return {
-    type: TransactionType.Redelegate,
+    type: "Redelegate",
     chain,
     amount: BigInt("1000000000000000000"),
     isMaxAmount: false,
@@ -250,7 +245,7 @@ export function mockClaimTransaction(
   chain: GuardianChain = MOCK_CHAIN
 ): ClaimTransaction {
   return {
-    type: TransactionType.Claim,
+    type: "Claim",
     chain,
     amount: 0n,
     validator: mockValidator(),

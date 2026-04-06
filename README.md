@@ -226,17 +226,16 @@ Returns the four balance categories for an address.
 **Returns:** `Promise<Balance[]>`
 
 ```typescript
+type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
+
 interface Balance {
   type: BalanceType;
   amount: bigint;   // In wei
 }
-
-const BalanceType = {
-  Available: "Available",  // Wallet balance, immediately spendable
-  Staked:    "Staked",     // Delegated and earning rewards
-  Pending:   "Pending",    // In the unbonding window
-  Claimable: "Claimable",  // Unbonding complete, ready to withdraw
-} as const;
+// Available  — Wallet balance, immediately spendable
+// Staked     — Delegated and earning rewards
+// Pending    — In the unbonding window
+// Claimable  — Unbonding complete, ready to withdraw
 ```
 
 ```typescript
@@ -275,7 +274,7 @@ Simulates a transaction on-chain and returns the estimated gas fee.
 
 ```typescript
 interface GasFee {
-  type: FeeType.GasFee;
+  type: "GasFee";
   gasPrice: bigint;   // In wei
   gasLimit: bigint;
   total: bigint;      // gasPrice × gasLimit, in wei
@@ -283,11 +282,10 @@ interface GasFee {
 ```
 
 ```typescript
-import { TransactionType } from "@guardian/bsc";
 import { parseEther } from "viem";
 
 const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
+  type: "Delegate",
   chain: BSC_CHAIN,
   amount: parseEther("1"),
   account: "0xYourAddress",
@@ -309,11 +307,11 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 **Returns:** `Promise<string>`
 
 ```typescript
-import { PrivateKey, Curve } from "@guardian/bsc";
+import { PrivateKey } from "@guardian/bsc";
 
 const rawTx = await sdk.sign({
   transaction: {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: parseEther("1"),
     isMaxAmount: false,
@@ -321,7 +319,7 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
+  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
 });
 ```
 
@@ -347,7 +345,7 @@ interface PrehashResult {
 ```typescript
 // Step 1 — serialize
 const { serializedTransaction, signArgs } = await sdk.preHash({
-  transaction: { type: TransactionType.Delegate, chain: BSC_CHAIN, ... },
+  transaction: { type: "Delegate", chain: BSC_CHAIN, ... },
   fee,
   nonce,
 });
@@ -383,14 +381,14 @@ End-to-end example using direct signing:
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, TransactionType, PrivateKey, Curve } from "@guardian/bsc";
+import { bsc, BSC_CHAIN, PrivateKey } from "@guardian/bsc";
 import { parseEther } from "viem";
 
 const sdk = new GuardianSDK([bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" })]);
 
 const validators = await sdk.getValidators(BSC_CHAIN);
 const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
+  type: "Delegate",
   chain: BSC_CHAIN,
   amount: parseEther("1"),
   account: "0xYourAddress",
@@ -399,10 +397,10 @@ const fee = await sdk.estimateFee({
 });
 const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
 const rawTx = await sdk.sign({
-  transaction: { type: TransactionType.Delegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: validators[0] },
+  transaction: { type: "Delegate", chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: validators[0] },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
+  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
 });
 const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
 ```
@@ -540,15 +538,14 @@ import {
   mockValidator, mockDelegation, mockDelegations, mockStakingSummary,
   mockBalance, mockFee, mockDelegateTransaction,
 } from "@guardian/sdk/testing";
-import { ValidatorStatus, DelegationStatus, BalanceType } from "@guardian/sdk";
 import { parseEther, parseGwei } from "viem";
 
 // Jailed validator
-const jailed = mockValidator({ status: ValidatorStatus.Jailed, name: "BadActor" });
+const jailed = mockValidator({ status: "Jailed", name: "BadActor" });
 
 // Pending unbond
 const pending = mockDelegation({
-  status: DelegationStatus.Pending,
+  status: "Pending",
   amount: parseEther("5"),
   pendingUntil: Date.now() + 7 * 24 * 60 * 60 * 1000,
 });
@@ -560,7 +557,7 @@ const delegations = mockDelegations({
 });
 
 // Staked balance
-const balance = mockBalance(BalanceType.Staked, { amount: parseEther("10") });
+const balance = mockBalance("Staked", { amount: parseEther("10") });
 
 // Realistic fee for sign args
 const fee = mockFee({ gasPrice: parseGwei("3"), gasLimit: 200_000n });

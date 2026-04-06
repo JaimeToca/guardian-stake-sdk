@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { getAddress } from "viem";
 import { FeeService } from "../../src/smartchain/services/fee-service";
-import { FeeType, TransactionType, ValidationError, ValidationErrorCode } from "@guardian/sdk";
+import { ValidationError, ValidationErrorCode } from "@guardian/sdk";
 import { BSC_CHAIN } from "../../src/chain";
 import gasPriceFixture from "../fixtures/eth_gasPrice.json";
 import estimateGasFixture from "../fixtures/eth_estimateGas.json";
@@ -29,7 +29,7 @@ describe("FeeService", () => {
     const service = new FeeService(makePublicClient() as any, makeSignService() as any);
 
     const fee = await service.estimateFee({
-      type: TransactionType.Undelegate,
+      type: "Undelegate",
       chain: BSC_CHAIN,
       amount: 1_000_000_000_000_000_000n,
       isMaxAmount: false,
@@ -38,7 +38,7 @@ describe("FeeService", () => {
     });
 
     const expectedLimit = (REAL_GAS_ESTIMATE * 115n) / 100n;
-    expect(fee.type).toBe(FeeType.GasFee);
+    expect(fee.type).toBe("GasFee");
     expect(fee.gasPrice).toBe(REAL_GAS_PRICE);
     expect(fee.gasLimit).toBe(expectedLimit);
     expect(fee.total).toBe(REAL_GAS_PRICE * expectedLimit);
@@ -50,7 +50,7 @@ describe("FeeService", () => {
     const service = new FeeService(client as any, makeSignService(callData) as any);
 
     await service.estimateFee({
-      type: TransactionType.Delegate,
+      type: "Delegate",
       chain: BSC_CHAIN,
       amount: 500n,
       isMaxAmount: false,
@@ -68,7 +68,7 @@ describe("FeeService", () => {
 
     await expect(
       service.estimateFee({
-        type: TransactionType.Delegate,
+        type: "Delegate",
         chain: BSC_CHAIN,
         amount: 1_000_000_000_000_000_000n,
         isMaxAmount: false,

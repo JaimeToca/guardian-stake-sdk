@@ -1,7 +1,7 @@
 import { parseUnits, toHex } from "viem";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
-import { GuardianSDK, BSC_CHAIN, TransactionType, bsc, ConsoleLogger, PrivateKey, Curve } from "@guardian/bsc";
+import { GuardianSDK, BSC_CHAIN, bsc, ConsoleLogger, PrivateKey } from "@guardian/bsc";
 import type { DelegateTransaction, RedelegateTransaction, UndelegateTransaction } from "@guardian/bsc";
 
 const sdk = new GuardianSDK([                                                                                                                                                                                      
@@ -69,7 +69,7 @@ async function sample_delegate_transaction() {
 
   // Build the transaction object
   const transaction: DelegateTransaction = {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: AMOUNT,
     account: ADDRESS,
@@ -120,7 +120,7 @@ async function sample_redelegate_transaction() {
 
   // Build the transaction object
   const transaction: RedelegateTransaction = {
-    type: TransactionType.Redelegate,
+    type: "Redelegate",
     chain: BSC_CHAIN,
     amount: AMOUNT,
     account: ADDRESS,
@@ -170,7 +170,7 @@ async function sample_undelegate_transaction() {
 
   // Build the undelegatetransaction object
   const transaction: UndelegateTransaction = {
-    type: TransactionType.Undelegate,
+    type: "Undelegate",
     chain: BSC_CHAIN,
     amount: AMOUNT,
     account: ADDRESS,
@@ -209,7 +209,7 @@ function privateKeyFromMnemonic(mnemonic: string, addressIndex = 0): PrivateKey 
   const child = root.derive(`m/44'/60'/0'/0/${addressIndex}`);
   if (!child.privateKey) throw new Error("Failed to derive private key");
   const hex = toHex(child.privateKey);
-  return PrivateKey.from(hex, Curve.Secp256k1);
+  return PrivateKey.from(hex, "secp256k1");
 }
 
 sample_check_delegations();

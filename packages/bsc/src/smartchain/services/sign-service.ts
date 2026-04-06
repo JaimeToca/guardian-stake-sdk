@@ -21,7 +21,7 @@ import type {
   RedelegateTransaction,
   Logger,
 } from "@guardian/sdk";
-import { SigningError, SigningErrorCode, TransactionType, NoopLogger, ValidationError, ValidationErrorCode } from "@guardian/sdk";
+import { SigningError, SigningErrorCode, NoopLogger, ValidationError, ValidationErrorCode } from "@guardian/sdk";
 import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import type { BscSignServiceContract, CallData, SigningWithAccount } from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
@@ -144,7 +144,7 @@ export class SignService implements BscSignServiceContract {
   }
 
   async buildCallData(transaction: Transaction): Promise<CallData> {
-    if (transaction.type === TransactionType.Delegate && transaction.amount < MIN_DELEGATION_AMOUNT) {
+    if (transaction.type === "Delegate" && transaction.amount < MIN_DELEGATION_AMOUNT) {
       throw new ValidationError(
         ValidationErrorCode.INVALID_AMOUNT,
         `Amount must be at least 1 BNB — got ${formatEther(transaction.amount)} BNB`
@@ -152,22 +152,22 @@ export class SignService implements BscSignServiceContract {
     }
 
     switch (transaction.type) {
-      case TransactionType.Delegate: {
+      case "Delegate": {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
         return { data: encodeDelegate(operatorAddress), amount: transaction.amount };
       }
-      case TransactionType.Redelegate: {
+      case "Redelegate": {
         const from = this.getValidatorAddress(transaction.fromValidator);
         const to = this.getValidatorAddress(transaction.toValidator);
         const shares = await this.bnbToShares(transaction);
         return { data: encodeRedelegate(from, to, shares), amount: 0n };
       }
-      case TransactionType.Undelegate: {
+      case "Undelegate": {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
         const shares = await this.bnbToShares(transaction);
         return { data: encodeUndelegate(operatorAddress, shares), amount: 0n };
       }
-      case TransactionType.Claim: {
+      case "Claim": {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
         return {
           data: encodeClaim(operatorAddress, transaction.index),
@@ -199,7 +199,7 @@ export class SignService implements BscSignServiceContract {
    * address is needed. Use getValidators() to obtain the Validator object.
    */
   private async bnbToShares(transaction: UndelegateTransaction | RedelegateTransaction): Promise<bigint> {
-    const validator = transaction.type === TransactionType.Undelegate
+    const validator = transaction.type === "Undelegate"
       ? transaction.validator
       : transaction.fromValidator;
 

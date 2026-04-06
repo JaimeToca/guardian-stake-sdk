@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { parseEther, getAddress, parseTransaction } from "viem";
 import { SignService } from "../../src/smartchain/services/sign-service";
-import { TransactionType, FeeType, ValidationError, ValidationErrorCode, PrivateKey, Curve } from "@guardian/sdk";
+import { ValidationError, ValidationErrorCode, PrivateKey } from "@guardian/sdk";
 import { BSC_CHAIN } from "../../src/chain";
 import { STAKING_CONTRACT } from "../../src/smartchain/abi/multicall-stake-abi";
 import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-rpc-client-contract";
@@ -9,7 +9,7 @@ import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-
 // Hardhat/Anvil account #0 — well-known test key, never use in production
 const TEST_PRIVATE_KEY = PrivateKey.from(
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-  Curve.Secp256k1
+  "secp256k1"
 );
 
 // Real BSC mainnet validators fetched from StakeHub (0x0000000000000000000000000000000000002002)
@@ -36,7 +36,7 @@ const mockStakingRpcClient: StakingRpcClientContract = {
 };
 
 const mockFee = {
-  type: FeeType.GasFee,
+  type: "GasFee" as const,
   gasPrice: 5_000_000_000n,
   gasLimit: 21_000n,
   total: 5_000_000_000n * 21_000n,
@@ -50,7 +50,7 @@ describe("SignService", () => {
       {
         name: "delegate",
         nonce: 1,
-        transaction: { type: TransactionType.Delegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: VALIDATOR },
+        transaction: { type: "Delegate" as const, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: VALIDATOR },
         expectedHex: "0xf8b20185012a05f200825208940000000000000000000000000000000000002002880de0b6b3a7640000b844982ef0a7000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000008193a073b31800d2b2de7c7881324090fc069a01d0801b8b4e0dcf4bdb88478753b61fa070270d13b7ac554d4fcfe90de6482cbacbea4f695c474ef69c2510be97aef450",
         expectedValue: parseEther("1"),
         expectedAddresses: [OPERATOR],
@@ -58,7 +58,7 @@ describe("SignService", () => {
       {
         name: "undelegate",
         nonce: 2,
-        transaction: { type: TransactionType.Undelegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: VALIDATOR },
+        transaction: { type: "Undelegate" as const, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: VALIDATOR },
         expectedHex: "0xf8aa0285012a05f20082520894000000000000000000000000000000000000200280b8444d99dd16000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b10000000000000000000000000000000000000000000000000dbd2fc137a300008194a0689fb80ec15d8ee08b82dd07fe4796ba8ab94f4ce26e80c662909ec0469b8fe3a05c6f32f1f5553e07987ded87502bf49c869c989c58d0a5aea0b9bc24fdb67dc2",
         expectedValue: 0n,
         expectedAddresses: [OPERATOR],
@@ -66,7 +66,7 @@ describe("SignService", () => {
       {
         name: "redelegate",
         nonce: 3,
-        transaction: { type: TransactionType.Redelegate, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, fromValidator: FROM_VALIDATOR, toValidator: TO_VALIDATOR },
+        transaction: { type: "Redelegate" as const, chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, fromValidator: FROM_VALIDATOR, toValidator: TO_VALIDATOR },
         expectedHex: "0xf8ea0385012a05f20082520894000000000000000000000000000000000000200280b88459491871000000000000000000000000343da7ff0446247ca47aa41e2a25c5bbb230ed0a000000000000000000000000f2b1d86dc7459887b1f7ce8d840db1d87613ce7f0000000000000000000000000000000000000000000000000dbd2fc137a3000000000000000000000000000000000000000000000000000000000000000000008194a0f7c2352bc160c3b699eb5e4bfd037b0817d53cd0b4017a6ab0b6f2c704cf16e0a042a9454bff941f65f3efe30a6434ad460b2c68b1d1ff2781fc8f5f23a65c00b1",
         expectedValue: 0n,
         expectedAddresses: [FROM_OPERATOR, TO_OPERATOR],
@@ -74,7 +74,7 @@ describe("SignService", () => {
       {
         name: "claim",
         nonce: 4,
-        transaction: { type: TransactionType.Claim, chain: BSC_CHAIN, amount: 0n, validator: VALIDATOR, index: 3n },
+        transaction: { type: "Claim" as const, chain: BSC_CHAIN, amount: 0n, validator: VALIDATOR, index: 3n },
         expectedHex: "0xf8aa0485012a05f20082520894000000000000000000000000000000000000200280b844aad3ec96000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b100000000000000000000000000000000000000000000000000000000000000038193a08bc7f022c9867390b85ef8ff70558a1c6b920c4bf1928d06e66e2b41817fa918a0494c23a4ae173529d0e6cfa794ff636851873faa86ccb83b12c624b2ac77abdd",
         expectedValue: 0n,
         expectedAddresses: [OPERATOR],
@@ -97,7 +97,7 @@ describe("SignService", () => {
       await expect(
         service.sign({
           transaction: {
-            type: TransactionType.Delegate,
+            type: "Delegate" as const,
             chain: BSC_CHAIN,
             amount: parseEther("0.5"),
             isMaxAmount: false,
@@ -119,7 +119,7 @@ describe("SignService", () => {
     it("returns serialized tx and sign args", async () => {
       const signArgs = {
         transaction: {
-          type: TransactionType.Delegate as const,
+          type: "Delegate" as const,
           chain: BSC_CHAIN,
           amount: parseEther("1"),
           isMaxAmount: false,
@@ -140,7 +140,7 @@ describe("SignService", () => {
     it("produces a signed tx from a raw signature", async () => {
       const signArgs = {
         transaction: {
-          type: TransactionType.Delegate as const,
+          type: "Delegate" as const,
           chain: BSC_CHAIN,
           amount: parseEther("1"),
           isMaxAmount: false,

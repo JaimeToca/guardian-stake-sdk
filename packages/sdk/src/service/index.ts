@@ -5,9 +5,9 @@ export { SignServiceContract } from "./sign-service-contract";
 export { StakingServiceContract } from "./staking-service-contract";
 export { NonceServiceContract } from "./nonce-service-contract";
 
-export { Balance, BalanceType } from "./balance-types";
-export { FeeType, Fee } from "./fee-types";
-export {
+export type { Balance, BalanceType } from "./balance-types";
+export type { FeeType, Fee } from "./fee-types";
+export type {
   Transaction,
   DelegateTransaction,
   UndelegateTransaction,
@@ -16,7 +16,7 @@ export {
   OperatorAddress,
   TransactionType,
 } from "./transaction-types";
-export {
+export type {
   Validator,
   ValidatorStatus,
   Delegations,

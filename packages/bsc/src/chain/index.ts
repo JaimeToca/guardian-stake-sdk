@@ -1,15 +1,14 @@
 import type { Chain } from "viem";
 import { bsc } from "viem/chains";
 import type { GuardianChain } from "@guardian/sdk";
-import { ChainEcosystemType, GuardianChainType } from "@guardian/sdk";
 
 /** BNB Smart Chain mainnet configuration. */
 export const BSC_CHAIN: GuardianChain = {
   id: "bsc-mainnet",
-  type: GuardianChainType.Smartchain,
+  type: "Smartchain",
   symbol: "BNB",
   decimals: 18,
-  ecosystem: ChainEcosystemType.Ethereum,
+  ecosystem: "Ethereum",
   chainId: "56",
   explorer: "https://bscscan.com",
 };

@@ -1,10 +1,7 @@
-export const FeeType = {
-  GasFee: "GasFee",
-} as const;
-export type FeeType = typeof FeeType[keyof typeof FeeType];
+export type FeeType = "GasFee";
 
 export interface GasFee {
-  type: typeof FeeType.GasFee;
+  type: "GasFee";
   gasPrice: bigint;
   gasLimit: bigint;
   total: bigint;

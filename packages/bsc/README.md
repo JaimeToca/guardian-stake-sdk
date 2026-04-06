@@ -194,7 +194,7 @@ npm install @guardian/bsc viem
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, TransactionType, PrivateKey, Curve } from "@guardian/bsc";
+import { bsc, BSC_CHAIN, PrivateKey } from "@guardian/bsc";
 import { formatEther, parseEther } from "viem";
 
 const sdk = new GuardianSDK([
@@ -223,7 +223,7 @@ for (const balance of balances) {
 
 // 4. Estimate fee for a delegation
 const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
+  type: "Delegate",
   chain: BSC_CHAIN,
   amount: parseEther("1"),
   account: ADDRESS,
@@ -237,7 +237,7 @@ const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
 // 6. Sign
 const rawTx = await sdk.sign({
   transaction: {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: parseEther("1"),
     isMaxAmount: false,
@@ -245,7 +245,7 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
+  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
 });
 
 // 7. Broadcast
@@ -280,11 +280,7 @@ interface Validator {
   creditAddress: string;       // Per-validator credit contract address
 }
 
-const ValidatorStatus = {
-  Active:   "Active",
-  Inactive: "Inactive",
-  Jailed:   "Jailed",
-} as const;
+type ValidatorStatus = "Active" | "Inactive" | "Jailed";
 ```
 
 > **Caching:** Validator data is cached in memory for the lifetime of the SDK instance. Validators are a slowly-changing set — elections run once per day at most — so cache invalidation is rarely needed in practice.
@@ -322,12 +318,11 @@ interface Delegation {
   pendingUntil: number;       // Unix timestamp (ms) when unbonding completes; 0 if claimable
 }
 
-const DelegationStatus = {
-  Active:    "Active",     // Staked and earning auto-compounding rewards
-  Pending:   "Pending",    // In the 7-day unbonding window — not yet withdrawable
-  Claimable: "Claimable",  // Unbonding complete — BNB held in StakeCredit, ready to claim
-  Inactive:  "Inactive",
-} as const;
+// status: "Active"    — Staked and earning auto-compounding rewards
+//         "Pending"   — In the 7-day unbonding window — not yet withdrawable
+//         "Claimable" — Unbonding complete — BNB held in StakeCredit, ready to claim
+//         "Inactive"
+type DelegationStatus = "Active" | "Pending" | "Claimable" | "Inactive";
 
 interface StakingSummary {
   totalProtocolStake: number;     // Total BNB staked across all validators
@@ -355,12 +350,11 @@ const balances = await sdk.getBalances(BSC_CHAIN, "0xYourAddress");
 **Returns:** `Promise<Balance[]>`
 
 ```typescript
-const BalanceType = {
-  Available:  "Available",   // Wallet balance, immediately spendable
-  Staked:     "Staked",      // Currently delegated and earning rewards
-  Pending:    "Pending",     // In the 7-day unbonding window
-  Claimable:  "Claimable",   // Unbonding complete, ready to claim
-} as const;
+type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
+// Available  — Wallet balance, immediately spendable
+// Staked     — Currently delegated and earning rewards
+// Pending    — In the 7-day unbonding window
+// Claimable  — Unbonding complete, ready to claim
 ```
 
 Example:
@@ -403,7 +397,7 @@ const fee = await sdk.estimateFee(transaction);
 
 ```typescript
 interface GasFee {
-  type: FeeType.GasFee;
+  type: "GasFee";
   gasPrice: bigint;   // In wei
   gasLimit: bigint;
   total: bigint;      // gasPrice × gasLimit, in wei
@@ -416,7 +410,7 @@ Accepts any of the four transaction types:
 // Delegate — stake BNB with a validator
 // `amount` is BNB in wei, sent as transaction value to StakeHub
 const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
+  type: "Delegate",
   chain: BSC_CHAIN,
   amount: parseEther("5"),
   account: "0xYourAddress",
@@ -427,7 +421,7 @@ const fee = await sdk.estimateFee({
 // Undelegate — begin the 7-day unbonding process
 // `amount` is BNB in wei — the SDK converts to shares internally before encoding
 const fee = await sdk.estimateFee({
-  type: TransactionType.Undelegate,
+  type: "Undelegate",
   chain: BSC_CHAIN,
   amount: parseEther("5"),    // BNB in wei
   account: "0xYourAddress",
@@ -438,7 +432,7 @@ const fee = await sdk.estimateFee({
 // Redelegate — move stake from one validator to another (0.002% fee applies)
 // `amount` is BNB in wei — the SDK converts to shares on the source validator internally
 const fee = await sdk.estimateFee({
-  type: TransactionType.Redelegate,
+  type: "Redelegate",
   chain: BSC_CHAIN,
   amount: parseEther("5"),    // BNB in wei
   account: "0xYourAddress",
@@ -451,7 +445,7 @@ const fee = await sdk.estimateFee({
 // `index` is the unbond request number from delegation.delegationIndex.
 // To claim multiple positions, submit one ClaimTransaction per delegationIndex.
 const fee = await sdk.estimateFee({
-  type: TransactionType.Claim,
+  type: "Claim",
   chain: BSC_CHAIN,
   amount: 0n,
   account: "0xYourAddress",
@@ -469,11 +463,11 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 **With a private key:**
 
 ```typescript
-import { PrivateKey, Curve } from "@guardian/bsc";
+import { PrivateKey } from "@guardian/bsc";
 
 const rawTx = await sdk.sign({
   transaction: {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: parseEther("1"),
     isMaxAmount: false,
@@ -481,7 +475,7 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", Curve.Secp256k1),
+  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
 });
 ```
 
@@ -543,7 +537,7 @@ For **MPC wallets, hardware wallets, or any setup where the private key is not d
 ```typescript
 const { serializedTransaction, signArgs } = await sdk.preHash({
   transaction: {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: parseEther("1"),
     isMaxAmount: false,

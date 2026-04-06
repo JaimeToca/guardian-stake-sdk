@@ -1,6 +1,5 @@
 import type { Address, PublicClient } from "viem";
 import type { Balance, BalanceServiceContract, StakingServiceContract } from "@guardian/sdk";
-import { BalanceType, DelegationStatus } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**
@@ -28,22 +27,10 @@ export class BalanceService implements BalanceServiceContract {
     ]);
 
     return [
-      {
-        type: BalanceType.Available,
-        amount: availableBalance,
-      },
-      {
-        type: BalanceType.Staked,
-        amount: pendingDelegations.stakedBalance,
-      },
-      {
-        type: BalanceType.Pending,
-        amount: pendingDelegations.pendingBalance,
-      },
-      {
-        type: BalanceType.Claimable,
-        amount: pendingDelegations.claimableBalance,
-      },
+      { type: "Available", amount: availableBalance },
+      { type: "Staked", amount: pendingDelegations.stakedBalance },
+      { type: "Pending", amount: pendingDelegations.pendingBalance },
+      { type: "Claimable", amount: pendingDelegations.claimableBalance },
     ];
   }
 
@@ -56,14 +43,11 @@ export class BalanceService implements BalanceServiceContract {
 
     return delegationsInfo.delegations.reduce(
       (acc, delegation) => {
-        if (delegation.status === DelegationStatus.Pending) {
+        if (delegation.status === "Pending") {
           acc.pendingBalance += delegation.amount;
-        } else if (delegation.status === DelegationStatus.Claimable) {
+        } else if (delegation.status === "Claimable") {
           acc.claimableBalance += delegation.amount;
-        } else if (
-          delegation.status === DelegationStatus.Active ||
-          delegation.status === DelegationStatus.Inactive
-        ) {
+        } else if (delegation.status === "Active" || delegation.status === "Inactive") {
           acc.stakedBalance += delegation.amount;
         }
         return acc;

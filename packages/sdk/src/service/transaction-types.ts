@@ -19,35 +19,29 @@ interface BaseTransaction {
   account?: string | undefined;
 }
 
-export const TransactionType = {
-  Delegate: "Delegate",
-  Undelegate: "Undelegate",
-  Redelegate: "Redelegate",
-  Claim: "Claim",
-} as const;
-export type TransactionType = typeof TransactionType[keyof typeof TransactionType];
+export type TransactionType = "Delegate" | "Undelegate" | "Redelegate" | "Claim";
 
 export interface DelegateTransaction extends BaseTransaction {
-  type: typeof TransactionType.Delegate;
+  type: "Delegate";
   isMaxAmount: boolean;
   validator: Validator | OperatorAddress;
 }
 
 export interface UndelegateTransaction extends BaseTransaction {
-  type: typeof TransactionType.Undelegate;
+  type: "Undelegate";
   isMaxAmount: boolean;
   validator: Validator | OperatorAddress;
 }
 
 export interface RedelegateTransaction extends BaseTransaction {
-  type: typeof TransactionType.Redelegate;
+  type: "Redelegate";
   isMaxAmount: boolean;
   fromValidator: Validator | OperatorAddress;
   toValidator: Validator | OperatorAddress;
 }
 
 export interface ClaimTransaction extends BaseTransaction {
-  type: typeof TransactionType.Claim;
+  type: "Claim";
   validator: Validator | OperatorAddress;
   index: bigint;
 }

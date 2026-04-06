@@ -6,7 +6,7 @@ import type { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract 
 import type { MulticallResult } from "../abi";
 import { processSingleMulticallResult } from "../abi";
 import type { Delegation, Delegations, StakingServiceContract, Validator } from "@guardian/sdk";
-import { DelegationStatus, ValidatorStatus } from "@guardian/sdk";
+import type { ValidatorStatus } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
 export class StakingService implements StakingServiceContract {
@@ -69,11 +69,11 @@ export class StakingService implements StakingServiceContract {
   private getValidatorStatus(bnbValidator: BNBChainValidator): ValidatorStatus {
     switch (bnbValidator.status) {
       case "INACTIVE":
-        return ValidatorStatus.Inactive;
+        return "Inactive";
       case "JAILED":
-        return ValidatorStatus.Jailed;
+        return "Jailed";
       default:
-        return ValidatorStatus.Active;
+        return "Active";
     }
   }
 
@@ -136,7 +136,7 @@ export class StakingService implements StakingServiceContract {
           id: `delegation_active_${index}`,
           validator: validators[index],
           amount: stakedAmount,
-          status: DelegationStatus.Active,
+          status: "Active" as const,
           delegationIndex: -1n,
           pendingUntil: 0,
         };
@@ -203,7 +203,7 @@ export class StakingService implements StakingServiceContract {
         id: `delegation_pending__${validator.creditAddress}_${index}`,
         validator,
         amount: req.amount,
-        status: now > unlockTimeInMillis ? DelegationStatus.Claimable : DelegationStatus.Pending,
+        status: now > unlockTimeInMillis ? "Claimable" : "Pending",
         delegationIndex: BigInt(index),
         pendingUntil: now > unlockTimeInMillis ? 0 : Number(unlockTimeInMillis),
       };
