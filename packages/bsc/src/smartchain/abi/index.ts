@@ -13,4 +13,4 @@ export {
   encodeUndelegate,
   encodeRedelegate,
   encodeClaim,
-} from "./staking-function-enconder";
+} from "./staking-function-encoder";
