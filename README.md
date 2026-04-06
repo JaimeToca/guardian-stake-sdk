@@ -22,7 +22,7 @@
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </a>
   <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=node.js&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=node.js&logoColor=white" alt="Node.js" />
 </p>
 
 The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (`@guardian/sdk`) and one package per supported chain. Install only the chain you need.
@@ -225,12 +225,12 @@ interface Balance {
   amount: bigint;   // In wei
 }
 
-enum BalanceType {
-  Available = "Available",  // Wallet balance, immediately spendable
-  Staked    = "Staked",     // Delegated and earning rewards
-  Pending   = "Pending",    // In the unbonding window
-  Claimable = "Claimable",  // Unbonding complete, ready to withdraw
-}
+const BalanceType = {
+  Available: "Available",  // Wallet balance, immediately spendable
+  Staked:    "Staked",     // Delegated and earning rewards
+  Pending:   "Pending",    // In the unbonding window
+  Claimable: "Claimable",  // Unbonding complete, ready to withdraw
+} as const;
 ```
 
 ```typescript

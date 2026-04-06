@@ -280,11 +280,11 @@ interface Validator {
   creditAddress: string;       // Per-validator credit contract address
 }
 
-enum ValidatorStatus {
-  Active   = "Active",
-  Inactive = "Inactive",
-  Jailed   = "Jailed",
-}
+const ValidatorStatus = {
+  Active:   "Active",
+  Inactive: "Inactive",
+  Jailed:   "Jailed",
+} as const;
 ```
 
 > **Caching:** Validator data is cached in memory for the lifetime of the SDK instance. Validators are a slowly-changing set — elections run once per day at most — so cache invalidation is rarely needed in practice.
@@ -322,12 +322,12 @@ interface Delegation {
   pendingUntil: number;       // Unix timestamp (ms) when unbonding completes; 0 if claimable
 }
 
-enum DelegationStatus {
-  Active    = "Active",     // Staked and earning auto-compounding rewards
-  Pending   = "Pending",    // In the 7-day unbonding window — not yet withdrawable
-  Claimable = "Claimable",  // Unbonding complete — BNB held in StakeCredit, ready to claim
-  Inactive  = "Inactive",
-}
+const DelegationStatus = {
+  Active:    "Active",     // Staked and earning auto-compounding rewards
+  Pending:   "Pending",    // In the 7-day unbonding window — not yet withdrawable
+  Claimable: "Claimable",  // Unbonding complete — BNB held in StakeCredit, ready to claim
+  Inactive:  "Inactive",
+} as const;
 
 interface StakingSummary {
   totalProtocolStake: number;     // Total BNB staked across all validators
@@ -355,12 +355,12 @@ const balances = await sdk.getBalances(BSC_CHAIN, "0xYourAddress");
 **Returns:** `Promise<Balance[]>`
 
 ```typescript
-enum BalanceType {
-  Available  = "Available",   // Wallet balance, immediately spendable
-  Staked     = "Staked",      // Currently delegated and earning rewards
-  Pending    = "Pending",     // In the 7-day unbonding window
-  Claimable  = "Claimable",   // Unbonding complete, ready to claim
-}
+const BalanceType = {
+  Available:  "Available",   // Wallet balance, immediately spendable
+  Staked:     "Staked",      // Currently delegated and earning rewards
+  Pending:    "Pending",     // In the 7-day unbonding window
+  Claimable:  "Claimable",   // Unbonding complete, ready to claim
+} as const;
 ```
 
 Example:
