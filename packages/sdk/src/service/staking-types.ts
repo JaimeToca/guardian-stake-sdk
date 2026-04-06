@@ -10,11 +10,12 @@ export interface Validator {
   creditAddress: string;
 }
 
-export enum ValidatorStatus {
-  Active = "Active",
-  Inactive = "Inactive",
-  Jailed = "Jailed",
-}
+export const ValidatorStatus = {
+  Active: "Active",
+  Inactive: "Inactive",
+  Jailed: "Jailed",
+} as const;
+export type ValidatorStatus = typeof ValidatorStatus[keyof typeof ValidatorStatus];
 
 export interface Delegations {
   delegations: Delegation[];
@@ -30,12 +31,13 @@ export interface Delegation {
   pendingUntil: number;
 }
 
-export enum DelegationStatus {
-  Active = "Active",
-  Pending = "Pending",
-  Claimable = "Claimable",
-  Inactive = "Inactive",
-}
+export const DelegationStatus = {
+  Active: "Active",
+  Pending: "Pending",
+  Claimable: "Claimable",
+  Inactive: "Inactive",
+} as const;
+export type DelegationStatus = typeof DelegationStatus[keyof typeof DelegationStatus];
 
 export interface StakingSummary {
   totalProtocolStake: number;

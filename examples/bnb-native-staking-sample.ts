@@ -6,7 +6,7 @@ import type { DelegateTransaction, RedelegateTransaction, UndelegateTransaction 
 
 const sdk = new GuardianSDK([                                                                                                                                                                                      
     bsc({                                                                                                                                                                                                            
-      rpcUrl: "https://bsc.meowrpc.com", // public RPC https://chainlist.org/chain/56                                                                                                                                                                          
+      rpcUrl: "https://bsc.api.pocket.network", // public RPC https://chainlist.org/chain/56                                                                                                                                                                          
       logger: new ConsoleLogger("debug"),
     }),                                                                                                                                                                                                              
   ]);
@@ -212,4 +212,4 @@ function privateKeyFromMnemonic(mnemonic: string, addressIndex = 0): PrivateKey 
   return PrivateKey.from(hex, Curve.Secp256k1);
 }
 
-sample_undelegate_transaction();
+sample_check_delegations();

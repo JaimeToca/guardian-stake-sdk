@@ -12,9 +12,10 @@ const SECP256K1_ORDER = BigInt(
  *
  * - Secp256k1: BSC, Ethereum, TRON, and most EVM-compatible chains.
  */
-export enum Curve {
-  Secp256k1 = "secp256k1",
-}
+export const Curve = {
+  Secp256k1: "secp256k1",
+} as const;
+export type Curve = typeof Curve[keyof typeof Curve];
 
 /**
  * A validated private key value object, curve-aware.

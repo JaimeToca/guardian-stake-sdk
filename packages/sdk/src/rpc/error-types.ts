@@ -1,14 +1,15 @@
 /**
  * Defines the possible types of API errors that can occur.
- * This enum helps categorize errors for more specific handling and reporting
+ * Categorizes errors for more specific handling and reporting.
  */
-export enum ApiErrorType {
-  ServerResponseError,
-  NetworkError,
-  RequestSetupError,
-  UnexpectedError,
-  UnknownError,
-}
+export const ApiErrorType = {
+  ServerResponseError: "ServerResponseError",
+  NetworkError: "NetworkError",
+  RequestSetupError: "RequestSetupError",
+  UnexpectedError: "UnexpectedError",
+  UnknownError: "UnknownError",
+} as const;
+export type ApiErrorType = (typeof ApiErrorType)[keyof typeof ApiErrorType];
 
 /**
  * Defines the structure for additional details that can be included with an ApiError.

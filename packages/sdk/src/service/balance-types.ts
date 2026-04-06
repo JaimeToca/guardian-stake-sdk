@@ -3,27 +3,28 @@ interface BalanceBase {
   type: BalanceType;
 }
 
-export enum BalanceType {
-  Available = "Available",
-  Staked = "Staked",
-  Pending = "Pending",
-  Claimable = "Claimable",
-}
+export const BalanceType = {
+  Available: "Available",
+  Staked: "Staked",
+  Pending: "Pending",
+  Claimable: "Claimable",
+} as const;
+export type BalanceType = typeof BalanceType[keyof typeof BalanceType];
 
 interface AvailableBalance extends BalanceBase {
-  type: BalanceType.Available;
+  type: typeof BalanceType.Available;
 }
 
 interface StakedBalance extends BalanceBase {
-  type: BalanceType.Staked;
+  type: typeof BalanceType.Staked;
 }
 
 interface PendingBalance extends BalanceBase {
-  type: BalanceType.Pending;
+  type: typeof BalanceType.Pending;
 }
 
 interface ClaimableBalance extends BalanceBase {
-  type: BalanceType.Claimable;
+  type: typeof BalanceType.Claimable;
 }
 
 export type Balance = AvailableBalance | StakedBalance | PendingBalance | ClaimableBalance;

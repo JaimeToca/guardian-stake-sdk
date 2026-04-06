@@ -17,14 +17,6 @@ export default {
       },
     ],
 
-    // Publish @guardian/sdk
-    [
-      "@semantic-release/npm",
-      {
-        pkgRoot: "packages/sdk",
-      },
-    ],
-
     // Publish @guardian/bsc
     [
       "@semantic-release/npm",
@@ -39,7 +31,6 @@ export default {
       {
         assets: [
           "CHANGELOG.md",
-          "packages/sdk/package.json",
           "packages/bsc/package.json",
         ],
         message:
