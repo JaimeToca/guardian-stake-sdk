@@ -1,5 +1,5 @@
-import type { Fee } from "./fee-types";
-import type { Transaction } from "./transaction-types";
+import type { Fee } from "../entity/fee-types";
+import type { Transaction } from "../entity/transaction-types";
 
 /**
  * Defines the contract for a FeeService, ensuring consistent behavior for fee estimation.

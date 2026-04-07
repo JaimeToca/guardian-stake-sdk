@@ -5,8 +5,8 @@ import { NoopLogger } from "@guardian/sdk";
 import type { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
 import type { MulticallResult } from "../abi";
 import { processSingleMulticallResult } from "../abi";
-import type { Delegation, Delegations, StakingServiceContract, Validator } from "@guardian/sdk";
-import type { ValidatorStatus } from "@guardian/sdk";
+import type { Delegation, Delegations, StakingServiceContract, Validator, ValidatorStatus } from "@guardian/sdk";
+import { filterByStatus } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 
 export class StakingService implements StakingServiceContract {
@@ -22,7 +22,13 @@ export class StakingService implements StakingServiceContract {
     private readonly logger: Logger = new NoopLogger()
   ) {}
 
-  async getValidators(): Promise<Validator[]> {
+  async getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
+    return filterByStatus(await this.fetchAllValidators(), status);
+  }
+
+  // BSC does not have more than 60 validators, they can be fetched in a single call, so pagination is not needed
+  // pagination support to be done in the future
+  private async fetchAllValidators(): Promise<Validator[]> {
     const cached = this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
     if (cached) {
       this.logger.debug("StakingService: validators cache hit", { count: cached.length });
@@ -88,7 +94,7 @@ export class StakingService implements StakingServiceContract {
   async getDelegations(address: string): Promise<Delegations> {
     const evmAddress = parseEvmAddress(address);
     const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
-    const validators = await this.getValidators();
+    const validators = await this.fetchAllValidators();
     const activeDelegationsPromise = this.getActiveDelegations(evmAddress, validators);
     const pendingDelegationsPromise = this.getPendingOrClaimableDelegations(evmAddress, validators);
 

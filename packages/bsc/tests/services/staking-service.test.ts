@@ -124,6 +124,45 @@ describe("StakingService", () => {
       validators.forEach((v) => expect(v.status).toBe("Jailed"));
     });
 
+    it("filters by a single status", async () => {
+      const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
+      const service = new StakingService(
+        new InMemoryCache(),
+        makeStakingRpcClient() as any,
+        bnbRpcClient as any
+      );
+
+      const active = await service.getValidators("Active");
+      expect(active).toHaveLength(0);
+
+      const inactive = await service.getValidators("Inactive");
+      expect(inactive).toHaveLength(3);
+      inactive.forEach((v) => expect(v.status).toBe("Inactive"));
+    });
+
+    it("filters by multiple statuses", async () => {
+      const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
+      const service = new StakingService(
+        new InMemoryCache(),
+        makeStakingRpcClient() as any,
+        bnbRpcClient as any
+      );
+
+      const result = await service.getValidators(["Active", "Inactive"]);
+      expect(result).toHaveLength(3);
+    });
+
+    it("returns all validators when no status filter is provided", async () => {
+      const service = new StakingService(
+        new InMemoryCache(),
+        makeStakingRpcClient() as any,
+        makeBNBRpcClient() as any
+      );
+
+      const all = await service.getValidators();
+      expect(all).toHaveLength(3);
+    });
+
     it("skips validators with no matching credit address", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       // Only include the first validator in the credit map

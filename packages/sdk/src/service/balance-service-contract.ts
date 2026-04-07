@@ -1,4 +1,4 @@
-import type { Balance } from "./balance-types";
+import type { Balance } from "../entity/balance-types";
 
 /** Contract for a service responsible for retrieving balances for a given address. */
 export interface BalanceServiceContract {

@@ -1,15 +1,15 @@
 import type { GuardianChain } from "../chain";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
-import type { Validator, Delegation, Delegations, StakingSummary } from "../service/staking-types";
-import type { Balance, BalanceType } from "../service/balance-types";
-import type { Fee } from "../service/fee-types";
+import type { Validator, Delegation, Delegations, StakingSummary } from "../entity/staking-types";
+import type { Balance, BalanceType } from "../entity/balance-types";
+import type { Fee } from "../entity/fee-types";
 import type {
   Transaction,
   DelegateTransaction,
   UndelegateTransaction,
   RedelegateTransaction,
   ClaimTransaction,
-} from "../service/transaction-types";
+} from "../entity/transaction-types";
 
 // ─── Chain ───────────────────────────────────────────────────────────────────
 

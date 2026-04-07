@@ -63,7 +63,7 @@ The validator set has grown beyond the original 45-slot design. As of early 2026
 - **Candidates** — occasional block producers, fill slots above position 21
 - **Inactive / Jailed** — registered on-chain but not producing blocks
 
-`getValidators()` returns all registered validators — active, inactive, and jailed. Use `validator.status` to filter.
+`getValidators()` returns all registered validators — active, inactive, and jailed. Pass an optional status (or array of statuses) to filter: `getValidators(bscMainnet, "Active")`.
 
 Elections run daily after 00:00 UTC. Each validator sets a **commission rate** — the percentage of block rewards they keep before distributing the rest to delegators. The full validator metadata available on-chain includes moniker, identity, website, details, consensus address, vote address, commission rate, and election info — the SDK surfaces the subset most relevant to delegation UIs.
 
@@ -160,7 +160,7 @@ The SDK adds a **15% buffer** on top of the simulated gas estimate to reduce the
 | Min delegation amount | 1 BNB |
 | Min validator self-stake | 2,000 BNB |
 | Validator election cadence | Daily at 00:00 UTC |
-| Max validators fetched per call | 100 (SDK default, matches current set size) |
+| Registered validators | 53 (as of early 2026, growing beyond the original 45-slot design) |
 | StakeHub contract | [`0x0000000000000000000000000000000000002002`](https://bscscan.com/address/0x0000000000000000000000000000000000002002) |
 | Mainnet chain ID | 56 |
 | Mainnet staking UI | https://www.bnbchain.org/en/bnb-staking |
@@ -259,10 +259,17 @@ console.log(`Transaction hash: ${txHash}`);
 
 ### `getValidators`
 
-Returns all validators registered on the protocol, including active, inactive, and jailed ones.
+Returns all validators registered on the protocol — active, inactive, and jailed. Pass an optional status filter to narrow the result.
 
 ```typescript
+// All validators
 const validators = await sdk.getValidators(chains.bscMainnet);
+
+// Only active validators
+const active = await sdk.getValidators(chains.bscMainnet, "Active");
+
+// Active and jailed
+const subset = await sdk.getValidators(chains.bscMainnet, ["Active", "Jailed"]);
 ```
 
 **Returns:** `Promise<Validator[]>`

@@ -1,16 +1,16 @@
 import type { GuardianChain } from "../chain";
 import { ConfigError } from "../entity/errors";
-import type { Balance } from "../service/balance-types";
-import type { Fee } from "../service/fee-types";
+import type { Balance } from "../entity/balance-types";
+import type { Fee } from "../entity/fee-types";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
 import type {
   BaseSignArgs,
   CompileArgs,
   PrehashResult,
   SigningWithPrivateKey,
-} from "../service/sign-types";
-import type { Delegations, Validator } from "../service/staking-types";
-import type { Transaction } from "../service/transaction-types";
+} from "../entity/sign-types";
+import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
+import type { Transaction } from "../entity/transaction-types";
 
 /**
  * The primary interface for interacting with supported blockchains.
@@ -35,8 +35,8 @@ export class GuardianSDK {
     this.services = new Map(services.map((s) => [s.getChainInfo().id, s]));
   }
 
-  getValidators(chain: GuardianChain): Promise<Validator[]> {
-    return this.getService(chain).getValidators();
+  getValidators(chain: GuardianChain, status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
+    return this.getService(chain).getValidators(status);
   }
 
   getDelegations(chain: GuardianChain, address: string): Promise<Delegations> {

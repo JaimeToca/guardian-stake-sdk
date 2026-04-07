@@ -133,7 +133,7 @@ The same API surface is available on every supported chain. Pass the chain objec
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| [`getValidators(chain)`](#getvalidatorschain) | `Validator[]` | All validators — active, inactive, and jailed |
+| [`getValidators(chain, status?)`](#getvalidatorschain) | `Validator[]` | All validators, optionally filtered by status |
 | [`getDelegations(chain, address)`](#getdelegationschain-address) | `Delegations` | All delegations for an address plus a protocol-level summary if available |
 | [`getBalances(chain, address)`](#getbalanceschain-address) | `Balance[]` | Available, staked, pending, and claimable balances |
 | [`getNonce(chain, address)`](#getnoncechain-address) | `number` | Current transaction nonce, required before signing |
@@ -143,13 +143,13 @@ The same API surface is available on every supported chain. Pass the chain objec
 | [`compile(args)`](#prehashhargs--compileargs) | `string` | Reassemble a signed transaction |
 | [`broadcast(chain, rawTx)`](#broadcastchain-rawtx) | `string` | Broadcast a signed raw transaction and return the tx hash |
 
-> **Note:** Some APIs — such as `getValidators` — may be extended in future releases (e.g. pagination support). The SDK initialization may also be extended to allow injecting additional configuration options per chain.
+> **Note:** The SDK initialization may be extended in future releases to allow injecting additional configuration options per chain.
 
 ---
 
 ### `getValidators(chain)`
 
-Returns all validators on the network — active, inactive, and jailed.
+Returns all validators on the network. Pass an optional status filter to narrow the result.
 
 **Returns:** `Promise<Validator[]>`
 
@@ -165,11 +165,19 @@ interface Validator {
   operatorAddress: string;
   creditAddress: string;
 }
+
+type ValidatorStatus = "Active" | "Inactive" | "Jailed";
 ```
 
 ```typescript
+// All validators
 const validators = await sdk.getValidators(chains.bscMainnet);
-// validators[0] → { name, apy, status, operatorAddress, ... }
+
+// Only active validators
+const active = await sdk.getValidators(chains.bscMainnet, "Active");
+
+// Active and jailed
+const subset = await sdk.getValidators(chains.bscMainnet, ["Active", "Jailed"]);
 ```
 
 ---
@@ -697,8 +705,9 @@ Beyond new chains, the SDK core is being extended with features that apply acros
 | Feature | Description | Status |
 |---|---|---|
 | Dashboard | Unified staking dashboard — aggregate positions, rewards, and claimable balances across all connected chains in a single view | Planned |
-| Extended validator API | Richer validator data — pagination, filtering by status/APY, historical performance, and commission history | Planned |
+| Extended validator API | Richer validator data — filtering by APY, historical performance, and commission history | Planned |
 | Client-injected validators | Allow consumers to supply their own validator list at SDK initialization, overriding or supplementing the on-chain data for whitelabelled or curated validator sets | Planned |
+| WebSocket (WSS) transport | Support WSS endpoints alongside HTTP/HTTPS, enabling subscription-based updates and lower-latency reads | Planned |
 
 ### Beyond native staking
 

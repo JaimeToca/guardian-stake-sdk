@@ -17,6 +17,7 @@ import type {
   NonceServiceContract,
   StakingServiceContract,
   Validator,
+  ValidatorStatus,
 } from "@guardian/sdk";
 import type { SigningWithAccount } from "../sign-types";
 import type { SignService } from "./sign-service";
@@ -37,8 +38,8 @@ export class GuardianService implements GuardianServiceContract {
     private broadcastService: BroadcastServiceContract
   ) {}
 
-  getValidators(): Promise<Validator[]> {
-    return this.stakingService.getValidators();
+  getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
+    return this.stakingService.getValidators(status);
   }
 
   getDelegations(address: string): Promise<Delegations> {

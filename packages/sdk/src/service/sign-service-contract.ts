@@ -1,4 +1,4 @@
-import type { BaseSignArgs, CompileArgs, PrehashResult, SigningWithPrivateKey } from "./sign-types";
+import type { BaseSignArgs, CompileArgs, PrehashResult, SigningWithPrivateKey } from "../entity/sign-types";
 
 /** Chain-agnostic contract for cryptographic signing operations. */
 export interface SignServiceContract {

@@ -5,8 +5,8 @@ export { SignServiceContract } from "./sign-service-contract";
 export { StakingServiceContract } from "./staking-service-contract";
 export { NonceServiceContract } from "./nonce-service-contract";
 
-export type { Balance, BalanceType } from "./balance-types";
-export type { FeeType, Fee } from "./fee-types";
+export type { Balance, BalanceType } from "../entity/balance-types";
+export type { FeeType, Fee } from "../entity/fee-types";
 export type {
   Transaction,
   DelegateTransaction,
@@ -15,7 +15,8 @@ export type {
   ClaimTransaction,
   OperatorAddress,
   TransactionType,
-} from "./transaction-types";
+} from "../entity/transaction-types";
+export { filterByStatus } from "../entity/staking-types";
 export type {
   Validator,
   ValidatorStatus,
@@ -23,8 +24,8 @@ export type {
   Delegation,
   DelegationStatus,
   StakingSummary,
-} from "./staking-types";
+} from "../entity/staking-types";
 
-export { SigningWithPrivateKey, BaseSignArgs, CompileArgs, PrehashResult } from "./sign-types";
+export { SigningWithPrivateKey, BaseSignArgs, CompileArgs, PrehashResult } from "../entity/sign-types";
 
 export { GuardianServiceContract } from "./guardian-service-contract";

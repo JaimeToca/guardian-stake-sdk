@@ -28,6 +28,15 @@ export interface Delegation {
 
 export type DelegationStatus = "Active" | "Pending" | "Claimable" | "Inactive";
 
+export function filterByStatus<S extends string, T extends { status: S }>(
+  items: T[],
+  status?: S | S[]
+): T[] {
+  if (!status) return items;
+  const statuses = Array.isArray(status) ? status : [status];
+  return items.filter((v) => statuses.includes(v.status));
+}
+
 export interface StakingSummary {
   totalProtocolStake: number;
   maxApy: number;
