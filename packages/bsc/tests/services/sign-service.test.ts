@@ -1,16 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { parseEther, getAddress, parseTransaction } from "viem";
 import { SignService } from "../../src/smartchain/services/sign-service";
-import { ValidationError, PrivateKey } from "@guardian/sdk";
+import { ValidationError } from "@guardian/sdk";
 import { BSC_CHAIN } from "../../src/chain";
 import { STAKING_CONTRACT } from "../../src/smartchain/abi/multicall-stake-abi";
 import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-rpc-client-contract";
 
 // Hardhat/Anvil account #0 — well-known test key, never use in production
-const TEST_PRIVATE_KEY = PrivateKey.from(
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-  "secp256k1"
-);
+const TEST_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 // Real BSC mainnet validators fetched from StakeHub (0x0000000000000000000000000000000000002002)
 const OPERATOR = getAddress("0x773760b0708a5cc369c346993a0c225d8e4043b1");

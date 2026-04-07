@@ -16,8 +16,8 @@ export * from "./rpc";
 
 // Entity types
 export * from "./entity/types";
-export { PrivateKey } from "./entity/private-key";
-export type { Curve } from "./entity/private-key";
+export { privateKey } from "./entity/private-key";
+export type { PrivateKey } from "./entity/private-key";
 
 // Service contracts and types
 export * from "./service";

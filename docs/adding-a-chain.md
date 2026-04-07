@@ -166,7 +166,7 @@ interface FeeServiceContract {
 }
 ```
 
-Simulate the transaction on-chain and return a `Fee` with `{ type: FeeType.GasFee, gasPrice, gasLimit, total }`. For non-EVM chains return the appropriate fee type.
+Simulate the transaction on-chain and return a `Fee` with `{ type: "GasFee", gasPrice, gasLimit, total }`. For non-EVM chains return the appropriate fee type.
 
 ### 3.4 `SignServiceContract`
 

@@ -1,7 +1,7 @@
 import { parseUnits, toHex } from "viem";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
-import { GuardianSDK, BSC_CHAIN, bsc, ConsoleLogger, PrivateKey } from "@guardian/bsc";
+import { GuardianSDK, BSC_CHAIN, bsc, ConsoleLogger } from "@guardian/bsc";
 import type {
   DelegateTransaction,
   RedelegateTransaction,
@@ -53,7 +53,7 @@ async function sample_check_delegations() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_delegate_transaction() {
-  const MNEMONIC = "<use your memonic>";
+  const MNEMONIC = "<your mnemonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
@@ -104,17 +104,17 @@ async function sample_delegate_transaction() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_redelegate_transaction() {
-  const MNEMONIC = "<use your memonic>";
+  const MNEMONIC = "<your mnemonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
-
+  
   // Pick a validator — use getValidators() to browse the full set
   const validators = await sdk.getValidators(BSC_CHAIN);
 
   // From Validator A to Validator B
   const fromValidator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
-  const toValidator = validators.find((v) => v.name === "Ankr Staking") ?? validators[1];
+  const toValidator = validators.find((v) => v.name === "Ankr Staking") ?? validators[0];
   console.log(`Redelegating from: ${fromValidator.name} (${fromValidator.operatorAddress})`);
   console.log(`Redelegating to: ${toValidator.name} (${toValidator.operatorAddress})`);
 
@@ -122,9 +122,9 @@ async function sample_redelegate_transaction() {
   const transaction: RedelegateTransaction = {
     type: "Redelegate",
     chain: BSC_CHAIN,
-    amount: AMOUNT,
+    amount: AMOUNT, // ignored when isMaxAmount is true
     account: ADDRESS,
-    isMaxAmount: true, // IMPORTANT to set for max amount
+    isMaxAmount: true, // redelegates the full position — amount is ignored
     fromValidator: fromValidator,
     toValidator: toValidator,
   };
@@ -156,7 +156,7 @@ async function sample_redelegate_transaction() {
  * The resulting rawTx is a signed hex string ready to broadcast to the network.
  */
 async function sample_undelegate_transaction() {
-  const MNEMONIC = "<use your memonic>";
+  const MNEMONIC = "<your mnemonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
@@ -164,11 +164,10 @@ async function sample_undelegate_transaction() {
   // Pick a validator — use getValidators() to browse the full set
   const validators = await sdk.getValidators(BSC_CHAIN);
 
-  // From Validator A to Validator B
-  const validator = validators.find((v) => v.name === "Ankr Staking") ?? validators[1];
+  const validator = validators.find((v) => v.name === "Ankr Staking") ?? validators[0];
   console.log(`Undelegating from: ${validator.name} (${validator.operatorAddress})`);
 
-  // Build the undelegatetransaction object
+  // Build the undelegate transaction object
   const transaction: UndelegateTransaction = {
     type: "Undelegate",
     chain: BSC_CHAIN,
@@ -198,18 +197,17 @@ async function sample_undelegate_transaction() {
 /**
  * This does not belong to Guardian SDK, it is up to the consumer to implement private key management and signing.
  * In this particular case, given a mnemonic, we derive the private key using the popular bip39 and bip32 libraries.
- * The resulting private key is then used to sign transactions with the Guardian SDK.
+ * The resulting raw hex string is passed directly to sdk.sign().
  *
  * @scure/bip32 and @scure/bip39 ship as transitive dependencies of viem —
  * no extra packages required.
  */
-function privateKeyFromMnemonic(mnemonic: string, addressIndex = 0): PrivateKey {
+function privateKeyFromMnemonic(mnemonic: string, addressIndex = 0): string {
   const seed = mnemonicToSeedSync(mnemonic);
   const root = HDKey.fromMasterSeed(seed);
   const child = root.derive(`m/44'/60'/0'/0/${addressIndex}`);
   if (!child.privateKey) throw new Error("Failed to derive private key");
-  const hex = toHex(child.privateKey);
-  return PrivateKey.from(hex, "secp256k1");
+  return toHex(child.privateKey);
 }
 
 sample_check_delegations();

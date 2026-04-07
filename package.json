@@ -6,8 +6,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "pnpm --filter @guardian/bsc run build",
-    "typecheck": "pnpm -r run typecheck",
+    "build": "pnpm --filter @guardian/sdk run build && pnpm --filter @guardian/bsc run build",
+    "typecheck": "pnpm -r run typecheck && tsc --noEmit -p examples/tsconfig.json",
     "test": "pnpm --filter @guardian/bsc run test",
     "docs": "typedoc",
     "lint": "eslint packages/*/src packages/*/tests",

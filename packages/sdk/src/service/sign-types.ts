@@ -1,4 +1,3 @@
-import type { PrivateKey } from "../entity/private-key";
 import type { Fee } from "./fee-types";
 import type { Transaction } from "./transaction-types";
 
@@ -8,7 +7,7 @@ export type BaseSignArgs = {
   nonce: number;
 };
 
-export type SigningWithPrivateKey = BaseSignArgs & { privateKey: PrivateKey };
+export type SigningWithPrivateKey = BaseSignArgs & { privateKey: string };
 
 export type CompileArgs = {
   signArgs: BaseSignArgs;

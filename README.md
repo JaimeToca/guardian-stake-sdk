@@ -307,8 +307,6 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 **Returns:** `Promise<string>`
 
 ```typescript
-import { PrivateKey } from "@guardian/bsc";
-
 const rawTx = await sdk.sign({
   transaction: {
     type: "Delegate",
@@ -319,7 +317,7 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
+  privateKey: "0xYourPrivateKey",
 });
 ```
 
@@ -381,7 +379,7 @@ End-to-end example using direct signing:
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, PrivateKey } from "@guardian/bsc";
+import { bsc, BSC_CHAIN } from "@guardian/bsc";
 import { parseEther } from "viem";
 
 const sdk = new GuardianSDK([bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" })]);
@@ -400,7 +398,7 @@ const rawTx = await sdk.sign({
   transaction: { type: "Delegate", chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: validators[0] },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
+  privateKey: "0xYourPrivateKey",
 });
 const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
 ```

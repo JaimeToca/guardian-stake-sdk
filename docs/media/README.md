@@ -142,7 +142,7 @@ for (const balance of balances) {
 
 // 4. Estimate fee for a delegation
 const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
+  type: "Delegate",
   chain: BSC_CHAIN,
   amount: parseEther("1"),
   account: ADDRESS,
@@ -156,7 +156,7 @@ const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
 // 6. Sign and broadcast
 const rawTx = await sdk.sign({
   transaction: {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: parseEther("1"),
     isMaxAmount: false,
@@ -315,7 +315,7 @@ const fee = await sdk.estimateFee(transaction);
 
 ```typescript
 interface GasFee {
-  type: FeeType.GasFee;
+  type: "GasFee";
   gasPrice: bigint;   // In wei
   gasLimit: bigint;
   total: bigint;      // gasPrice × gasLimit, in wei
@@ -327,7 +327,7 @@ Accepts any of the four transaction types:
 ```typescript
 // Delegate — stake BNB with a validator
 const fee = await sdk.estimateFee({
-  type: TransactionType.Delegate,
+  type: "Delegate",
   chain: BSC_CHAIN,
   amount: parseEther("5"),
   account: "0xYourAddress",
@@ -337,7 +337,7 @@ const fee = await sdk.estimateFee({
 
 // Undelegate — begin the 7-day unbonding process
 const fee = await sdk.estimateFee({
-  type: TransactionType.Undelegate,
+  type: "Undelegate",
   chain: BSC_CHAIN,
   amount: parseEther("5"),
   account: "0xYourAddress",
@@ -347,7 +347,7 @@ const fee = await sdk.estimateFee({
 
 // Redelegate — move stake from one validator to another (0.002% fee applies)
 const fee = await sdk.estimateFee({
-  type: TransactionType.Redelegate,
+  type: "Redelegate",
   chain: BSC_CHAIN,
   amount: parseEther("5"),
   account: "0xYourAddress",
@@ -358,7 +358,7 @@ const fee = await sdk.estimateFee({
 
 // Claim — withdraw BNB after the unbonding period completes
 const fee = await sdk.estimateFee({
-  type: TransactionType.Claim,
+  type: "Claim",
   chain: BSC_CHAIN,
   amount: 0n,
   account: "0xYourAddress",
@@ -378,7 +378,7 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 ```typescript
 const rawTx = await sdk.sign({
   transaction: {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: parseEther("1"),
     isMaxAmount: false,
@@ -416,7 +416,7 @@ For **MPC wallets, hardware wallets, or any setup where the private key is not d
 ```typescript
 const { serializedTransaction, signArgs } = await sdk.preHash({
   transaction: {
-    type: TransactionType.Delegate,
+    type: "Delegate",
     chain: BSC_CHAIN,
     amount: parseEther("1"),
     isMaxAmount: false,

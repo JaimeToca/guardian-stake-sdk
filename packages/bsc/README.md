@@ -194,7 +194,7 @@ npm install @guardian/bsc viem
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, PrivateKey } from "@guardian/bsc";
+import { bsc, BSC_CHAIN } from "@guardian/bsc";
 import { formatEther, parseEther } from "viem";
 
 const sdk = new GuardianSDK([
@@ -245,7 +245,7 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
+  privateKey: "0xYourPrivateKey",
 });
 
 // 7. Broadcast
@@ -463,8 +463,6 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 **With a private key:**
 
 ```typescript
-import { PrivateKey } from "@guardian/bsc";
-
 const rawTx = await sdk.sign({
   transaction: {
     type: "Delegate",
@@ -475,7 +473,7 @@ const rawTx = await sdk.sign({
   },
   fee,
   nonce,
-  privateKey: PrivateKey.from("0xYourPrivateKey", "secp256k1"),
+  privateKey: "0xYourPrivateKey",
 });
 ```
 

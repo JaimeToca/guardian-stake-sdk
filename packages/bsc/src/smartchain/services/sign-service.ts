@@ -21,7 +21,7 @@ import type {
   RedelegateTransaction,
   Logger,
 } from "@guardian/sdk";
-import { SigningError, NoopLogger, ValidationError } from "@guardian/sdk";
+import { SigningError, NoopLogger, ValidationError, privateKey } from "@guardian/sdk";
 import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import type { BscSignServiceContract, CallData, SigningWithAccount } from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
@@ -55,7 +55,7 @@ export class SignService implements BscSignServiceContract {
       const account = signingArgs.account;
       signedTransaction = await account.signTransaction(unsignedTransaction);
     } else if (isSigningWithPrivateKey(signingArgs)) {
-      const account = privateKeyToAccount(signingArgs.privateKey.toHex());
+      const account = privateKeyToAccount(privateKey(signingArgs.privateKey));
       signedTransaction = await account.signTransaction(unsignedTransaction);
     } else {
       throw new SigningError(
