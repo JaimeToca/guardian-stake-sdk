@@ -29,6 +29,19 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Generated TypeDoc output (run `pnpm run docs` to rebuild)
+docs/assets/
+docs/classes/
+docs/enums/
+docs/functions/
+docs/interfaces/
+docs/modules/
+docs/types/
+docs/variables/
+docs/hierarchy.html
+docs/modules.html
+docs/index.html
+
 # Source maps
 *.js.map
 
