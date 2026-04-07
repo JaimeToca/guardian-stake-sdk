@@ -6,21 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Build both packages (sdk first, then bsc)
-npm run build
+pnpm run build
 
 # Type-check all packages
-npm run typecheck
+pnpm run typecheck
 
 # Run tests
-npm test
+pnpm run test
 ```
 
 ## Monorepo Structure
 
-This is an npm workspaces monorepo with two packages:
+This is a pnpm workspaces monorepo with two packages:
 
 - `packages/sdk` → published as `@guardian/sdk` — chain-agnostic core (no viem dependency)
 - `packages/bsc` → published as `@guardian/bsc` — BSC implementation (viem peer dep, depends on `@guardian/sdk`)

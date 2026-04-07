@@ -1,1 +1,6 @@
-export type { GuardianChain, GuardianChainIdentifier, GuardianChainType, ChainEcosystemType } from "./chain-types";
+export type {
+  GuardianChain,
+  GuardianChainIdentifier,
+  GuardianChainType,
+  ChainEcosystemType,
+} from "./chain-types";

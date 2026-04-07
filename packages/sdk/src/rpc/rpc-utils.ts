@@ -16,7 +16,7 @@ export async function fetchOrError<T>(requestConfig: AxiosRequestConfig): Promis
     const response: AxiosResponse<T> = await axios({
       timeout: 16000,
       maxContentLength: 10 * 1024 * 1024, // 10 MB
-      maxBodyLength: 10 * 1024 * 1024,     // 10 MB
+      maxBodyLength: 10 * 1024 * 1024, // 10 MB
       ...requestConfig,
     });
     return response.data;

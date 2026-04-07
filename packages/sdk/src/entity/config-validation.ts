@@ -14,10 +14,7 @@ export function validateRpcUrl(rpcUrl: string): void {
   try {
     parsed = new URL(rpcUrl);
   } catch {
-    throw new ConfigError(
-      "INVALID_RPC_URL",
-      `Invalid rpcUrl: "${rpcUrl}" is not a valid URL`
-    );
+    throw new ConfigError("INVALID_RPC_URL", `Invalid rpcUrl: "${rpcUrl}" is not a valid URL`);
   }
 
   if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) {

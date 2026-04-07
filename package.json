@@ -6,9 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build -w packages/bsc",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm test -w packages/bsc",
+    "build": "pnpm --filter @guardian/bsc run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm --filter @guardian/bsc run test",
     "docs": "typedoc",
     "lint": "eslint packages/*/src packages/*/tests",
     "lint:fix": "eslint packages/*/src packages/*/tests --fix",
@@ -19,9 +19,11 @@
   "engines": {
     "node": ">=22"
   },
+  "packageManager": "pnpm@10.33.0",
   "author": "JaimeToca",
   "license": "MIT",
   "devDependencies": {
+    "typescript": "6.0.2",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.6",

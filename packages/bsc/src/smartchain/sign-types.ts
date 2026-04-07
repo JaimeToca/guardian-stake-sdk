@@ -1,5 +1,10 @@
 import type { PrivateKeyAccount } from "viem";
-import type { BaseSignArgs, SigningWithPrivateKey, SignServiceContract, Transaction } from "@guardian/sdk";
+import type {
+  BaseSignArgs,
+  SigningWithPrivateKey,
+  SignServiceContract,
+  Transaction,
+} from "@guardian/sdk";
 
 /** EVM calldata and native value for a staking transaction. */
 export type CallData = {

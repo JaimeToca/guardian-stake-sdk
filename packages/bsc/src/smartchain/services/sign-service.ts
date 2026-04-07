@@ -87,7 +87,9 @@ export class SignService implements BscSignServiceContract {
         nonce: nonce,
       },
     };
-    this.logger.info("SignService: prehash complete — send serializedTransaction to external signer");
+    this.logger.info(
+      "SignService: prehash complete — send serializedTransaction to external signer"
+    );
     return result;
   }
 
@@ -198,10 +200,11 @@ export class SignService implements BscSignServiceContract {
    * Requires a full Validator object (not a bare operator address string) because the credit contract
    * address is needed. Use getValidators() to obtain the Validator object.
    */
-  private async bnbToShares(transaction: UndelegateTransaction | RedelegateTransaction): Promise<bigint> {
-    const validator = transaction.type === "Undelegate"
-      ? transaction.validator
-      : transaction.fromValidator;
+  private async bnbToShares(
+    transaction: UndelegateTransaction | RedelegateTransaction
+  ): Promise<bigint> {
+    const validator =
+      transaction.type === "Undelegate" ? transaction.validator : transaction.fromValidator;
 
     if (typeof validator === "string") {
       throw new SigningError(
@@ -221,7 +224,10 @@ export class SignService implements BscSignServiceContract {
           "account is required when isMaxAmount is true — it is used to read the exact share balance."
         );
       }
-      return this.stakingRpcClient.getShareBalance(creditAddress, parseEvmAddress(transaction.account));
+      return this.stakingRpcClient.getShareBalance(
+        creditAddress,
+        parseEvmAddress(transaction.account)
+      );
     }
 
     return this.stakingRpcClient.getSharesByPooledBNBData(creditAddress, transaction.amount);

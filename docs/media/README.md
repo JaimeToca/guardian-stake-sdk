@@ -505,7 +505,7 @@ Every `GuardianError` instance exposes:
 Thrown when the caller provides invalid input. Caught before any network call is made.
 
 ```typescript
-import { ValidationError, ValidationErrorCode } from "@guardian/bsc";
+import { ValidationError } from "@guardian/bsc";
 ```
 
 | Code | Thrown when |
@@ -522,7 +522,7 @@ import { ValidationError, ValidationErrorCode } from "@guardian/bsc";
 Thrown when the SDK is misconfigured or asked to operate on a chain it does not support.
 
 ```typescript
-import { ConfigError, ConfigErrorCode } from "@guardian/bsc";
+import { ConfigError } from "@guardian/bsc";
 ```
 
 | Code | Thrown when |
@@ -536,7 +536,7 @@ import { ConfigError, ConfigErrorCode } from "@guardian/bsc";
 Thrown during transaction signing when the signing arguments are invalid or the transaction type is not supported.
 
 ```typescript
-import { SigningError, SigningErrorCode } from "@guardian/bsc";
+import { SigningError } from "@guardian/bsc";
 ```
 
 | Code | Thrown when |

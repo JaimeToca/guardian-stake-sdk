@@ -17,7 +17,11 @@
 
 // ─── Error codes ─────────────────────────────────────────────────────────────
 
-export type ValidationErrorCode = "INVALID_ADDRESS" | "INVALID_AMOUNT" | "INVALID_NONCE" | "INVALID_FEE";
+export type ValidationErrorCode =
+  | "INVALID_ADDRESS"
+  | "INVALID_AMOUNT"
+  | "INVALID_NONCE"
+  | "INVALID_FEE";
 
 export type ConfigErrorCode = "UNSUPPORTED_CHAIN" | "INVALID_RPC_URL";
 

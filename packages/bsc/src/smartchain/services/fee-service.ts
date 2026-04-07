@@ -52,10 +52,7 @@ export class FeeService implements FeeServiceContract {
       transaction.account !== undefined ? parseEvmAddress(transaction.account) : undefined;
 
     if (account === undefined) {
-      throw new ValidationError(
-        "INVALID_ADDRESS",
-        "Account address is required to estimate fee"
-      );
+      throw new ValidationError("INVALID_ADDRESS", "Account address is required to estimate fee");
     }
 
     const callDataResult = await this.signService.buildCallData(transaction);

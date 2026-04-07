@@ -1,5 +1,14 @@
 [
-  {"operator": "0x5c38FF8Ca2b16099C086bF36546e99b13D152C4c", "credit": "0xc437593d9c296bf9a5002522a86dad8a4d4af808"},
-  {"operator": "0xCA9EbBE042f975700F13e5e0D7683918533170BE", "credit": "0x487f2663c8e134eb98495249bba5c602a89ceaa7"},
-  {"operator": "0xe0761D6679aE9691C98C3f07867740b08f43e510", "credit": "0x57d6be3ba78e611e71e8de981309f85ee5cb67e4"}
+  {
+    "operator": "0x5c38FF8Ca2b16099C086bF36546e99b13D152C4c",
+    "credit": "0xc437593d9c296bf9a5002522a86dad8a4d4af808"
+  },
+  {
+    "operator": "0xCA9EbBE042f975700F13e5e0D7683918533170BE",
+    "credit": "0x487f2663c8e134eb98495249bba5c602a89ceaa7"
+  },
+  {
+    "operator": "0xe0761D6679aE9691C98C3f07867740b08f43e510",
+    "credit": "0x57d6be3ba78e611e71e8de981309f85ee5cb67e4"
+  }
 ]

@@ -21,7 +21,7 @@
   <a href="https://github.com/JaimeToca/bnb-native-staking/blob/main/CONTRIBUTING.md">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </a>
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/TypeScript-6.x-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=node.js&logoColor=white" alt="Node.js" />
 </p>
 

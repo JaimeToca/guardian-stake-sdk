@@ -7,6 +7,9 @@ dist/
 # npm pack output
 *.tgz
 
+# npm lockfile (project uses pnpm)
+package-lock.json
+
 # Logs
 logs/
 *.log

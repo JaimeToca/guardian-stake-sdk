@@ -1,1 +1,11 @@
-{"code":2000,"data":{"summary":{"activeValidators":45,"maxApy":0.020099854,"totalStaked":"25718232618987424081511146","totalValidators":53}}}
+{
+  "code": 2000,
+  "data": {
+    "summary": {
+      "activeValidators": 45,
+      "maxApy": 0.020099854,
+      "totalStaked": "25718232618987424081511146",
+      "totalValidators": 53
+    }
+  }
+}

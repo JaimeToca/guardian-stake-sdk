@@ -9,10 +9,7 @@ export function checkIsValidAddress(address: string): void {
 
 export function parseEvmAddress(address: string): Address {
   if (!isAddress(address)) {
-    throw new ValidationError(
-      "INVALID_ADDRESS",
-      `"${address}" is not a valid EVM address.`
-    );
+    throw new ValidationError("INVALID_ADDRESS", `"${address}" is not a valid EVM address.`);
   }
   return address;
 }

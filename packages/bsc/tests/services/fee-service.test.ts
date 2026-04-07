@@ -11,7 +11,10 @@ const REAL_GAS_PRICE = BigInt(gasPriceFixture.result);
 const REAL_GAS_ESTIMATE = BigInt(estimateGasFixture.result);
 
 const OPERATOR = getAddress("0x773760b0708a5cc369c346993a0c225d8e4043b1");
-const VALIDATOR = { operatorAddress: OPERATOR, creditAddress: getAddress("0x4afc633e7b6beb8e552ccddbe06cca3754991e9a") } as any;
+const VALIDATOR = {
+  operatorAddress: OPERATOR,
+  creditAddress: getAddress("0x4afc633e7b6beb8e552ccddbe06cca3754991e9a"),
+} as any;
 
 function makePublicClient(gasPrice = REAL_GAS_PRICE, gasEstimate = REAL_GAS_ESTIMATE) {
   return {

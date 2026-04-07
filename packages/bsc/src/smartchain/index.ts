@@ -1,6 +1,5 @@
-import type { PublicClient } from "viem";
 import { createPublicClient, http } from "viem";
-import type { GuardianServiceContract, StakingServiceContract, Validator, Logger } from "@guardian/sdk";
+import type { GuardianServiceContract, Validator, Logger } from "@guardian/sdk";
 import { InMemoryCache, NoopLogger, validateRpcUrl } from "@guardian/sdk";
 import type { GuardianChain } from "@guardian/sdk";
 import { GuardianService } from "./services/guardian-service";
@@ -33,7 +32,11 @@ export function bsc(config: { rpcUrl: string; logger?: Logger }): GuardianServic
   return provideGuarService(BSC_CHAIN, config.rpcUrl, config.logger ?? new NoopLogger());
 }
 
-function provideGuarService(chain: GuardianChain, rpcUrl: string, logger: Logger): GuardianServiceContract {
+function provideGuarService(
+  chain: GuardianChain,
+  rpcUrl: string,
+  logger: Logger
+): GuardianServiceContract {
   const client = createPublicClient({
     chain: getViemChain(chain),
     transport: http(rpcUrl),
