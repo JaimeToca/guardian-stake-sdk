@@ -632,13 +632,13 @@ Every `GuardianError` exposes:
 Thrown when the caller provides invalid input. Always caught before any network call is made.
 
 ```typescript
-import { ValidationError, ValidationErrorCode } from "@guardian/bsc";
+import { ValidationError } from "@guardian/bsc";
 ```
 
 | Code | Thrown when |
 |---|---|
 | `INVALID_ADDRESS` | An address fails the chain's format check — applies to `getDelegations`, `getBalances`, `getNonce`, and any address field inside a transaction |
-| `INVALID_AMOUNT` | A transaction `amount` is zero or negative (Claim transactions are exempt) |
+| `INVALID_AMOUNT` | A `Delegate` transaction `amount` is below the 1 BNB protocol minimum |
 | `INVALID_NONCE` | The `nonce` passed to `sign`, `preHash`, or `compile` is negative or not an integer |
 | `INVALID_FEE` | The `fee.gasLimit` or `fee.gasPrice` passed to `sign`, `preHash`, or `compile` is zero or negative |
 
@@ -649,7 +649,7 @@ import { ValidationError, ValidationErrorCode } from "@guardian/bsc";
 Thrown when the SDK is misconfigured or asked to operate on an unsupported chain.
 
 ```typescript
-import { ConfigError, ConfigErrorCode } from "@guardian/bsc";
+import { ConfigError } from "@guardian/bsc";
 ```
 
 | Code | Thrown when |
@@ -663,7 +663,7 @@ import { ConfigError, ConfigErrorCode } from "@guardian/bsc";
 Thrown during transaction signing when arguments are invalid or the transaction type has no implementation.
 
 ```typescript
-import { SigningError, SigningErrorCode } from "@guardian/bsc";
+import { SigningError } from "@guardian/bsc";
 ```
 
 | Code | Thrown when |
