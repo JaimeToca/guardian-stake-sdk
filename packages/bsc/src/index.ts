@@ -4,8 +4,8 @@ export * from "@guardian/sdk";
 // BSC chain factory
 export { bsc } from "./smartchain";
 
-// BSC chain constants
-export { BSC_CHAIN, SUPPORTED_CHAINS } from "./chain";
+// BSC chain constants and registry
+export { bscMainnet, chains, SUPPORTED_CHAINS } from "./chain";
 
 // BSC-specific signing types
 export { isSigningWithPrivateKey, isSigningWithAccount } from "./smartchain/sign-types";

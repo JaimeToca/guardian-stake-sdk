@@ -101,7 +101,7 @@ Install the chain package you need, then pass its factory to `GuardianSDK`:
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN } from "@guardian/bsc";
+import { bsc, chains } from "@guardian/bsc";
 
 const sdk = new GuardianSDK([
   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
@@ -112,7 +112,7 @@ Adding another chain later is just adding another entry to the array:
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN } from "@guardian/bsc";
+import { bsc, chains } from "@guardian/bsc";
 import { tron, TRON_CHAIN } from "@guardian/tron"; // when available
 
 const sdk = new GuardianSDK([
@@ -168,7 +168,7 @@ interface Validator {
 ```
 
 ```typescript
-const validators = await sdk.getValidators(BSC_CHAIN);
+const validators = await sdk.getValidators(chains.bscMainnet);
 // validators[0] → { name, apy, status, operatorAddress, ... }
 ```
 
@@ -207,7 +207,7 @@ interface StakingSummary {
 ```
 
 ```typescript
-const { delegations, stakingSummary } = await sdk.getDelegations(BSC_CHAIN, "0xYourAddress");
+const { delegations, stakingSummary } = await sdk.getDelegations(chains.bscMainnet, "0xYourAddress");
 
 console.log(stakingSummary.maxApy);           // best APY across all validators
 console.log(stakingSummary.minAmountToStake); // minimum stake in wei
@@ -241,7 +241,7 @@ interface Balance {
 ```typescript
 import { formatEther } from "viem";
 
-const balances = await sdk.getBalances(BSC_CHAIN, "0xYourAddress");
+const balances = await sdk.getBalances(chains.bscMainnet, "0xYourAddress");
 
 for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount));
@@ -261,7 +261,7 @@ Returns the current transaction nonce for an address. Required before calling `s
 **Returns:** `Promise<number>`
 
 ```typescript
-const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
+const nonce = await sdk.getNonce(chains.bscMainnet, "0xYourAddress");
 ```
 
 ---
@@ -286,7 +286,7 @@ import { parseEther } from "viem";
 
 const fee = await sdk.estimateFee({
   type: "Delegate",
-  chain: BSC_CHAIN,
+  chain: chains.bscMainnet,
   amount: parseEther("1"),
   account: "0xYourAddress",
   isMaxAmount: false,
@@ -310,7 +310,7 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 const rawTx = await sdk.sign({
   transaction: {
     type: "Delegate",
-    chain: BSC_CHAIN,
+    chain: chains.bscMainnet,
     amount: parseEther("1"),
     isMaxAmount: false,
     validator: validators[0],
@@ -343,7 +343,7 @@ interface PrehashResult {
 ```typescript
 // Step 1 — serialize
 const { serializedTransaction, signArgs } = await sdk.preHash({
-  transaction: { type: "Delegate", chain: BSC_CHAIN, ... },
+  transaction: { type: "Delegate", chain: chains.bscMainnet, ... },
   fee,
   nonce,
 });
@@ -363,7 +363,7 @@ Broadcasts a signed raw transaction to the network and returns the transaction h
 **Returns:** `Promise<string>`
 
 ```typescript
-const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+const txHash = await sdk.broadcast(chains.bscMainnet, rawTx);
 console.log(`Transaction hash: ${txHash}`);
 ```
 
@@ -379,28 +379,28 @@ End-to-end example using direct signing:
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN } from "@guardian/bsc";
+import { bsc, chains } from "@guardian/bsc";
 import { parseEther } from "viem";
 
 const sdk = new GuardianSDK([bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" })]);
 
-const validators = await sdk.getValidators(BSC_CHAIN);
+const validators = await sdk.getValidators(chains.bscMainnet);
 const fee = await sdk.estimateFee({
   type: "Delegate",
-  chain: BSC_CHAIN,
+  chain: chains.bscMainnet,
   amount: parseEther("1"),
   account: "0xYourAddress",
   isMaxAmount: false,
   validator: validators[0],
 });
-const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
+const nonce = await sdk.getNonce(chains.bscMainnet, "0xYourAddress");
 const rawTx = await sdk.sign({
-  transaction: { type: "Delegate", chain: BSC_CHAIN, amount: parseEther("1"), isMaxAmount: false, validator: validators[0] },
+  transaction: { type: "Delegate", chain: chains.bscMainnet, amount: parseEther("1"), isMaxAmount: false, validator: validators[0] },
   fee,
   nonce,
   privateKey: "0xYourPrivateKey",
 });
-const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+const txHash = await sdk.broadcast(chains.bscMainnet, rawTx);
 ```
 
 For chain-specific details (protocol parameters, transaction shapes, error codes) see:
@@ -492,7 +492,7 @@ Returns a fully-typed `GuardianServiceContract` with no-op defaults. Pass only t
 import { describe, it, expect, vi } from "vitest";
 import { GuardianSDK } from "@guardian/sdk";
 import { createMockService, mockValidator } from "@guardian/sdk/testing";
-import { BSC_CHAIN } from "@guardian/bsc";
+import { chains } from "@guardian/bsc";
 
 describe("my staking feature", () => {
   it("renders the validator with the highest APY", async () => {
@@ -505,7 +505,7 @@ describe("my staking feature", () => {
       }),
     ]);
 
-    const validators = await sdk.getValidators(BSC_CHAIN);
+    const validators = await sdk.getValidators(chains.bscMainnet);
     const best = validators.sort((a, b) => b.apy - a.apy)[0];
 
     expect(best.name).toBe("Beta");
@@ -595,7 +595,7 @@ Every error thrown by the SDK extends `GuardianError`. Each subclass carries a `
 import { GuardianError, ValidationError, ConfigError, SigningError } from "@guardian/bsc";
 
 try {
-  await sdk.getDelegations(BSC_CHAIN, address);
+  await sdk.getDelegations(chains.bscMainnet, address);
 } catch (err) {
   if (err instanceof ValidationError) {
     // invalid input — caught before any network call

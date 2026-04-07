@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { parseEther, getAddress, parseTransaction } from "viem";
 import { SignService } from "../../src/smartchain/services/sign-service";
 import { ValidationError } from "@guardian/sdk";
-import { BSC_CHAIN } from "../../src/chain";
+import { bscMainnet } from "../../src/chain";
 import { STAKING_CONTRACT } from "../../src/smartchain/abi/multicall-stake-abi";
 import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-rpc-client-contract";
 
@@ -49,7 +49,7 @@ describe("SignService", () => {
         nonce: 1,
         transaction: {
           type: "Delegate" as const,
-          chain: BSC_CHAIN,
+          chain: bscMainnet,
           amount: parseEther("1"),
           isMaxAmount: false,
           validator: VALIDATOR,
@@ -64,7 +64,7 @@ describe("SignService", () => {
         nonce: 2,
         transaction: {
           type: "Undelegate" as const,
-          chain: BSC_CHAIN,
+          chain: bscMainnet,
           amount: parseEther("1"),
           isMaxAmount: false,
           validator: VALIDATOR,
@@ -79,7 +79,7 @@ describe("SignService", () => {
         nonce: 3,
         transaction: {
           type: "Redelegate" as const,
-          chain: BSC_CHAIN,
+          chain: bscMainnet,
           amount: parseEther("1"),
           isMaxAmount: false,
           fromValidator: FROM_VALIDATOR,
@@ -95,7 +95,7 @@ describe("SignService", () => {
         nonce: 4,
         transaction: {
           type: "Claim" as const,
-          chain: BSC_CHAIN,
+          chain: bscMainnet,
           amount: 0n,
           validator: VALIDATOR,
           index: 3n,
@@ -115,7 +115,7 @@ describe("SignService", () => {
 
       expect(rawTx).toBe(expectedHex);
       const tx = parseTransaction(rawTx as `0x${string}`);
-      expect(tx.chainId).toBe(Number(BSC_CHAIN.chainId));
+      expect(tx.chainId).toBe(Number(bscMainnet.chainId));
       expect(tx.nonce).toBe(nonce);
       expect(tx.gasPrice).toBe(mockFee.gasPrice);
       expect(tx.gas).toBe(mockFee.gasLimit);
@@ -131,7 +131,7 @@ describe("SignService", () => {
         service.sign({
           transaction: {
             type: "Delegate" as const,
-            chain: BSC_CHAIN,
+            chain: bscMainnet,
             amount: parseEther("0.5"),
             isMaxAmount: false,
             validator: OPERATOR,
@@ -153,7 +153,7 @@ describe("SignService", () => {
       const signArgs = {
         transaction: {
           type: "Delegate" as const,
-          chain: BSC_CHAIN,
+          chain: bscMainnet,
           amount: parseEther("1"),
           isMaxAmount: false,
           validator: OPERATOR,
@@ -176,7 +176,7 @@ describe("SignService", () => {
       const signArgs = {
         transaction: {
           type: "Delegate" as const,
-          chain: BSC_CHAIN,
+          chain: bscMainnet,
           amount: parseEther("1"),
           isMaxAmount: false,
           validator: OPERATOR,

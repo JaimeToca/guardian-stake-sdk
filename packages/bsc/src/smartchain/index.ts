@@ -3,7 +3,7 @@ import type { GuardianServiceContract, Validator, Logger } from "@guardian/sdk";
 import { InMemoryCache, NoopLogger, validateRpcUrl } from "@guardian/sdk";
 import type { GuardianChain } from "@guardian/sdk";
 import { GuardianService } from "./services/guardian-service";
-import { BSC_CHAIN, getViemChain } from "../chain";
+import { bscMainnet, getViemChain } from "../chain";
 import { BalanceService } from "./services/balance-service";
 import { StakingService } from "./services/staking-service";
 import { BNBRpcClient } from "./rpc/bnb-rpc-client";
@@ -20,7 +20,7 @@ import { BroadcastService } from "./services/broadcast-service";
  * @example
  * ```typescript
  * import { GuardianSDK } from "@guardian/sdk";
- * import { bsc, BSC_CHAIN } from "@guardian/bsc";
+ * import { bsc, chains } from "@guardian/bsc";
  *
  * const sdk = new GuardianSDK([
  *   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
@@ -29,7 +29,7 @@ import { BroadcastService } from "./services/broadcast-service";
  */
 export function bsc(config: { rpcUrl: string; logger?: Logger }): GuardianServiceContract {
   validateRpcUrl(config.rpcUrl);
-  return provideGuarService(BSC_CHAIN, config.rpcUrl, config.logger ?? new NoopLogger());
+  return provideGuarService(bscMainnet, config.rpcUrl, config.logger ?? new NoopLogger());
 }
 
 function provideGuarService(

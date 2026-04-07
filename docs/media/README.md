@@ -113,7 +113,7 @@ npm install @guardian/bsc viem
 
 ```typescript
 import { GuardianSDK } from "@guardian/sdk";
-import { bsc, BSC_CHAIN, TransactionType } from "@guardian/bsc";
+import { bsc, chains } from "@guardian/bsc";
 import { formatEther, parseEther } from "viem";
 
 const sdk = new GuardianSDK([
@@ -123,15 +123,15 @@ const sdk = new GuardianSDK([
 const ADDRESS = "0xYourAddress";
 
 // 1. Fetch all validators
-const validators = await sdk.getValidators(BSC_CHAIN);
+const validators = await sdk.getValidators(chains.bscMainnet);
 console.log(`${validators.length} validators found`);
 
 // 2. Fetch delegations for an address
-const { delegations, stakingSummary } = await sdk.getDelegations(BSC_CHAIN, ADDRESS);
+const { delegations, stakingSummary } = await sdk.getDelegations(chains.bscMainnet, ADDRESS);
 console.log(`${delegations.length} delegations, max APY: ${stakingSummary.maxApy}%`);
 
 // 3. Fetch balances
-const balances = await sdk.getBalances(BSC_CHAIN, ADDRESS);
+const balances = await sdk.getBalances(chains.bscMainnet, ADDRESS);
 for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount), "BNB");
 }
@@ -143,7 +143,7 @@ for (const balance of balances) {
 // 4. Estimate fee for a delegation
 const fee = await sdk.estimateFee({
   type: "Delegate",
-  chain: BSC_CHAIN,
+  chain: chains.bscMainnet,
   amount: parseEther("1"),
   account: ADDRESS,
   isMaxAmount: false,
@@ -151,13 +151,13 @@ const fee = await sdk.estimateFee({
 });
 
 // 5. Get nonce
-const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+const nonce = await sdk.getNonce(chains.bscMainnet, ADDRESS);
 
 // 6. Sign and broadcast
 const rawTx = await sdk.sign({
   transaction: {
     type: "Delegate",
-    chain: BSC_CHAIN,
+    chain: chains.bscMainnet,
     amount: parseEther("1"),
     isMaxAmount: false,
     validator: validators[0],
@@ -179,7 +179,7 @@ const rawTx = await sdk.sign({
 Returns all validators registered on the protocol, including active, inactive, and jailed ones.
 
 ```typescript
-const validators = await sdk.getValidators(BSC_CHAIN);
+const validators = await sdk.getValidators(chains.bscMainnet);
 ```
 
 **Returns:** `Promise<Validator[]>`
@@ -214,7 +214,7 @@ Returns all delegations for a given address, along with a summary of the staking
 
 ```typescript
 const { delegations, stakingSummary } = await sdk.getDelegations(
-  BSC_CHAIN,
+  chains.bscMainnet,
   "0xYourAddress"
 );
 ```
@@ -261,7 +261,7 @@ interface StakingSummary {
 Returns the four balance categories for a given address — useful for displaying a portfolio overview.
 
 ```typescript
-const balances = await sdk.getBalances(BSC_CHAIN, "0xYourAddress");
+const balances = await sdk.getBalances(chains.bscMainnet, "0xYourAddress");
 ```
 
 **Returns:** `Promise<Balance[]>`
@@ -280,7 +280,7 @@ Example:
 ```typescript
 import { formatEther } from "viem";
 
-const balances = await sdk.getBalances(BSC_CHAIN, "0xYourAddress");
+const balances = await sdk.getBalances(chains.bscMainnet, "0xYourAddress");
 
 for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount));
@@ -298,7 +298,7 @@ for (const balance of balances) {
 Returns the current transaction nonce for an address. Required when building signing arguments.
 
 ```typescript
-const nonce = await sdk.getNonce(BSC_CHAIN, "0xYourAddress");
+const nonce = await sdk.getNonce(chains.bscMainnet, "0xYourAddress");
 ```
 
 ---
@@ -328,7 +328,7 @@ Accepts any of the four transaction types:
 // Delegate — stake BNB with a validator
 const fee = await sdk.estimateFee({
   type: "Delegate",
-  chain: BSC_CHAIN,
+  chain: chains.bscMainnet,
   amount: parseEther("5"),
   account: "0xYourAddress",
   isMaxAmount: false,
@@ -338,7 +338,7 @@ const fee = await sdk.estimateFee({
 // Undelegate — begin the 7-day unbonding process
 const fee = await sdk.estimateFee({
   type: "Undelegate",
-  chain: BSC_CHAIN,
+  chain: chains.bscMainnet,
   amount: parseEther("5"),
   account: "0xYourAddress",
   isMaxAmount: false,
@@ -348,7 +348,7 @@ const fee = await sdk.estimateFee({
 // Redelegate — move stake from one validator to another (0.002% fee applies)
 const fee = await sdk.estimateFee({
   type: "Redelegate",
-  chain: BSC_CHAIN,
+  chain: chains.bscMainnet,
   amount: parseEther("5"),
   account: "0xYourAddress",
   isMaxAmount: false,
@@ -359,7 +359,7 @@ const fee = await sdk.estimateFee({
 // Claim — withdraw BNB after the unbonding period completes
 const fee = await sdk.estimateFee({
   type: "Claim",
-  chain: BSC_CHAIN,
+  chain: chains.bscMainnet,
   amount: 0n,
   account: "0xYourAddress",
   validator: validators[0],
@@ -379,7 +379,7 @@ Signs a transaction and returns the raw hex string ready to broadcast.
 const rawTx = await sdk.sign({
   transaction: {
     type: "Delegate",
-    chain: BSC_CHAIN,
+    chain: chains.bscMainnet,
     amount: parseEther("1"),
     isMaxAmount: false,
     validator: validators[0],
@@ -417,7 +417,7 @@ For **MPC wallets, hardware wallets, or any setup where the private key is not d
 const { serializedTransaction, signArgs } = await sdk.preHash({
   transaction: {
     type: "Delegate",
-    chain: BSC_CHAIN,
+    chain: chains.bscMainnet,
     amount: parseEther("1"),
     isMaxAmount: false,
     validator: validators[0],
@@ -472,7 +472,7 @@ import {
 } from "@guardian/bsc"; // re-exported from @guardian/sdk
 
 try {
-  await sdk.getDelegations(BSC_CHAIN, address);
+  await sdk.getDelegations(chains.bscMainnet, address);
 } catch (err) {
   if (err instanceof ValidationError) {
     console.error(err.code, err.message);
@@ -554,7 +554,7 @@ If you only want to handle one specific condition:
 import { ValidationError } from "@guardian/bsc";
 
 try {
-  await sdk.getBalances(BSC_CHAIN, rawInput);
+  await sdk.getBalances(chains.bscMainnet, rawInput);
 } catch (err) {
   if (
     err instanceof ValidationError &&
@@ -572,7 +572,7 @@ try {
 Import the chain constant for the network you want to interact with:
 
 ```typescript
-import { BSC_CHAIN } from "@guardian/bsc";
+import { chains } from "@guardian/bsc";
 ```
 
 | Chain | Chain ID | Explorer |

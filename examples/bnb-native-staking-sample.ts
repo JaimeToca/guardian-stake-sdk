@@ -1,7 +1,9 @@
 import { parseUnits, toHex } from "viem";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
-import { GuardianSDK, BSC_CHAIN, bsc, ConsoleLogger } from "@guardian/bsc";
+import { GuardianSDK, chains, bsc, ConsoleLogger } from "@guardian/bsc";
+
+const { bscMainnet } = chains;
 import type {
   DelegateTransaction,
   RedelegateTransaction,
@@ -24,16 +26,16 @@ const sdk = new GuardianSDK([
  */
 async function sample_check_delegations() {
   // Fetch balances
-  const balances = await sdk.getBalances(BSC_CHAIN, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
+  const balances = await sdk.getBalances(bscMainnet, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
   console.log("Balances:", balances);
 
   // Fetch validators
-  const validators = await sdk.getValidators(BSC_CHAIN);
+  const validators = await sdk.getValidators(bscMainnet);
   console.log("Validators:", validators);
 
   // Fetch delegations for an address
   const delegations = await sdk.getDelegations(
-    BSC_CHAIN,
+    bscMainnet,
     "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b"
   );
   for (const delegation of delegations.delegations) {
@@ -59,18 +61,18 @@ async function sample_delegate_transaction() {
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
 
   // Fetch balances
-  const balances = await sdk.getBalances(BSC_CHAIN, ADDRESS);
+  const balances = await sdk.getBalances(bscMainnet, ADDRESS);
   console.log("Balances:", balances);
 
   // Pick a validator — use getValidators() to browse the full set
-  const validators = await sdk.getValidators(BSC_CHAIN);
+  const validators = await sdk.getValidators(bscMainnet);
   const validator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
   console.log(`Delegating to: ${validator.name} (${validator.operatorAddress})`);
 
   // Build the transaction object
   const transaction: DelegateTransaction = {
     type: "Delegate",
-    chain: BSC_CHAIN,
+    chain: bscMainnet,
     amount: AMOUNT,
     account: ADDRESS,
     isMaxAmount: false,
@@ -82,7 +84,7 @@ async function sample_delegate_transaction() {
   console.log(`Fee: ${fee.total} wei (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})`);
 
   // Fetch nonce
-  const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+  const nonce = await sdk.getNonce(bscMainnet, ADDRESS);
   console.log(`Nonce: ${nonce}`);
 
   // Sign — returns a signed raw transaction hex string ready to broadcast
@@ -90,7 +92,7 @@ async function sample_delegate_transaction() {
   console.log(`Signed tx: ${rawTx}`);
 
   // broadcast
-  const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+  const txHash = await sdk.broadcast(bscMainnet, rawTx);
   console.log(`Broadcasted tx hash: ${txHash}`);
 }
 
@@ -110,7 +112,7 @@ async function sample_redelegate_transaction() {
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
   
   // Pick a validator — use getValidators() to browse the full set
-  const validators = await sdk.getValidators(BSC_CHAIN);
+  const validators = await sdk.getValidators(bscMainnet);
 
   // From Validator A to Validator B
   const fromValidator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
@@ -121,7 +123,7 @@ async function sample_redelegate_transaction() {
   // Build the transaction object
   const transaction: RedelegateTransaction = {
     type: "Redelegate",
-    chain: BSC_CHAIN,
+    chain: bscMainnet,
     amount: AMOUNT, // ignored when isMaxAmount is true
     account: ADDRESS,
     isMaxAmount: true, // redelegates the full position — amount is ignored
@@ -134,7 +136,7 @@ async function sample_redelegate_transaction() {
   console.log(`Fee: ${fee.total} wei (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})`);
 
   // Fetch nonce
-  const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+  const nonce = await sdk.getNonce(bscMainnet, ADDRESS);
   console.log(`Nonce: ${nonce}`);
 
   // Sign — returns a signed raw transaction hex string ready to broadcast
@@ -142,7 +144,7 @@ async function sample_redelegate_transaction() {
   console.log(`Signed tx: ${rawTx}`);
 
   // broadcast
-  const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+  const txHash = await sdk.broadcast(bscMainnet, rawTx);
   console.log(`Broadcasted tx hash: ${txHash}`);
 }
 
@@ -162,7 +164,7 @@ async function sample_undelegate_transaction() {
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
 
   // Pick a validator — use getValidators() to browse the full set
-  const validators = await sdk.getValidators(BSC_CHAIN);
+  const validators = await sdk.getValidators(bscMainnet);
 
   const validator = validators.find((v) => v.name === "Ankr Staking") ?? validators[0];
   console.log(`Undelegating from: ${validator.name} (${validator.operatorAddress})`);
@@ -170,7 +172,7 @@ async function sample_undelegate_transaction() {
   // Build the undelegate transaction object
   const transaction: UndelegateTransaction = {
     type: "Undelegate",
-    chain: BSC_CHAIN,
+    chain: bscMainnet,
     amount: AMOUNT,
     account: ADDRESS,
     isMaxAmount: true,
@@ -182,7 +184,7 @@ async function sample_undelegate_transaction() {
   console.log(`Fee: ${fee.total} wei (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})`);
 
   // Fetch nonce
-  const nonce = await sdk.getNonce(BSC_CHAIN, ADDRESS);
+  const nonce = await sdk.getNonce(bscMainnet, ADDRESS);
   console.log(`Nonce: ${nonce}`);
 
   // Sign — returns a signed raw transaction hex string ready to broadcast
@@ -190,7 +192,7 @@ async function sample_undelegate_transaction() {
   console.log(`Signed tx: ${rawTx}`);
 
   // broadcast
-  const txHash = await sdk.broadcast(BSC_CHAIN, rawTx);
+  const txHash = await sdk.broadcast(bscMainnet, rawTx);
   console.log(`Broadcasted tx hash: ${txHash}`);
 }
 

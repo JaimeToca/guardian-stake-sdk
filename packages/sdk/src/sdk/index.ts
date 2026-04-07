@@ -19,13 +19,13 @@ import type { Transaction } from "../service/transaction-types";
  * @example
  * ```typescript
  * import { GuardianSDK } from "@guardian/sdk";
- * import { bsc, BSC_CHAIN } from "@guardian/bsc";
+ * import { bsc, chains } from "@guardian/bsc";
  *
  * const sdk = new GuardianSDK([
  *   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
  * ]);
  *
- * const validators = await sdk.getValidators(BSC_CHAIN);
+ * const validators = await sdk.getValidators(chains.bscMainnet);
  * ```
  */
 export class GuardianSDK {

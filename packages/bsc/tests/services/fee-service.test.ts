@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { getAddress } from "viem";
 import { FeeService } from "../../src/smartchain/services/fee-service";
 import { ValidationError } from "@guardian/sdk";
-import { BSC_CHAIN } from "../../src/chain";
+import { bscMainnet } from "../../src/chain";
 import gasPriceFixture from "../fixtures/eth_gasPrice.json";
 import estimateGasFixture from "../fixtures/eth_estimateGas.json";
 
@@ -33,7 +33,7 @@ describe("FeeService", () => {
 
     const fee = await service.estimateFee({
       type: "Undelegate",
-      chain: BSC_CHAIN,
+      chain: bscMainnet,
       amount: 1_000_000_000_000_000_000n,
       isMaxAmount: false,
       validator: VALIDATOR,
@@ -54,7 +54,7 @@ describe("FeeService", () => {
 
     await service.estimateFee({
       type: "Delegate",
-      chain: BSC_CHAIN,
+      chain: bscMainnet,
       amount: 500n,
       isMaxAmount: false,
       validator: VALIDATOR,
@@ -72,7 +72,7 @@ describe("FeeService", () => {
     await expect(
       service.estimateFee({
         type: "Delegate",
-        chain: BSC_CHAIN,
+        chain: bscMainnet,
         amount: 1_000_000_000_000_000_000n,
         isMaxAmount: false,
         validator: VALIDATOR,

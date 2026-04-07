@@ -68,9 +68,10 @@ def kebab_to_camel(s: str) -> str:
     return parts[0] + "".join(p.capitalize() for p in parts[1:])
 
 
-def kebab_to_screaming_snake(s: str) -> str:
-    """bnb-smart-chain → BNB_SMART_CHAIN"""
-    return s.upper().replace("-", "_")
+# chain_name: camelCase constant name for the mainnet chain object
+# e.g. "tron" → "tronMainnet", "bnb-smart-chain" → "bnbSmartChainMainnet"
+def make_chain_name(slug: str) -> str:
+    return kebab_to_camel(slug) + "Mainnet"
 
 
 # ---------------------------------------------------------------------------
@@ -105,16 +106,17 @@ def make_package_json(slug: str, symbol: str, no_viem: bool) -> str:
         },
         "files": ["dist"],
         "sideEffects": False,
+        "publishConfig": {"access": "public"},
         "scripts": {
             "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json",
             "typecheck": "tsc --noEmit",
-            "prepublishOnly": "npm run build",
+            "prepublishOnly": "pnpm run build",
             "test": "vitest run",
             "test:watch": "vitest",
         },
         "dependencies": {"@guardian/sdk": "*"},
         "devDependencies": {"vitest": "^3.0.0"},
-        "engines": {"node": ">=18"},
+        "engines": {"node": ">=22"},
         "keywords": [slug, "staking", "web3", "blockchain", "sdk", "guardian"],
         "license": "MIT",
     }
@@ -185,31 +187,44 @@ export default defineConfig({
 """
 
 
-def make_chain_index(slug: str, symbol: str, numeric_chain_id: str, explorer: str, chain_const: str) -> str:
+def make_chain_index(slug: str, symbol: str, numeric_chain_id: str, explorer: str, chain_name: str) -> str:
     return f"""import type {{ GuardianChain }} from "@guardian/sdk";
-import {{ ChainEcosystemType, GuardianChainType }} from "@guardian/sdk";
 
 /** {symbol} mainnet configuration. */
-export const {chain_const}: GuardianChain = {{
+export const {chain_name}: GuardianChain = {{
   id: "{slug}-mainnet",
-  type: GuardianChainType.Smartchain, // TODO: adjust if not EVM
+  type: "Smartchain", // TODO: adjust if not EVM
   symbol: "{symbol}",
   decimals: 18, // TODO: confirm native token decimals
-  ecosystem: ChainEcosystemType.Ethereum, // TODO: adjust if not EVM
+  ecosystem: "Ethereum", // TODO: adjust if not EVM
   chainId: "{numeric_chain_id}",
   explorer: "{explorer}",
 }};
 
+/**
+ * Registry of all chains supported by `@guardian/{slug}`.
+ * Use this for autocomplete — type `chains.` to see available chains.
+ *
+ * @example
+ * ```typescript
+ * import {{ chains }} from "@guardian/{slug}";
+ * sdk.getValidators(chains.{chain_name});
+ * ```
+ */
+export const chains = {{
+  {chain_name},
+}} as const;
+
 /** All chains supported by `@guardian/{slug}`. */
-export const SUPPORTED_CHAINS: GuardianChain[] = [{chain_const}];
+export const SUPPORTED_CHAINS: GuardianChain[] = Object.values(chains);
 
 /** Retrieves a supported chain by its `id` string. */
 export const getChainById = (id: string): GuardianChain | undefined =>
-  SUPPORTED_CHAINS.find((chain) => chain.id === id);
+  Object.values(chains).find((chain) => chain.id === id);
 
 /** Returns true if the given chain is in the supported chains list. */
 export const isSupportedChain = (chain: GuardianChain): boolean =>
-  SUPPORTED_CHAINS.some(
+  Object.values(chains).some(
     (supported) => supported.id === chain.id && supported.chainId === chain.chainId
   );
 """
@@ -318,7 +333,6 @@ def make_sign_service() -> str:
   Logger,
 } from "@guardian/sdk";
 import { NoopLogger } from "@guardian/sdk";
-import type { HexString } from "@guardian/sdk";
 
 export class SignService implements SignServiceContract {
   constructor(private readonly logger: Logger = new NoopLogger()) {}
@@ -338,7 +352,7 @@ export class SignService implements SignServiceContract {
     throw new Error("compile: not yet implemented");
   }
 
-  buildCallData(_transaction: Transaction): { data: HexString; amount: bigint } {
+  buildCallData(_transaction: Transaction): { data: string; amount: bigint } {
     // TODO: ABI-encode (EVM) or proto-encode the transaction
     throw new Error("buildCallData: not yet implemented");
   }
@@ -346,8 +360,8 @@ export class SignService implements SignServiceContract {
 """
 
 
-def make_guardian_service(chain_const: str) -> str:
-    return f"""import type {{
+def make_guardian_service() -> str:
+    return """import type {
   GuardianServiceContract,
   GuardianChain,
   Validator,
@@ -364,9 +378,9 @@ def make_guardian_service(chain_const: str) -> str:
   FeeServiceContract,
   SignServiceContract,
   NonceServiceContract,
-}} from "@guardian/sdk";
+} from "@guardian/sdk";
 
-export class GuardianService implements GuardianServiceContract {{
+export class GuardianService implements GuardianServiceContract {
   constructor(
     private readonly chain: GuardianChain,
     private readonly balanceService: BalanceServiceContract,
@@ -374,53 +388,53 @@ export class GuardianService implements GuardianServiceContract {{
     private readonly feeService: FeeServiceContract,
     private readonly signService: SignServiceContract,
     private readonly stakingService: StakingServiceContract
-  ) {{}}
+  ) {}
 
-  getChainInfo(): GuardianChain {{
+  getChainInfo(): GuardianChain {
     return this.chain;
-  }}
+  }
 
-  getValidators(): Promise<Validator[]> {{
+  getValidators(): Promise<Validator[]> {
     return this.stakingService.getValidators();
-  }}
+  }
 
-  getDelegations(address: string): Promise<Delegations> {{
+  getDelegations(address: string): Promise<Delegations> {
     return this.stakingService.getDelegations(address);
-  }}
+  }
 
-  getBalances(address: string): Promise<Balance[]> {{
+  getBalances(address: string): Promise<Balance[]> {
     return this.balanceService.getBalances(address);
-  }}
+  }
 
-  getNonce(address: string): Promise<number> {{
+  getNonce(address: string): Promise<number> {
     return this.nonceService.getNonce(address);
-  }}
+  }
 
-  estimateFee(transaction: Transaction): Promise<Fee> {{
+  estimateFee(transaction: Transaction): Promise<Fee> {
     return this.feeService.estimateFee(transaction);
-  }}
+  }
 
-  sign(signingArgs: SigningWithPrivateKey): Promise<string> {{
+  sign(signingArgs: SigningWithPrivateKey): Promise<string> {
     return this.signService.sign(signingArgs);
-  }}
+  }
 
-  prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult> {{
+  prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult> {
     return this.signService.prehash(preHashArgs);
-  }}
+  }
 
-  compile(compileArgs: CompileArgs): Promise<string> {{
+  compile(compileArgs: CompileArgs): Promise<string> {
     return this.signService.compile(compileArgs);
-  }}
-}}
+  }
+}
 """
 
 
-def make_di_factory(slug: str, symbol: str, chain_const: str, factory_fn: str) -> str:
+def make_di_factory(slug: str, symbol: str, chain_name: str, factory_fn: str) -> str:
     pkg = f"@guardian/{slug}"
     return f"""import type {{ GuardianServiceContract, Logger }} from "@guardian/sdk";
 import {{ InMemoryCache, NoopLogger, validateRpcUrl }} from "@guardian/sdk";
 import type {{ Validator }} from "@guardian/sdk";
-import {{ {chain_const} }} from "../chain";
+import {{ {chain_name} }} from "../chain";
 import {{ GuardianService }} from "./services/guardian-service";
 import {{ StakingService }} from "./services/staking-service";
 import {{ BalanceService }} from "./services/balance-service";
@@ -435,11 +449,13 @@ import {{ NonceService }} from "./services/nonce-service";
  * @example
  * ```typescript
  * import {{ GuardianSDK }} from "@guardian/sdk";
- * import {{ {factory_fn}, {chain_const} }} from "{pkg}";
+ * import {{ {factory_fn}, chains }} from "{pkg}";
  *
  * const sdk = new GuardianSDK([
  *   {factory_fn}({{ rpcUrl: "https://<rpc-endpoint>" }}),
  * ]);
+ *
+ * const validators = await sdk.getValidators(chains.{chain_name});
  * ```
  */
 export function {factory_fn}(config: {{ rpcUrl: string; logger?: Logger }}): GuardianServiceContract {{
@@ -457,7 +473,7 @@ export function {factory_fn}(config: {{ rpcUrl: string; logger?: Logger }}): Gua
   const feeService = new FeeService(logger);
 
   return new GuardianService(
-    {chain_const},
+    {chain_name},
     balanceService,
     nonceService,
     feeService,
@@ -468,14 +484,14 @@ export function {factory_fn}(config: {{ rpcUrl: string; logger?: Logger }}): Gua
 """
 
 
-def make_src_index(slug: str, chain_const: str, factory_fn: str) -> str:
+def make_src_index(slug: str, factory_fn: str) -> str:
     symbol_upper = slug.upper().replace("-", " ")
     return f"""// Re-export everything from @guardian/sdk so consumers need only one import
 export * from "@guardian/sdk";
 
 // {symbol_upper}-specific public API
 export {{ {factory_fn} }} from "./mainnet";
-export {{ {chain_const}, SUPPORTED_CHAINS, getChainById, isSupportedChain }} from "./chain";
+export {{ chains, SUPPORTED_CHAINS, getChainById, isSupportedChain }} from "./chain";
 """
 
 
@@ -537,14 +553,14 @@ describe("StakingService", () => {{
 """
 
 
-def make_sign_test(chain_const: str) -> str:
+def make_sign_test(slug: str, chain_name: str) -> str:
     return f"""import {{ describe, it }} from "vitest";
 import {{ SignService }} from "../../src/mainnet/services/sign-service";
-import {{ {chain_const} }} from "../../src/chain";
+import {{ chains }} from "../../src/chain";
 
 describe("SignService", () => {{
   const _service = new SignService();
-  const _chain = {chain_const};
+  const _chain = chains.{chain_name};
 
   describe("buildCallData", () => {{
     it.todo("encodes a Delegate transaction");
@@ -564,31 +580,31 @@ describe("SignService", () => {{
 """
 
 
-def make_example(slug: str, symbol: str, chain_const: str, factory_fn: str) -> str:
+def make_example(slug: str, symbol: str, chain_name: str, factory_fn: str) -> str:
     pkg = f"@guardian/{slug}"
     return f"""/**
  * {symbol} staking — quick-start sample
- * Run: npx tsx examples/{slug}-sample.ts
+ * Run: pnpm tsx examples/{slug}-sample.ts
  */
 import {{ GuardianSDK }} from "@guardian/sdk";
-import {{ {factory_fn}, {chain_const} }} from "{pkg}";
+import {{ {factory_fn}, chains }} from "{pkg}";
 
 const sdk = new GuardianSDK([
   {factory_fn}({{ rpcUrl: "https://<rpc-endpoint>" /* TODO: replace */ }}),
 ]);
 
 // --- Validators --------------------------------------------------------------
-const validators = await sdk.getValidators({chain_const});
+const validators = await sdk.getValidators(chains.{chain_name});
 console.log(`validators (${{validators.length}}):`, validators.slice(0, 3));
 
 // --- Delegations -------------------------------------------------------------
 const ADDRESS = "<your-address>"; // TODO: replace
-const {{ delegations, stakingSummary }} = await sdk.getDelegations(ADDRESS, {chain_const});
+const {{ delegations, stakingSummary }} = await sdk.getDelegations(chains.{chain_name}, ADDRESS);
 console.log("stakingSummary:", stakingSummary);
 console.log(`delegations (${{delegations.length}}):`, delegations);
 
 // --- Balances ----------------------------------------------------------------
-const balances = await sdk.getBalances(ADDRESS, {chain_const});
+const balances = await sdk.getBalances(chains.{chain_name}, ADDRESS);
 console.log("balances:", balances);
 """
 
@@ -610,7 +626,6 @@ def patch_eslint(root: Path, slug: str) -> None:
     changed = False
     for entry in entries:
         if entry not in patched:
-            # Insert after the last existing tsconfig.test.json line in the project array
             patched = re.sub(
                 r'("\.\/packages\/[^"]+tsconfig\.test\.json")(,?\s*\])',
                 rf'\1,\n        {entry}\2',
@@ -630,7 +645,7 @@ def patch_root_package_json(root: Path, slug: str) -> None:
     pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
 
     build_script: str = pkg["scripts"].get("build", "")
-    new_entry = f"npm run build -w packages/{slug}"
+    new_entry = f"pnpm --filter @guardian/{slug} run build"
 
     if new_entry not in build_script:
         pkg["scripts"]["build"] = build_script + f" && {new_entry}"
@@ -651,8 +666,8 @@ def main() -> None:
     symbol = args.symbol or slug.upper()
     numeric_chain_id = args.numeric_chain_id or "0 /* TODO: set correct chain ID */"
     explorer = args.explorer or f"https://{slug}scan.io"
-    chain_const = kebab_to_screaming_snake(slug) + "_CHAIN"
-    factory_fn = kebab_to_camel(slug)
+    chain_name = make_chain_name(slug)   # e.g. "tronMainnet", "ethereumMainnet"
+    factory_fn = kebab_to_camel(slug)    # e.g. "tron", "ethereum"
     no_viem = args.no_viem
 
     pkg_dir = ROOT / "packages" / slug
@@ -672,28 +687,28 @@ def main() -> None:
 
     # -- Source files ---------------------------------------------------------
     write(pkg_dir, "src/chain/index.ts",
-          make_chain_index(slug, symbol, numeric_chain_id, explorer, chain_const))
+          make_chain_index(slug, symbol, numeric_chain_id, explorer, chain_name))
     write(pkg_dir, "src/mainnet/services/staking-service.ts",  make_staking_service(slug))
     write(pkg_dir, "src/mainnet/services/balance-service.ts",  make_balance_service())
     write(pkg_dir, "src/mainnet/services/fee-service.ts",      make_fee_service())
     write(pkg_dir, "src/mainnet/services/nonce-service.ts",    make_nonce_service())
     write(pkg_dir, "src/mainnet/services/sign-service.ts",     make_sign_service())
-    write(pkg_dir, "src/mainnet/services/guardian-service.ts", make_guardian_service(chain_const))
+    write(pkg_dir, "src/mainnet/services/guardian-service.ts", make_guardian_service())
     write(pkg_dir, "src/mainnet/index.ts",
-          make_di_factory(slug, symbol, chain_const, factory_fn))
+          make_di_factory(slug, symbol, chain_name, factory_fn))
     write(pkg_dir, "src/index.ts",
-          make_src_index(slug, chain_const, factory_fn))
+          make_src_index(slug, factory_fn))
 
     # -- Test stubs -----------------------------------------------------------
     write(pkg_dir, f"tests/{slug}-config.test.ts",              make_config_test(slug, factory_fn))
     write(pkg_dir, "tests/services/staking-service.test.ts",   make_staking_test(slug))
-    write(pkg_dir, "tests/services/sign-service.test.ts",      make_sign_test(chain_const))
+    write(pkg_dir, "tests/services/sign-service.test.ts",      make_sign_test(slug, chain_name))
 
     # -- Example --------------------------------------------------------------
     examples_dir = ROOT / "examples"
     examples_dir.mkdir(exist_ok=True)
     example_path = examples_dir / f"{slug}-sample.ts"
-    example_path.write_text(make_example(slug, symbol, chain_const, factory_fn), encoding="utf-8")
+    example_path.write_text(make_example(slug, symbol, chain_name, factory_fn), encoding="utf-8")
     print(f"  created  examples/{slug}-sample.ts")
 
     # -- Patch root files -----------------------------------------------------
@@ -705,12 +720,12 @@ def main() -> None:
 ✅  packages/{slug} scaffolded successfully.
 
 Next steps:
-  1. npm install
+  1. pnpm install
   2. Fill in the TODOs in packages/{slug}/src/mainnet/services/
   3. Update packages/{slug}/src/chain/index.ts (chainId, decimals, ecosystem)
   4. Add @guardian/{slug} to the packages table in README.md
-  5. npm run typecheck -w packages/{slug}
-  6. npm test -w packages/{slug}
+  5. pnpm --filter @guardian/{slug} run typecheck
+  6. pnpm --filter @guardian/{slug} run test
 
 Full contributor guide: docs/adding-a-chain.md
 """)
