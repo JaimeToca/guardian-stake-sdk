@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@guardian/sdk':
+        specifier: workspace:*
+        version: link:packages/sdk
       '@scure/bip32':
         specifier: ^2.0.1
         version: 2.0.1
@@ -59,9 +62,6 @@ importers:
 
   packages/bsc:
     devDependencies:
-      '@guardian/sdk':
-        specifier: workspace:*
-        version: link:../sdk
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.8)(typescript@6.0.2)(yaml@2.8.3)

@@ -23,6 +23,7 @@
   "author": "JaimeToca",
   "license": "MIT",
   "devDependencies": {
+    "@guardian/sdk": "workspace:*",
     "@scure/bip32": "^2.0.1",
     "@scure/bip39": "^2.0.1",
     "@semantic-release/changelog": "^6.0.3",
