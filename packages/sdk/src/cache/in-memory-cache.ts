@@ -41,7 +41,7 @@ export class InMemoryCache<K, V> implements CacheContract<K, V> {
 
   public set(key: K, value: V, ttlMs?: number): void {
     const expiration = Date.now() + (ttlMs ?? this.defaultTtlMs);
-    this.cache.set(key, { value, expiration });
+    this.cache.set(key, { value, expirationInMillis: expiration });
   }
 
   public get(key: K): V | undefined {
@@ -49,7 +49,7 @@ export class InMemoryCache<K, V> implements CacheContract<K, V> {
 
     if (!entry) return undefined;
 
-    if (Date.now() >= entry.expiration) {
+    if (Date.now() >= entry.expirationInMillis) {
       this.delete(key);
       return undefined;
     }
@@ -63,7 +63,7 @@ export class InMemoryCache<K, V> implements CacheContract<K, V> {
 
   public has(key: K): boolean {
     const entry = this.cache.get(key);
-    return !!entry && Date.now() < entry.expiration;
+    return !!entry && Date.now() < entry.expirationInMillis;
   }
 
   public clear(): void {
