@@ -73,15 +73,15 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | Package | Chain | Status | Docs |
 |---|---|---|---|
 | [`@guardian/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
-| `@guardian/sui` | SUI | In Progress | — |
+| `@guardian/ethereum` | Ethereum | Planned | — |
+| `@guardian/sui` | SUI | Planned | — |
 | `@guardian/tron` | Tron | Planned | — |
+| `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — |
 | `@guardian/solana` | Solana | Planned | — |
 | `@guardian/aptos` | Aptos | Planned | — |
 | `@guardian/cardano` | Cardano | Planned | — |
 | `@guardian/polkadot` | Polkadot | Planned | — |
 | `@guardian/near` | NEAR | Planned | — |
-| `@guardian/ethereum` | Ethereum | Planned | — |
-| `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — |
 
 Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian/sdk` is included automatically as a dependency of each chain package.
 
@@ -127,9 +127,9 @@ No chain IDs to configure manually, no internal wiring — install the package, 
 
 ## Staking API
 
-> **Beta notice:** The public API is currently in beta. Method signatures, return types, and behaviours may change between minor versions until a stable 1.0 release is declared. Pin your dependency to a specific version and review the [CHANGELOG](./CHANGELOG.md) before upgrading.
+> **Beta notice:** The public API is currently in beta. Method signatures, return types, and behaviours may change between minor versions until a stable 1.0 release is declared. Pin your dependency to a specific version and review the [CHANGELOG](./CHANGELOG.md) before upgrading. Please note that there are some planned changes, such as extending to WSS endpoints and APIs, as well as improving hardware wallet support. Additionally, the SDK may support specific DeFi protocols in the future.
 
-The same API surface is available on every supported chain. Pass the chain object as the first argument to scope each call.
+The same API surface will be available on every supported chain. Pass the chain object as the first argument to scope each call.
 
 | Method | Returns | Description |
 |--------|---------|-------------|
