@@ -2,7 +2,12 @@ import type { GuardianChain } from "../chain";
 import type { Balance } from "../entity/balance-types";
 import type { Transaction } from "../entity/transaction-types";
 import type { Fee } from "../entity/fee-types";
-import type { BaseSignArgs, CompileArgs, PrehashResult, SigningWithPrivateKey } from "../entity/sign-types";
+import type {
+  BaseSignArgs,
+  CompileArgs,
+  PrehashResult,
+  SigningWithPrivateKey,
+} from "../entity/sign-types";
 import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
 /** Chain-agnostic contract for the Guardian Service facade. Implemented by each chain package. */
 export interface GuardianServiceContract {

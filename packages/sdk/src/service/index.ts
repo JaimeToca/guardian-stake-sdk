@@ -26,6 +26,11 @@ export type {
   StakingSummary,
 } from "../entity/staking-types";
 
-export { SigningWithPrivateKey, BaseSignArgs, CompileArgs, PrehashResult } from "../entity/sign-types";
+export {
+  SigningWithPrivateKey,
+  BaseSignArgs,
+  CompileArgs,
+  PrehashResult,
+} from "../entity/sign-types";
 
 export { GuardianServiceContract } from "./guardian-service-contract";

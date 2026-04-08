@@ -5,7 +5,13 @@ import { NoopLogger } from "@guardian/sdk";
 import type { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
 import type { MulticallResult } from "../abi";
 import { processSingleMulticallResult } from "../abi";
-import type { Delegation, Delegations, StakingServiceContract, Validator, ValidatorStatus } from "@guardian/sdk";
+import type {
+  Delegation,
+  Delegations,
+  StakingServiceContract,
+  Validator,
+  ValidatorStatus,
+} from "@guardian/sdk";
 import { filterByStatus } from "@guardian/sdk";
 import { parseEvmAddress } from "../validations";
 

@@ -35,7 +35,10 @@ export class GuardianSDK {
     this.services = new Map(services.map((s) => [s.getChainInfo().id, s]));
   }
 
-  getValidators(chain: GuardianChain, status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
+  getValidators(
+    chain: GuardianChain,
+    status?: ValidatorStatus | ValidatorStatus[]
+  ): Promise<Validator[]> {
     return this.getService(chain).getValidators(status);
   }
 
