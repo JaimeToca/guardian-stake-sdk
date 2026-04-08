@@ -36,35 +36,29 @@ This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md). By partic
 
 ## Development setup
 
-**Prerequisites**: Node.js ≥ 18, npm ≥ 9.
+**Prerequisites**: Node.js ≥ 22, pnpm ≥ 9.
 
 ```bash
 # Clone and install
-git clone https://github.com/JaimeToca/bnb-native-staking.git
-cd bnb-native-staking
-npm install
+git clone https://github.com/JaimeToca/guardian-stake-sdk.git
+cd guardian-stake-sdk
+pnpm install
 
 # Build (sdk must build before bsc)
-npm run build
+pnpm run build
 
 # Type-check all packages
-npm run typecheck
+pnpm run typecheck
 
 # Run tests
-npm test
-
-# Lint + format check
-npm run lint
-npm run format:check
+pnpm test
 ```
 
 All CI checks must pass before a PR is merged:
 
-1. `format:check` — Prettier
-2. `lint` — ESLint
-3. `typecheck` — TypeScript
-4. `test` — Vitest
-5. `build` — tsc
+1. `typecheck` — TypeScript
+2. `test` — Vitest
+3. `build` — tsc + tsup
 
 ---
 
@@ -72,10 +66,10 @@ All CI checks must pass before a PR is merged:
 
 ```
 packages/
-  sdk/   → @guardian/sdk  — chain-agnostic core, no viem
+  sdk/   → @guardian/sdk  — chain-agnostic core, no viem dependency (private, not published)
   bsc/   → @guardian/bsc  — BNB Smart Chain implementation
 examples/ → runnable usage examples
-docs/     → generated TypeDoc site (not committed)
+docs/     → architecture diagrams and contributor guides
 ```
 
 See [CLAUDE.md](./CLAUDE.md) for a detailed architecture walkthrough.
@@ -110,7 +104,7 @@ Examples:
 
 1. Fork the repo and create a branch: `git checkout -b feat/my-feature`
 2. Make your changes following the conventions above.
-3. Run the full check suite locally (`npm run build && npm run typecheck && npm test && npm run lint`).
+3. Run the full check suite locally (`pnpm run build && pnpm run typecheck && pnpm test`).
 4. Open a PR against `main` with a clear description of **what** and **why**.
 5. A maintainer will review. Address any feedback and keep commits clean.
 6. Once approved and CI passes, a maintainer merges — semantic-release handles the version bump and npm publish automatically.
@@ -153,5 +147,5 @@ The release workflow:
 1. Analyzes commits since the last release tag.
 2. Determines the next version (major/minor/patch).
 3. Updates `CHANGELOG.md`.
-4. Publishes both packages to npm.
+4. Publishes `@guardian/bsc` to npm (`@guardian/sdk` is private and bundled — it is never published separately).
 5. Creates a GitHub release with release notes.
