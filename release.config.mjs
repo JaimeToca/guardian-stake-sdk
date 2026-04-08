@@ -19,7 +19,7 @@ export default {
 
     // Publish @guardian/bsc
     [
-      "semantic-release-pnpm",
+      "@semantic-release/npm",
       {
         pkgRoot: "packages/bsc",
       },
