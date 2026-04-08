@@ -28,7 +28,7 @@
   "peerDependencies": {
     "viem": "^2.47.5"
   },
-"devDependencies": {
+  "devDependencies": {
     "tsup": "^8.5.1",
     "viem": "^2.47.10",
     "vitest": "^4.1.2"

@@ -3,22 +3,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/JaimeToca/bnb-native-staking/actions/workflows/ci.yml">
-    <img src="https://github.com/JaimeToca/bnb-native-staking/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  <a href="https://github.com/JaimeToca/guardian-stake-sdk/actions/workflows/ci.yml">
+    <img src="https://github.com/JaimeToca/guardian-stake-sdk/actions/workflows/ci.yml/badge.svg" alt="CI" />
   </a>
   <a href="https://www.npmjs.com/package/@guardian/bsc">
     <img src="https://img.shields.io/npm/v/@guardian/bsc?label=%40guardian%2Fbsc&color=0d9488" alt="npm @guardian/bsc" />
   </a>
-  <a href="https://www.npmjs.com/package/@guardian/sdk">
-    <img src="https://img.shields.io/npm/v/@guardian/sdk?label=%40guardian%2Fsdk&color=6366f1" alt="npm @guardian/sdk" />
-  </a>
-  <a href="https://www.npmjs.com/package/@guardian/bsc">
+<a href="https://www.npmjs.com/package/@guardian/bsc">
     <img src="https://img.shields.io/npm/dm/@guardian/bsc?color=0d9488" alt="npm downloads" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
   </a>
-  <a href="https://github.com/JaimeToca/bnb-native-staking/blob/main/CONTRIBUTING.md">
+  <a href="https://github.com/JaimeToca/guardian-stake-sdk/blob/main/CONTRIBUTING.md">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </a>
   <img src="https://img.shields.io/badge/TypeScript-6.x-3178c6?logo=typescript&logoColor=white" alt="TypeScript" />
@@ -381,7 +378,7 @@ console.log(`Transaction hash: ${txHash}`);
 
 ## Sample — Delegate on BNB Smart Chain
 
-Full example: [`examples/bnb-native-staking-sample.ts`](./examples/bnb-native-staking-sample.ts)
+Full example: [`examples/guardian-stake-sdk-sample.ts`](./examples/guardian-stake-sdk-sample.ts)
 
 End-to-end example using direct signing:
 
@@ -688,7 +685,7 @@ Planned integrations follow the same architecture — each chain is an independe
 | Chain | Package | Status |
 |---|---|---|
 | BNB Smart Chain | [`@guardian/bsc`](./packages/bsc/README.md) | Available |
-| SUI | `@guardian/sui` | In Progress |
+| SUI | `@guardian/sui` | Planned |
 | Tron | `@guardian/tron` | Planned |
 | Solana | `@guardian/solana` | Planned |
 | Aptos | `@guardian/aptos` | Planned |
