@@ -5,6 +5,13 @@
 >
 > **Disclaimer:** Guardian SDK is unaudited, experimental software provided AS-IS. See [SECURITY.md](./SECURITY.md) and [README.md](./README.md) for full disclaimer.
 
+## [1.0.1](https://github.com/JaimeToca/guardian-stake-sdk/compare/v1.0.0...v1.0.1) (2026-04-08)
+
+
+### Bug Fixes
+
+* correct npm scope to [@guardian-sdk](https://github.com/guardian-sdk) ([6fbf7e6](https://github.com/JaimeToca/guardian-stake-sdk/commit/6fbf7e6f7b25b53d4aa20d82ca88399c7f7e25bd))
+
 # 1.0.0 (2026-04-08)
 
 
