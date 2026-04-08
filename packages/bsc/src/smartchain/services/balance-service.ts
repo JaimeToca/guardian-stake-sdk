@@ -1,5 +1,5 @@
 import type { Address, PublicClient } from "viem";
-import type { Balance, BalanceServiceContract, StakingServiceContract } from "@guardian/sdk";
+import type { Balance, BalanceServiceContract, StakingServiceContract } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**

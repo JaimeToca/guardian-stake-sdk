@@ -1,5 +1,5 @@
 {
-  "name": "@guardian/bsc",
+  "name": "@guardian-sdk/bsc",
   "version": "1.0.0",
   "description": "Guardian SDK for BNB Smart Chain",
   "main": "./dist/index.js",

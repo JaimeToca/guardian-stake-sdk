@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { parseEther, getAddress, parseTransaction } from "viem";
 import { SignService } from "../../src/smartchain/services/sign-service";
-import { ValidationError } from "@guardian/sdk";
+import { ValidationError } from "@guardian-sdk/sdk";
 import { bscMainnet } from "../../src/chain";
 import { STAKING_CONTRACT } from "../../src/smartchain/abi/multicall-stake-abi";
 import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-rpc-client-contract";

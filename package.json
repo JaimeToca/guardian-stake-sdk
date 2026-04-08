@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "build": "pnpm --filter @guardian/sdk run build && pnpm --filter @guardian/bsc run build",
+    "build": "pnpm --filter @guardian-sdk/sdk run build && pnpm --filter @guardian-sdk/bsc run build",
     "typecheck": "pnpm -r run typecheck && tsc --noEmit -p examples/tsconfig.json",
-    "test": "pnpm --filter @guardian/bsc run test",
+    "test": "pnpm --filter @guardian-sdk/bsc run test",
     "docs": "typedoc",
     "lint": "eslint packages/*/src packages/*/tests",
     "lint:fix": "eslint packages/*/src packages/*/tests --fix",
@@ -18,13 +18,13 @@
   },
   "packageManager": "pnpm@10.33.0",
   "pnpm": {
-    "publicHoistPattern": ["@guardian/sdk"],
+    "publicHoistPattern": ["@guardian-sdk/sdk"],
     "confirmModulesPurge": false
   },
   "author": "JaimeToca",
   "license": "MIT",
   "devDependencies": {
-    "@guardian/sdk": "workspace:*",
+    "@guardian-sdk/sdk": "workspace:*",
     "@scure/bip32": "^2.0.1",
     "@scure/bip39": "^2.0.1",
     "@semantic-release/changelog": "^6.0.3",

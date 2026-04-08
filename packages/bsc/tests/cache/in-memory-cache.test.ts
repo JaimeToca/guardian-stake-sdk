@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { InMemoryCache } from "@guardian/sdk";
+import { InMemoryCache } from "@guardian-sdk/sdk";
 
 describe("InMemoryCache", () => {
   let cache: InMemoryCache<string, string>;

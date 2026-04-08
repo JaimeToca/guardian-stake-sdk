@@ -20,8 +20,8 @@ import type {
   UndelegateTransaction,
   RedelegateTransaction,
   Logger,
-} from "@guardian/sdk";
-import { SigningError, NoopLogger, ValidationError, privateKey } from "@guardian/sdk";
+} from "@guardian-sdk/sdk";
+import { SigningError, NoopLogger, ValidationError, privateKey } from "@guardian-sdk/sdk";
 import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import type { BscSignServiceContract, CallData, SigningWithAccount } from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";

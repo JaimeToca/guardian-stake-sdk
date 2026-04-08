@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateRpcUrl, ConfigError } from "@guardian/sdk";
+import { validateRpcUrl, ConfigError } from "@guardian-sdk/sdk";
 
 describe("validateRpcUrl", () => {
   it.each(["http://example.com", "https://example.com", "ws://example.com", "wss://example.com"])(

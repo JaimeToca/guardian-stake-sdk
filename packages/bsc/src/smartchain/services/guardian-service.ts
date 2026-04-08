@@ -1,14 +1,14 @@
-import type { GuardianChain } from "@guardian/sdk";
-import type { Balance } from "@guardian/sdk";
-import type { Fee } from "@guardian/sdk";
-import type { GuardianServiceContract } from "@guardian/sdk";
+import type { GuardianChain } from "@guardian-sdk/sdk";
+import type { Balance } from "@guardian-sdk/sdk";
+import type { Fee } from "@guardian-sdk/sdk";
+import type { GuardianServiceContract } from "@guardian-sdk/sdk";
 import type {
   SigningWithPrivateKey,
   BaseSignArgs,
   PrehashResult,
   CompileArgs,
-} from "@guardian/sdk";
-import type { Transaction } from "@guardian/sdk";
+} from "@guardian-sdk/sdk";
+import type { Transaction } from "@guardian-sdk/sdk";
 import type {
   BalanceServiceContract,
   BroadcastServiceContract,
@@ -18,7 +18,7 @@ import type {
   StakingServiceContract,
   Validator,
   ValidatorStatus,
-} from "@guardian/sdk";
+} from "@guardian-sdk/sdk";
 import type { SigningWithAccount } from "../sign-types";
 import type { SignService } from "./sign-service";
 

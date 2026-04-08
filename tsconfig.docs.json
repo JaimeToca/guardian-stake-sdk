@@ -2,7 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "@guardian/sdk": ["./packages/sdk/src/index.ts"]
+      "@guardian-sdk/sdk": ["./packages/sdk/src/index.ts"]
     }
   },
   "include": [

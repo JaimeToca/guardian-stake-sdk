@@ -20,7 +20,7 @@ updates:
     commit-message:
       prefix: "chore(deps)"
 
-  # @guardian/sdk dependencies (axios)
+  # @guardian-sdk/sdk dependencies (axios)
   - package-ecosystem: npm
     directory: /packages/sdk
     schedule:
@@ -32,7 +32,7 @@ updates:
     commit-message:
       prefix: "chore(deps)(sdk)"
 
-  # @guardian/bsc dependencies (viem, vitest)
+  # @guardian-sdk/bsc dependencies (viem, vitest)
   - package-ecosystem: npm
     directory: /packages/bsc
     schedule:

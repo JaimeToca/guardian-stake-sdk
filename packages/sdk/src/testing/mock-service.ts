@@ -32,8 +32,8 @@ export const MOCK_CHAIN: GuardianChain = {
  *
  * @example
  * ```typescript
- * import { GuardianSDK, createMockService, mockValidator } from "@guardian/sdk";
- * import { chains } from "@guardian/bsc";
+ * import { GuardianSDK, createMockService, mockValidator } from "@guardian-sdk/sdk";
+ * import { chains } from "@guardian-sdk/bsc";
  *
  * const sdk = new GuardianSDK([
  *   createMockService({

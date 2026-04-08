@@ -22,10 +22,10 @@ pnpm run test
 
 This is a pnpm workspaces monorepo with two packages:
 
-- `packages/sdk` → published as `@guardian/sdk` — chain-agnostic core (no viem dependency)
-- `packages/bsc` → published as `@guardian/bsc` — BSC implementation (viem peer dep, depends on `@guardian/sdk`)
+- `packages/sdk` → published as `@guardian-sdk/sdk` — chain-agnostic core (no viem dependency)
+- `packages/bsc` → published as `@guardian-sdk/bsc` — BSC implementation (viem peer dep, depends on `@guardian-sdk/sdk`)
 
-Consumers install only `@guardian/bsc`, which re-exports everything from `@guardian/sdk`.
+Consumers install only `@guardian-sdk/bsc`, which re-exports everything from `@guardian-sdk/sdk`.
 
 ## Architecture
 
@@ -57,5 +57,5 @@ Consumers install only `@guardian/bsc`, which re-exports everything from `@guard
 2. MPC/external: `preHash()` → external signing → `compile()` — for when you don't control the private key
 
 **Dependencies**:
-- `@guardian/sdk`: `axios` only
-- `@guardian/bsc`: `@guardian/sdk`, `viem` (peer dep)
+- `@guardian-sdk/sdk`: `axios` only
+- `@guardian-sdk/bsc`: `@guardian-sdk/sdk`, `viem` (peer dep)

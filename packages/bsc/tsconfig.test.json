@@ -3,8 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
-      "@guardian/sdk": ["../sdk/src/index.ts"],
-      "@guardian/sdk/testing": ["../sdk/src/testing/index.ts"]
+      "@guardian-sdk/sdk": ["../sdk/src/index.ts"],
+      "@guardian-sdk/sdk/testing": ["../sdk/src/testing/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],

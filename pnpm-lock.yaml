@@ -8,7 +8,7 @@ importers:
 
   .:
     devDependencies:
-      '@guardian/sdk':
+      '@guardian-sdk/sdk':
         specifier: workspace:*
         version: link:packages/sdk
       '@scure/bip32':

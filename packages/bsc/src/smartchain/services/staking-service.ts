@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { parseEther } from "viem";
-import type { CacheContract, Logger } from "@guardian/sdk";
-import { NoopLogger } from "@guardian/sdk";
+import type { CacheContract, Logger } from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 import type { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
 import type { MulticallResult } from "../abi";
 import { processSingleMulticallResult } from "../abi";
@@ -11,8 +11,8 @@ import type {
   StakingServiceContract,
   Validator,
   ValidatorStatus,
-} from "@guardian/sdk";
-import { filterByStatus } from "@guardian/sdk";
+} from "@guardian-sdk/sdk";
+import { filterByStatus } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
 export class StakingService implements StakingServiceContract {

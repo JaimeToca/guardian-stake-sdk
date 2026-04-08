@@ -4,7 +4,7 @@ import type {
   SigningWithPrivateKey,
   SignServiceContract,
   Transaction,
-} from "@guardian/sdk";
+} from "@guardian-sdk/sdk";
 
 /** EVM calldata and native value for a staking transaction. */
 export type CallData = {

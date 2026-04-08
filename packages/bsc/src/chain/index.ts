@@ -1,6 +1,6 @@
 import type { Chain } from "viem";
 import { bsc } from "viem/chains";
-import type { GuardianChain } from "@guardian/sdk";
+import type { GuardianChain } from "@guardian-sdk/sdk";
 
 /** BNB Smart Chain mainnet configuration. */
 export const bscMainnet: GuardianChain = {
@@ -14,12 +14,12 @@ export const bscMainnet: GuardianChain = {
 };
 
 /**
- * Registry of all chains supported by `@guardian/bsc`.
+ * Registry of all chains supported by `@guardian-sdk/bsc`.
  * Use this for autocomplete — type `chains.` to see available chains.
  *
  * @example
  * ```typescript
- * import { chains } from "@guardian/bsc";
+ * import { chains } from "@guardian-sdk/bsc";
  * sdk.getValidators(chains.bscMainnet);
  * ```
  */
@@ -27,7 +27,7 @@ export const chains = {
   bscMainnet,
 } as const;
 
-/** All chains supported by `@guardian/bsc`. */
+/** All chains supported by `@guardian-sdk/bsc`. */
 export const SUPPORTED_CHAINS: GuardianChain[] = [bscMainnet];
 
 /** Retrieves a supported chain by its `id` string (e.g. `"bsc-mainnet"`). */

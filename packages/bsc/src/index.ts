@@ -1,5 +1,5 @@
 // Re-export everything from the chain-agnostic SDK core (includes GuardianSDK)
-export * from "@guardian/sdk";
+export * from "@guardian-sdk/sdk";
 
 // BSC chain factory
 export { bsc } from "./smartchain";

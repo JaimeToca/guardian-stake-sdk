@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { bsc } from "../src/smartchain/index";
-import { ConfigError } from "@guardian/sdk";
+import { ConfigError } from "@guardian-sdk/sdk";
 
 describe("bsc() config validation", () => {
   it("accepts a valid https url", () => {

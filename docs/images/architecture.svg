@@ -39,14 +39,14 @@
   <line x1="450" y1="76" x2="450" y2="102" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="4 2"/>
 
   <!-- ═══════════════════════════════════════════════════ -->
-  <!-- LAYER 1 — @guardian/sdk                            -->
+  <!-- LAYER 1 — @guardian-sdk/sdk                            -->
   <!-- ═══════════════════════════════════════════════════ -->
   <rect x="30" y="106" width="840" height="108" rx="8" fill="url(#sdkGrad)" stroke="#3730a3" stroke-width="1"/>
   <!-- Left accent bar -->
   <rect x="30" y="106" width="3" height="108" rx="2" fill="#6366f1"/>
   <!-- Package label -->
   <rect x="42" y="114" width="120" height="18" rx="4" fill="#312e81"/>
-  <text x="102" y="127" text-anchor="middle" font-size="10" fill="#a5b4fc" font-weight="700" letter-spacing="0.5">@guardian/sdk</text>
+  <text x="102" y="127" text-anchor="middle" font-size="10" fill="#a5b4fc" font-weight="700" letter-spacing="0.5">@guardian-sdk/sdk</text>
 
   <!-- Card: GuardianSDK -->
   <rect x="55" y="138" width="210" height="62" rx="6" fill="#1e1b4b" stroke="#4f46e5" stroke-width="1"/>
@@ -71,14 +71,14 @@
   <text x="460" y="231" font-size="9.5" fill="#4b5563">GuardianServiceContract</text>
 
   <!-- ═══════════════════════════════════════════════════ -->
-  <!-- LAYER 2 — @guardian/bsc                            -->
+  <!-- LAYER 2 — @guardian-sdk/bsc                            -->
   <!-- ═══════════════════════════════════════════════════ -->
   <rect x="30" y="244" width="840" height="306" rx="8" fill="url(#bscGrad)" stroke="#0f766e" stroke-width="1"/>
   <!-- Left accent bar -->
   <rect x="30" y="244" width="3" height="306" rx="2" fill="#0d9488"/>
   <!-- Package label -->
   <rect x="42" y="252" width="115" height="18" rx="4" fill="#134e4a"/>
-  <text x="100" y="265" text-anchor="middle" font-size="10" fill="#5eead4" font-weight="700" letter-spacing="0.5">@guardian/bsc</text>
+  <text x="100" y="265" text-anchor="middle" font-size="10" fill="#5eead4" font-weight="700" letter-spacing="0.5">@guardian-sdk/bsc</text>
 
   <!-- bsc() factory box -->
   <rect x="325" y="272" width="250" height="48" rx="6" fill="#134e4a" stroke="#0d9488" stroke-width="1"/>

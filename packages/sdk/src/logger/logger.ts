@@ -7,8 +7,8 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
  * Pass an implementation to the chain factory to enable logging:
  * @example
  * ```ts
- * import { ConsoleLogger } from "@guardian/sdk";
- * import { bsc } from "@guardian/bsc";
+ * import { ConsoleLogger } from "@guardian-sdk/sdk";
+ * import { bsc } from "@guardian-sdk/bsc";
  *
  * const sdk = new GuardianSDK([
  *   bsc({ rpcUrl: "...", logger: new ConsoleLogger("debug") }),

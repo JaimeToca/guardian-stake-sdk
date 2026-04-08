@@ -1,5 +1,5 @@
 {
-  "name": "@guardian/sdk",
+  "name": "@guardian-sdk/sdk",
   "version": "0.1.0",
   "private": true,
   "description": "Chain-agnostic core for the Guardian SDK",

@@ -114,7 +114,7 @@ def make_package_json(slug: str, symbol: str, no_viem: bool) -> str:
             "test": "vitest run",
             "test:watch": "vitest",
         },
-        "dependencies": {"@guardian/sdk": "*"},
+        "dependencies": {"@guardian-sdk/sdk": "*"},
         "devDependencies": {"vitest": "^3.0.0"},
         "engines": {"node": ">=22"},
         "keywords": [slug, "staking", "web3", "blockchain", "sdk", "guardian"],
@@ -162,8 +162,8 @@ def make_tsconfig_test() -> str:
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "@guardian/sdk": ["../sdk/src/index.ts"],
-      "@guardian/sdk/testing": ["../sdk/src/testing/index.ts"]
+      "@guardian-sdk/sdk": ["../sdk/src/index.ts"],
+      "@guardian-sdk/sdk/testing": ["../sdk/src/testing/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],
@@ -179,8 +179,8 @@ import { resolve } from "path";
 export default defineConfig({
   resolve: {
     alias: {
-      "@guardian/sdk": resolve(__dirname, "../sdk/src/index.ts"),
-      "@guardian/sdk/testing": resolve(__dirname, "../sdk/src/testing/index.ts"),
+      "@guardian-sdk/sdk": resolve(__dirname, "../sdk/src/index.ts"),
+      "@guardian-sdk/sdk/testing": resolve(__dirname, "../sdk/src/testing/index.ts"),
     },
   },
 });
@@ -188,7 +188,7 @@ export default defineConfig({
 
 
 def make_chain_index(slug: str, symbol: str, numeric_chain_id: str, explorer: str, chain_name: str) -> str:
-    return f"""import type {{ GuardianChain }} from "@guardian/sdk";
+    return f"""import type {{ GuardianChain }} from "@guardian-sdk/sdk";
 
 /** {symbol} mainnet configuration. */
 export const {chain_name}: GuardianChain = {{
@@ -231,8 +231,8 @@ export const isSupportedChain = (chain: GuardianChain): boolean =>
 
 
 def make_staking_service(slug: str) -> str:
-    return f"""import type {{ CacheContract, Logger, Delegations, Validator, StakingServiceContract }} from "@guardian/sdk";
-import {{ NoopLogger }} from "@guardian/sdk";
+    return f"""import type {{ CacheContract, Logger, Delegations, Validator, StakingServiceContract }} from "@guardian-sdk/sdk";
+import {{ NoopLogger }} from "@guardian-sdk/sdk";
 
 // TODO: import your RPC client types
 
@@ -271,8 +271,8 @@ export class StakingService implements StakingServiceContract {{
 
 
 def make_balance_service() -> str:
-    return """import type { Balance, BalanceServiceContract, Logger } from "@guardian/sdk";
-import { NoopLogger } from "@guardian/sdk";
+    return """import type { Balance, BalanceServiceContract, Logger } from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 
 export class BalanceService implements BalanceServiceContract {
   constructor(
@@ -289,8 +289,8 @@ export class BalanceService implements BalanceServiceContract {
 
 
 def make_fee_service() -> str:
-    return """import type { Fee, FeeServiceContract, Transaction, Logger } from "@guardian/sdk";
-import { NoopLogger } from "@guardian/sdk";
+    return """import type { Fee, FeeServiceContract, Transaction, Logger } from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 
 export class FeeService implements FeeServiceContract {
   constructor(
@@ -307,7 +307,7 @@ export class FeeService implements FeeServiceContract {
 
 
 def make_nonce_service() -> str:
-    return """import type { NonceServiceContract } from "@guardian/sdk";
+    return """import type { NonceServiceContract } from "@guardian-sdk/sdk";
 
 export class NonceService implements NonceServiceContract {
   constructor(
@@ -331,8 +331,8 @@ def make_sign_service() -> str:
   CompileArgs,
   Transaction,
   Logger,
-} from "@guardian/sdk";
-import { NoopLogger } from "@guardian/sdk";
+} from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 
 export class SignService implements SignServiceContract {
   constructor(private readonly logger: Logger = new NoopLogger()) {}
@@ -378,7 +378,7 @@ def make_guardian_service() -> str:
   FeeServiceContract,
   SignServiceContract,
   NonceServiceContract,
-} from "@guardian/sdk";
+} from "@guardian-sdk/sdk";
 
 export class GuardianService implements GuardianServiceContract {
   constructor(
@@ -431,9 +431,9 @@ export class GuardianService implements GuardianServiceContract {
 
 def make_di_factory(slug: str, symbol: str, chain_name: str, factory_fn: str) -> str:
     pkg = f"@guardian/{slug}"
-    return f"""import type {{ GuardianServiceContract, Logger }} from "@guardian/sdk";
-import {{ InMemoryCache, NoopLogger, validateRpcUrl }} from "@guardian/sdk";
-import type {{ Validator }} from "@guardian/sdk";
+    return f"""import type {{ GuardianServiceContract, Logger }} from "@guardian-sdk/sdk";
+import {{ InMemoryCache, NoopLogger, validateRpcUrl }} from "@guardian-sdk/sdk";
+import type {{ Validator }} from "@guardian-sdk/sdk";
 import {{ {chain_name} }} from "../chain";
 import {{ GuardianService }} from "./services/guardian-service";
 import {{ StakingService }} from "./services/staking-service";
@@ -448,7 +448,7 @@ import {{ NonceService }} from "./services/nonce-service";
  *
  * @example
  * ```typescript
- * import {{ GuardianSDK }} from "@guardian/sdk";
+ * import {{ GuardianSDK }} from "@guardian-sdk/sdk";
  * import {{ {factory_fn}, chains }} from "{pkg}";
  *
  * const sdk = new GuardianSDK([
@@ -486,8 +486,8 @@ export function {factory_fn}(config: {{ rpcUrl: string; logger?: Logger }}): Gua
 
 def make_src_index(slug: str, factory_fn: str) -> str:
     symbol_upper = slug.upper().replace("-", " ")
-    return f"""// Re-export everything from @guardian/sdk so consumers need only one import
-export * from "@guardian/sdk";
+    return f"""// Re-export everything from @guardian-sdk/sdk so consumers need only one import
+export * from "@guardian-sdk/sdk";
 
 // {symbol_upper}-specific public API
 export {{ {factory_fn} }} from "./mainnet";
@@ -497,7 +497,7 @@ export {{ chains, SUPPORTED_CHAINS, getChainById, isSupportedChain }} from "./ch
 
 def make_config_test(slug: str, factory_fn: str) -> str:
     return f"""import {{ describe, it, expect }} from "vitest";
-import {{ ConfigError }} from "@guardian/sdk";
+import {{ ConfigError }} from "@guardian-sdk/sdk";
 import {{ {factory_fn} }} from "../src/mainnet";
 
 describe("{factory_fn}()", () => {{
@@ -531,9 +531,9 @@ describe("{factory_fn}()", () => {{
 def make_staking_test(slug: str) -> str:
     return f"""import {{ describe, it, expect }} from "vitest";
 import {{ StakingService }} from "../../src/mainnet/services/staking-service";
-import {{ InMemoryCache }} from "@guardian/sdk";
-import type {{ Validator }} from "@guardian/sdk";
-import {{ mockValidator }} from "@guardian/sdk/testing";
+import {{ InMemoryCache }} from "@guardian-sdk/sdk";
+import type {{ Validator }} from "@guardian-sdk/sdk";
+import {{ mockValidator }} from "@guardian-sdk/sdk/testing";
 
 describe("StakingService", () => {{
   describe("getValidators()", () => {{
@@ -586,7 +586,7 @@ def make_example(slug: str, symbol: str, chain_name: str, factory_fn: str) -> st
  * {symbol} staking — quick-start sample
  * Run: pnpm tsx examples/{slug}-sample.ts
  */
-import {{ GuardianSDK }} from "@guardian/sdk";
+import {{ GuardianSDK }} from "@guardian-sdk/sdk";
 import {{ {factory_fn}, chains }} from "{pkg}";
 
 const sdk = new GuardianSDK([

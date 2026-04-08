@@ -1,4 +1,4 @@
-# @guardian/bsc — BNB Smart Chain
+# @guardian-sdk/bsc — BNB Smart Chain
 
 Native staking support for BNB Smart Chain, part of the [Guardian SDK](../../README.md).
 
@@ -102,18 +102,18 @@ Validators can be penalised for misbehaviour, which affects delegators proportio
 ## Installation
 
 ```bash
-npm install @guardian/bsc viem
+npm install @guardian-sdk/bsc viem
 ```
 
-`@guardian/sdk` is included automatically as a dependency of `@guardian/bsc`. `viem` is a peer dependency — if your project already uses it, the same instance will be shared.
+`@guardian-sdk/sdk` is included automatically as a dependency of `@guardian-sdk/bsc`. `viem` is a peer dependency — if your project already uses it, the same instance will be shared.
 
 ---
 
 ## Quick Start
 
 ```typescript
-import { GuardianSDK } from "@guardian/sdk";
-import { bsc, chains } from "@guardian/bsc";
+import { GuardianSDK } from "@guardian-sdk/sdk";
+import { bsc, chains } from "@guardian-sdk/bsc";
 import { formatEther, parseEther } from "viem";
 
 const sdk = new GuardianSDK([
@@ -469,7 +469,7 @@ import {
   ValidationError,
   ConfigError,
   SigningError,
-} from "@guardian/bsc"; // re-exported from @guardian/sdk
+} from "@guardian-sdk/bsc"; // re-exported from @guardian-sdk/sdk
 
 try {
   await sdk.getDelegations(chains.bscMainnet, address);
@@ -505,7 +505,7 @@ Every `GuardianError` instance exposes:
 Thrown when the caller provides invalid input. Caught before any network call is made.
 
 ```typescript
-import { ValidationError } from "@guardian/bsc";
+import { ValidationError } from "@guardian-sdk/bsc";
 ```
 
 | Code | Thrown when |
@@ -522,7 +522,7 @@ import { ValidationError } from "@guardian/bsc";
 Thrown when the SDK is misconfigured or asked to operate on a chain it does not support.
 
 ```typescript
-import { ConfigError } from "@guardian/bsc";
+import { ConfigError } from "@guardian-sdk/bsc";
 ```
 
 | Code | Thrown when |
@@ -536,7 +536,7 @@ import { ConfigError } from "@guardian/bsc";
 Thrown during transaction signing when the signing arguments are invalid or the transaction type is not supported.
 
 ```typescript
-import { SigningError } from "@guardian/bsc";
+import { SigningError } from "@guardian-sdk/bsc";
 ```
 
 | Code | Thrown when |
@@ -551,7 +551,7 @@ import { SigningError } from "@guardian/bsc";
 If you only want to handle one specific condition:
 
 ```typescript
-import { ValidationError } from "@guardian/bsc";
+import { ValidationError } from "@guardian-sdk/bsc";
 
 try {
   await sdk.getBalances(chains.bscMainnet, rawInput);
@@ -572,7 +572,7 @@ try {
 Import the chain constant for the network you want to interact with:
 
 ```typescript
-import { chains } from "@guardian/bsc";
+import { chains } from "@guardian-sdk/bsc";
 ```
 
 | Chain | Chain ID | Explorer |
@@ -582,7 +582,7 @@ import { chains } from "@guardian/bsc";
 You can also retrieve all chains supported by the installed packages at runtime:
 
 ```typescript
-import { getSupportedChains } from "@guardian/bsc";
+import { getSupportedChains } from "@guardian-sdk/bsc";
 
 const chains = getSupportedChains();
 // [{ id: "bsc-mainnet", symbol: "BNB", chainId: "56", ... }]

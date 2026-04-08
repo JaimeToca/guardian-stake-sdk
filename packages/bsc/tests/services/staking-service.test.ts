@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { getAddress } from "viem";
 import { StakingService } from "../../src/smartchain/services/staking-service";
-import { InMemoryCache } from "@guardian/sdk";
+import { InMemoryCache } from "@guardian-sdk/sdk";
 import validatorsFixture from "../fixtures/bnb_validators.json";
 import summaryFixture from "../fixtures/bnb_staking_summary.json";
 import creditContractsFixture from "../fixtures/staking_credit_contracts.json";

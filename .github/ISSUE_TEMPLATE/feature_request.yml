@@ -35,8 +35,8 @@ body:
     attributes:
       label: Which package does this affect?
       options:
-        - "@guardian/sdk (core)"
-        - "@guardian/bsc"
+        - "@guardian-sdk/sdk (core)"
+        - "@guardian-sdk/bsc"
         - "New chain package"
         - "Tooling / CI / docs"
         - "Not sure"

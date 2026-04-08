@@ -18,8 +18,8 @@ import type { Transaction } from "../entity/transaction-types";
  *
  * @example
  * ```typescript
- * import { GuardianSDK } from "@guardian/sdk";
- * import { bsc, chains } from "@guardian/bsc";
+ * import { GuardianSDK } from "@guardian-sdk/sdk";
+ * import { bsc, chains } from "@guardian-sdk/bsc";
  *
  * const sdk = new GuardianSDK([
  *   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),

@@ -1,7 +1,7 @@
 import { createPublicClient, http } from "viem";
-import type { GuardianServiceContract, Validator, Logger } from "@guardian/sdk";
-import { InMemoryCache, NoopLogger, validateRpcUrl } from "@guardian/sdk";
-import type { GuardianChain } from "@guardian/sdk";
+import type { GuardianServiceContract, Validator, Logger } from "@guardian-sdk/sdk";
+import { InMemoryCache, NoopLogger, validateRpcUrl } from "@guardian-sdk/sdk";
+import type { GuardianChain } from "@guardian-sdk/sdk";
 import { GuardianService } from "./services/guardian-service";
 import { bscMainnet, getViemChain } from "../chain";
 import { BalanceService } from "./services/balance-service";
@@ -19,8 +19,8 @@ import { BroadcastService } from "./services/broadcast-service";
  *
  * @example
  * ```typescript
- * import { GuardianSDK } from "@guardian/sdk";
- * import { bsc, chains } from "@guardian/bsc";
+ * import { GuardianSDK } from "@guardian-sdk/sdk";
+ * import { bsc, chains } from "@guardian-sdk/bsc";
  *
  * const sdk = new GuardianSDK([
  *   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),

@@ -13,7 +13,7 @@ body:
     id: package
     attributes:
       label: Affected package(s)
-      placeholder: "@guardian/sdk, @guardian/bsc"
+      placeholder: "@guardian-sdk/sdk, @guardian-sdk/bsc"
     validations:
       required: true
 

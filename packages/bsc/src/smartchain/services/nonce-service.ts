@@ -1,5 +1,5 @@
 import type { PublicClient } from "viem";
-import type { NonceServiceContract } from "@guardian/sdk";
+import type { NonceServiceContract } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**

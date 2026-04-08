@@ -6,11 +6,11 @@
   <a href="https://github.com/JaimeToca/guardian-stake-sdk/actions/workflows/ci.yml">
     <img src="https://github.com/JaimeToca/guardian-stake-sdk/actions/workflows/ci.yml/badge.svg" alt="CI" />
   </a>
-  <a href="https://www.npmjs.com/package/@guardian/bsc">
-    <img src="https://img.shields.io/npm/v/@guardian/bsc?label=%40guardian%2Fbsc&color=0d9488" alt="npm @guardian/bsc" />
+  <a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
+    <img src="https://img.shields.io/npm/v/@guardian-sdk/bsc?label=%40guardian-sdk%2Fbsc&color=0d9488" alt="npm @guardian-sdk/bsc" />
   </a>
-<a href="https://www.npmjs.com/package/@guardian/bsc">
-    <img src="https://img.shields.io/npm/dm/@guardian/bsc?color=0d9488" alt="npm downloads" />
+<a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
+    <img src="https://img.shields.io/npm/dm/@guardian-sdk/bsc?color=0d9488" alt="npm downloads" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=node.js&logoColor=white" alt="Node.js" />
 </p>
 
-The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (`@guardian/sdk`) and one package per supported chain. Install only the chain you need.
+The **Guardian SDK** is a modular, chain-agnostic staking SDK for TypeScript. It is structured as a multi-package monorepo: a chain-agnostic core (`@guardian-sdk/sdk`) and one package per supported chain. Install only the chain you need.
 
 ## Why Guardian SDK
 
@@ -69,24 +69,24 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 
 | Package | Chain | Status | Docs |
 |---|---|---|---|
-| [`@guardian/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
-| `@guardian/ethereum` | Ethereum | Planned | — |
-| `@guardian/sui` | SUI | Planned | — |
-| `@guardian/tron` | Tron | Planned | — |
+| [`@guardian-sdk/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
+| `@guardian-sdk/ethereum` | Ethereum | Planned | — |
+| `@guardian-sdk/sui` | SUI | Planned | — |
+| `@guardian-sdk/tron` | Tron | Planned | — |
 | `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — |
-| `@guardian/solana` | Solana | Planned | — |
+| `@guardian-sdk/solana` | Solana | Planned | — |
 | `@guardian/aptos` | Aptos | Planned | — |
 | `@guardian/cardano` | Cardano | Planned | — |
 | `@guardian/polkadot` | Polkadot | Planned | — |
 | `@guardian/near` | NEAR | Planned | — |
 
-Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian/sdk` is included automatically as a dependency of each chain package.
+Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian-sdk/sdk` is included automatically as a dependency of each chain package.
 
 ---
 
 ## Architecture
 
-> The diagram above shows how `@guardian/bsc` plugs into the SDK. Each chain package implements `GuardianServiceContract` independently — it can expose any number of services and RPC clients suited to that chain's protocol. `GuardianSDK` only ever sees the contract interface and routes calls by `chain.id`.
+> The diagram above shows how `@guardian-sdk/bsc` plugs into the SDK. Each chain package implements `GuardianServiceContract` independently — it can expose any number of services and RPC clients suited to that chain's protocol. `GuardianSDK` only ever sees the contract interface and routes calls by `chain.id`.
 
 ![Architecture](./docs/images/architecture.svg)
 
@@ -97,8 +97,8 @@ Each chain ships as an independent package — install only what you need, your 
 Install the chain package you need, then pass its factory to `GuardianSDK`:
 
 ```typescript
-import { GuardianSDK } from "@guardian/sdk";
-import { bsc, chains } from "@guardian/bsc";
+import { GuardianSDK } from "@guardian-sdk/sdk";
+import { bsc, chains } from "@guardian-sdk/bsc";
 
 const sdk = new GuardianSDK([
   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
@@ -108,9 +108,9 @@ const sdk = new GuardianSDK([
 Adding another chain later is just adding another entry to the array:
 
 ```typescript
-import { GuardianSDK } from "@guardian/sdk";
-import { bsc, chains } from "@guardian/bsc";
-import { tron, TRON_CHAIN } from "@guardian/tron"; // when available
+import { GuardianSDK } from "@guardian-sdk/sdk";
+import { bsc, chains } from "@guardian-sdk/bsc";
+import { tron, TRON_CHAIN } from "@guardian-sdk/tron"; // when available
 
 const sdk = new GuardianSDK([
   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
@@ -383,8 +383,8 @@ Full example: [`examples/guardian-stake-sdk-sample.ts`](./examples/guardian-stak
 End-to-end example using direct signing:
 
 ```typescript
-import { GuardianSDK } from "@guardian/sdk";
-import { bsc, chains } from "@guardian/bsc";
+import { GuardianSDK } from "@guardian-sdk/sdk";
+import { bsc, chains } from "@guardian-sdk/bsc";
 import { parseEther } from "viem";
 
 const sdk = new GuardianSDK([bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" })]);
@@ -429,8 +429,8 @@ The SDK is **silent by default** — no logs are emitted unless you opt in. Pass
 ### Built-in console logger
 
 ```typescript
-import { ConsoleLogger } from "@guardian/sdk";
-import { bsc } from "@guardian/bsc";
+import { ConsoleLogger } from "@guardian-sdk/sdk";
+import { bsc } from "@guardian-sdk/bsc";
 
 const sdk = new GuardianSDK([
   bsc({
@@ -452,10 +452,10 @@ Sample output:
 
 ### Bring your own logger
 
-Implement the `Logger` interface from `@guardian/sdk` to plug in any logging library:
+Implement the `Logger` interface from `@guardian-sdk/sdk` to plug in any logging library:
 
 ```typescript
-import type { Logger } from "@guardian/sdk";
+import type { Logger } from "@guardian-sdk/sdk";
 import winston from "winston";
 
 const winstonLogger = winston.createLogger({ ... });
@@ -487,7 +487,7 @@ const sdk = new GuardianSDK([
 
 ## Testing
 
-`@guardian/sdk` ships test utilities so you can unit-test your own code without hitting real RPC nodes.
+`@guardian-sdk/sdk` ships test utilities so you can unit-test your own code without hitting real RPC nodes.
 
 ### `createMockService(overrides?, chain?)`
 
@@ -495,9 +495,9 @@ Returns a fully-typed `GuardianServiceContract` with no-op defaults. Pass only t
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
-import { GuardianSDK } from "@guardian/sdk";
-import { createMockService, mockValidator } from "@guardian/sdk/testing";
-import { chains } from "@guardian/bsc";
+import { GuardianSDK } from "@guardian-sdk/sdk";
+import { createMockService, mockValidator } from "@guardian-sdk/sdk/testing";
+import { chains } from "@guardian-sdk/bsc";
 
 describe("my staking feature", () => {
   it("renders the validator with the highest APY", async () => {
@@ -540,7 +540,7 @@ All fixtures accept an optional `overrides` object — set only what matters for
 import {
   mockValidator, mockDelegation, mockDelegations, mockStakingSummary,
   mockBalance, mockFee, mockDelegateTransaction,
-} from "@guardian/sdk/testing";
+} from "@guardian-sdk/sdk/testing";
 import { parseEther, parseGwei } from "viem";
 
 // Jailed validator
@@ -574,8 +574,8 @@ const tx = mockDelegateTransaction({ amount: parseEther("2"), account: "0x123...
 Capture log output in tests by passing a mock logger:
 
 ```typescript
-import { createMockService } from "@guardian/sdk/testing";
-import type { Logger } from "@guardian/sdk";
+import { createMockService } from "@guardian-sdk/sdk/testing";
+import type { Logger } from "@guardian-sdk/sdk";
 
 const logs: string[] = [];
 const testLogger: Logger = {
@@ -588,7 +588,7 @@ const testLogger: Logger = {
 const sdk = new GuardianSDK([bsc({ rpcUrl: "...", logger: testLogger })]);
 ```
 
-> **Note:** Test utilities are exported from the `@guardian/sdk/testing` subpath — they are tree-shaken out of production builds automatically. They are plain TypeScript with no dependency on any test framework.
+> **Note:** Test utilities are exported from the `@guardian-sdk/sdk/testing` subpath — they are tree-shaken out of production builds automatically. They are plain TypeScript with no dependency on any test framework.
 
 ---
 
@@ -597,7 +597,7 @@ const sdk = new GuardianSDK([bsc({ rpcUrl: "...", logger: testLogger })]);
 Every error thrown by the SDK extends `GuardianError`. Each subclass carries a `code` (machine-readable) and `message` (human-readable).
 
 ```typescript
-import { GuardianError, ValidationError, ConfigError, SigningError } from "@guardian/bsc";
+import { GuardianError, ValidationError, ConfigError, SigningError } from "@guardian-sdk/bsc";
 
 try {
   await sdk.getDelegations(chains.bscMainnet, address);
@@ -635,7 +635,7 @@ Every `GuardianError` exposes:
 Thrown when the caller provides invalid input. Always caught before any network call is made.
 
 ```typescript
-import { ValidationError } from "@guardian/bsc";
+import { ValidationError } from "@guardian-sdk/bsc";
 ```
 
 | Code | Thrown when |
@@ -652,7 +652,7 @@ import { ValidationError } from "@guardian/bsc";
 Thrown when the SDK is misconfigured or asked to operate on an unsupported chain.
 
 ```typescript
-import { ConfigError } from "@guardian/bsc";
+import { ConfigError } from "@guardian-sdk/bsc";
 ```
 
 | Code | Thrown when |
@@ -666,7 +666,7 @@ import { ConfigError } from "@guardian/bsc";
 Thrown during transaction signing when arguments are invalid or the transaction type has no implementation.
 
 ```typescript
-import { SigningError } from "@guardian/bsc";
+import { SigningError } from "@guardian-sdk/bsc";
 ```
 
 | Code | Thrown when |
@@ -680,19 +680,19 @@ import { SigningError } from "@guardian/bsc";
 
 ### Chain support
 
-Planned integrations follow the same architecture — each chain is an independent package implementing the `GuardianServiceContract` interface from `@guardian/sdk`.
+Planned integrations follow the same architecture — each chain is an independent package implementing the `GuardianServiceContract` interface from `@guardian-sdk/sdk`.
 
 | Chain | Package | Status |
 |---|---|---|
-| BNB Smart Chain | [`@guardian/bsc`](./packages/bsc/README.md) | Available |
-| SUI | `@guardian/sui` | Planned |
-| Tron | `@guardian/tron` | Planned |
-| Solana | `@guardian/solana` | Planned |
+| BNB Smart Chain | [`@guardian-sdk/bsc`](./packages/bsc/README.md) | Available |
+| SUI | `@guardian-sdk/sui` | Planned |
+| Tron | `@guardian-sdk/tron` | Planned |
+| Solana | `@guardian-sdk/solana` | Planned |
 | Aptos | `@guardian/aptos` | Planned |
 | Cardano | `@guardian/cardano` | Planned |
 | Polkadot | `@guardian/polkadot` | Planned |
 | NEAR | `@guardian/near` | Planned |
-| Ethereum | `@guardian/ethereum` | Planned |
+| Ethereum | `@guardian-sdk/ethereum` | Planned |
 | Bitcoin (Babylon) | `@guardian/btc-babylon` | Planned |
 
 ### SDK improvements
@@ -708,7 +708,7 @@ Beyond new chains, the SDK core is being extended with features that apply acros
 
 ### Beyond native staking
 
-The `@guardian/sdk` core is protocol-agnostic by design. Future releases may expand into other DeFi primitives — liquidity provisioning, lending, yield aggregation — expanding the chain-agnostic interfaces and signing flows.
+The `@guardian-sdk/sdk` core is protocol-agnostic by design. Future releases may expand into other DeFi primitives — liquidity provisioning, lending, yield aggregation — expanding the chain-agnostic interfaces and signing flows.
 
 ---
 

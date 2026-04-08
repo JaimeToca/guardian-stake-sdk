@@ -17,7 +17,7 @@ export default {
       },
     ],
 
-    // Publish @guardian/bsc
+    // Publish @guardian-sdk/bsc
     [
       "@semantic-release/npm",
       {

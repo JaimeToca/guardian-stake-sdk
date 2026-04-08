@@ -1,5 +1,5 @@
-import { fetchOrError, NoopLogger } from "@guardian/sdk";
-import type { Logger } from "@guardian/sdk";
+import { fetchOrError, NoopLogger } from "@guardian-sdk/sdk";
+import type { Logger } from "@guardian-sdk/sdk";
 import type { BNBRpcClientContract } from "./bnb-rpc-client-contract";
 import type {
   BNBChainValidator,

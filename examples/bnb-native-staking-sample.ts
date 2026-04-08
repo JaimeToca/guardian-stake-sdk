@@ -1,12 +1,12 @@
 import { parseUnits, toHex } from "viem";
 import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
-import { GuardianSDK, chains, bsc, ConsoleLogger } from "@guardian/bsc";
+import { GuardianSDK, chains, bsc, ConsoleLogger } from "@guardian-sdk/bsc";
 import type {
   DelegateTransaction,
   RedelegateTransaction,
   UndelegateTransaction,
-} from "@guardian/bsc";
+} from "@guardian-sdk/bsc";
 
 const { bscMainnet } = chains;
 

@@ -12,8 +12,8 @@ import {
   encodeUnbondRequestData,
   decodeUnbond,
 } from "../abi";
-import type { Logger } from "@guardian/sdk";
-import { NoopLogger } from "@guardian/sdk";
+import type { Logger } from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 
 export class StakingRpcClient implements StakingRpcClientContract {
   constructor(

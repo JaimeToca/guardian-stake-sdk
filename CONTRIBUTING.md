@@ -66,8 +66,8 @@ All CI checks must pass before a PR is merged:
 
 ```
 packages/
-  sdk/   → @guardian/sdk  — chain-agnostic core, no viem dependency (private, not published)
-  bsc/   → @guardian/bsc  — BNB Smart Chain implementation
+  sdk/   → @guardian-sdk/sdk  — chain-agnostic core, no viem dependency (private, not published)
+  bsc/   → @guardian-sdk/bsc  — BNB Smart Chain implementation
 examples/ → runnable usage examples
 docs/     → architecture diagrams and contributor guides
 ```
@@ -147,5 +147,5 @@ The release workflow:
 1. Analyzes commits since the last release tag.
 2. Determines the next version (major/minor/patch).
 3. Updates `CHANGELOG.md`.
-4. Publishes `@guardian/bsc` to npm (`@guardian/sdk` is private and bundled — it is never published separately).
+4. Publishes `@guardian-sdk/bsc` to npm (`@guardian-sdk/sdk` is private and bundled — it is never published separately).
 5. Creates a GitHub release with release notes.

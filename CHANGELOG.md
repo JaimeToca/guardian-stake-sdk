@@ -69,8 +69,8 @@ Initial release of the Guardian SDK.
 
 ### Packages
 
-- **`@guardian/sdk` `0.1.0`** — Chain-agnostic core. No viem dependency.
-- **`@guardian/bsc` `0.1.0`** — BNB Smart Chain native staking implementation.
+- **`@guardian-sdk/sdk` `0.1.0`** — Chain-agnostic core. No viem dependency.
+- **`@guardian-sdk/bsc` `0.1.0`** — BNB Smart Chain native staking implementation.
 
 ### Features
 
@@ -92,6 +92,6 @@ Initial release of the Guardian SDK.
 
 #### Developer experience
 - **Logging** — opt-in `ConsoleLogger` with `debug | info | warn | error` levels; bring-your-own via the `Logger` interface
-- **Test utilities** (`@guardian/sdk/testing`) — `createMockService`, `mockValidator`, `mockDelegation`, `mockDelegations`, `mockBalance`, `mockFee`, `mockDelegateTransaction`, and more
+- **Test utilities** (`@guardian-sdk/sdk/testing`) — `createMockService`, `mockValidator`, `mockDelegation`, `mockDelegations`, `mockBalance`, `mockFee`, `mockDelegateTransaction`, and more
 - **Error types** — `ValidationError`, `ConfigError`, `SigningError`, each with a machine-readable `code` field
 - **Node.js ≥ 22**, TypeScript target `ES2024`

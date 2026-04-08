@@ -1,7 +1,7 @@
 import type { Address } from "viem";
 import { isAddress } from "viem";
-import type { BaseSignArgs } from "@guardian/sdk";
-import { ValidationError } from "@guardian/sdk";
+import type { BaseSignArgs } from "@guardian-sdk/sdk";
+import { ValidationError } from "@guardian-sdk/sdk";
 
 export function checkIsValidAddress(address: string): void {
   parseEvmAddress(address);

@@ -1,8 +1,8 @@
 import type { PublicClient } from "viem";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
-import type { FeeServiceContract, Fee, Transaction, Logger } from "@guardian/sdk";
+import type { FeeServiceContract, Fee, Transaction, Logger } from "@guardian-sdk/sdk";
 import type { BscSignServiceContract } from "../sign-types";
-import { ValidationError, NoopLogger } from "@guardian/sdk";
+import { ValidationError, NoopLogger } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**

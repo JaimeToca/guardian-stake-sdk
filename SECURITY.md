@@ -21,8 +21,8 @@ Only the latest published version of each package receives security fixes.
 
 | Package | Supported |
 |---------|-----------|
-| `@guardian/sdk` | latest ✅ |
-| `@guardian/bsc` | latest ✅ |
+| `@guardian-sdk/sdk` | latest ✅ |
+| `@guardian-sdk/bsc` | latest ✅ |
 
 ---
 

@@ -47,13 +47,13 @@ After running, search for `TODO` across the new package — those are the only p
 
 ## Overview
 
-Each chain lives in its own npm package (`packages/<chain>/`) that depends on `@guardian/sdk` and re-exports everything from it. Consumers install only the chain package; `@guardian/sdk` is never installed directly.
+Each chain lives in its own npm package (`packages/<chain>/`) that depends on `@guardian-sdk/sdk` and re-exports everything from it. Consumers install only the chain package; `@guardian-sdk/sdk` is never installed directly.
 
 ```
 packages/
-  sdk/          → @guardian/sdk  (chain-agnostic interfaces, utilities, mock helpers)
-  bsc/          → @guardian/bsc  (BSC implementation — reference to copy from)
-  <newchain>/   → @guardian/<newchain>  (your new package)
+  sdk/          → @guardian-sdk/sdk  (chain-agnostic interfaces, utilities, mock helpers)
+  bsc/          → @guardian-sdk/bsc  (BSC implementation — reference to copy from)
+  <newchain>/   → @guardian-sdk/<newchain>  (your new package)
 ```
 
 ---
@@ -63,7 +63,7 @@ packages/
 | Thing | Convention | Example (`tron`) |
 |-------|-----------|-----------------|
 | Package slug | kebab-case | `tron` |
-| npm package | `@guardian/<slug>` | `@guardian/tron` |
+| npm package | `@guardian-sdk/<slug>` | `@guardian-sdk/tron` |
 | Factory function | camelCase slug | `tron(...)` |
 | Chain constant | camelCase + `Mainnet` / `Testnet` | `tronMainnet` |
 | Chains registry | `chains` object | `chains.tronMainnet` |
@@ -115,7 +115,7 @@ packages/<newchain>/
 Define the chain object and the `chains` registry. Copy `bsc/src/chain/index.ts` and adjust:
 
 ```typescript
-import type { GuardianChain } from "@guardian/sdk";
+import type { GuardianChain } from "@guardian-sdk/sdk";
 
 /** <ChainName> mainnet configuration. */
 export const <chainName>Mainnet: GuardianChain = {
@@ -129,12 +129,12 @@ export const <chainName>Mainnet: GuardianChain = {
 };
 
 /**
- * Registry of all chains supported by `@guardian/<chain>`.
+ * Registry of all chains supported by `@guardian-sdk/<chain>`.
  * Add testnets and additional networks here as they are supported.
  *
  * @example
  * ```typescript
- * import { chains } from "@guardian/<chain>";
+ * import { chains } from "@guardian-sdk/<chain>";
  * sdk.getValidators(chains.<chainName>Mainnet);
  * ```
  */
@@ -143,7 +143,7 @@ export const chains = {
   // <chainName>Testnet,  ← add when testnet is supported
 } as const;
 
-/** All chains supported by `@guardian/<chain>`. */
+/** All chains supported by `@guardian-sdk/<chain>`. */
 export const SUPPORTED_CHAINS: GuardianChain[] = Object.values(chains);
 
 /** Retrieves a supported chain by its `id` string (e.g. `"<chain>-mainnet"`). */
@@ -177,7 +177,7 @@ export const chains = {
 
 ## Step 3 — Implement the service contracts
 
-Every chain package must implement **five service contracts** from `@guardian/sdk`. All interfaces are in `packages/sdk/src/service/`.
+Every chain package must implement **five service contracts** from `@guardian-sdk/sdk`. All interfaces are in `packages/sdk/src/service/`.
 
 ### 3.1 `StakingServiceContract`
 
@@ -188,7 +188,7 @@ interface StakingServiceContract {
 }
 ```
 
-- `getValidators()` — return ALL validators (active, inactive, jailed). Cache results in `InMemoryCache` from `@guardian/sdk`.
+- `getValidators()` — return ALL validators (active, inactive, jailed). Cache results in `InMemoryCache` from `@guardian-sdk/sdk`.
 - `getDelegations(address)` — return active delegations + pending/claimable unbonds + a `StakingSummary` (protocol-level stats: total staked, max APY, min stake amount, unbond period, etc.).
 - Validator shape: `{ id, name, status, description, image, apy, delegators, operatorAddress, creditAddress }`.
 - Use `"Active" | "Inactive" | "Jailed"` for `ValidatorStatus` and `"Active" | "Pending" | "Claimable"` for `DelegationStatus`.
@@ -245,8 +245,8 @@ Return the next transaction sequence number for the address.
 This is the file consumers import to configure the chain. Pattern from `bsc`:
 
 ```typescript
-import { validateRpcUrl, NoopLogger, InMemoryCache } from "@guardian/sdk";
-import type { GuardianServiceContract, Logger } from "@guardian/sdk";
+import { validateRpcUrl, NoopLogger, InMemoryCache } from "@guardian-sdk/sdk";
+import type { GuardianServiceContract, Logger } from "@guardian-sdk/sdk";
 import { <chainName>Mainnet } from "../chain";
 import { GuardianService } from "./services/guardian-service";
 // ... other service imports
@@ -259,7 +259,7 @@ export function <chain>(config: { rpcUrl: string; logger?: Logger }): GuardianSe
 }
 ```
 
-`validateRpcUrl` is already implemented in `@guardian/sdk` — no need to re-implement it. It accepts `http`, `https`, `ws`, and `wss` URLs and throws `ConfigError` with code `"INVALID_RPC_URL"` for anything else.
+`validateRpcUrl` is already implemented in `@guardian-sdk/sdk` — no need to re-implement it. It accepts `http`, `https`, `ws`, and `wss` URLs and throws `ConfigError` with code `"INVALID_RPC_URL"` for anything else.
 
 ---
 
@@ -268,7 +268,7 @@ export function <chain>(config: { rpcUrl: string; logger?: Logger }): GuardianSe
 Implement `GuardianServiceContract` by delegating to the individual services:
 
 ```typescript
-import type { GuardianServiceContract, GuardianChain } from "@guardian/sdk";
+import type { GuardianServiceContract, GuardianChain } from "@guardian-sdk/sdk";
 // implement all 9 methods from GuardianServiceContract by delegating to injected services
 ```
 
@@ -290,8 +290,8 @@ getChainInfo()     → return the GuardianChain constant
 ## Step 6 — Public exports (`src/index.ts`)
 
 ```typescript
-// Re-export everything from @guardian/sdk so consumers need only one import
-export * from "@guardian/sdk";
+// Re-export everything from @guardian-sdk/sdk so consumers need only one import
+export * from "@guardian-sdk/sdk";
 
 // Chain-specific public API
 export { <chain> } from "./mainnet";
@@ -301,7 +301,7 @@ export { chains, SUPPORTED_CHAINS, getChainById, isSupportedChain } from "./chai
 Consumers import `chains` — not individual chain constants — to keep the API consistent across packages:
 
 ```typescript
-import { <chain>, chains } from "@guardian/<chain>";
+import { <chain>, chains } from "@guardian-sdk/<chain>";
 sdk.getValidators(chains.<chainName>Mainnet);
 ```
 
@@ -313,7 +313,7 @@ sdk.getValidators(chains.<chainName>Mainnet);
 
 ```json
 {
-  "name": "@guardian/<chain>",
+  "name": "@guardian-sdk/<chain>",
   "version": "0.1.0",
   "description": "Guardian SDK for <ChainName>",
   "main": "./dist/cjs/index.js",
@@ -340,7 +340,7 @@ sdk.getValidators(chains.<chainName>Mainnet);
     "viem": "^2.0.0"
   },
   "dependencies": {
-    "@guardian/sdk": "*"
+    "@guardian-sdk/sdk": "*"
   },
   "devDependencies": {
     "viem": "^2.0.0",
@@ -370,8 +370,8 @@ Copy from `packages/bsc/tsconfig.esm.json`. Set `"outDir": "./dist/esm"` and `"m
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "@guardian/sdk": ["../sdk/src/index.ts"],
-      "@guardian/sdk/testing": ["../sdk/src/testing/index.ts"]
+      "@guardian-sdk/sdk": ["../sdk/src/index.ts"],
+      "@guardian-sdk/sdk/testing": ["../sdk/src/testing/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],
@@ -388,8 +388,8 @@ import { resolve } from "path";
 export default defineConfig({
   resolve: {
     alias: {
-      "@guardian/sdk": resolve(__dirname, "../sdk/src/index.ts"),
-      "@guardian/sdk/testing": resolve(__dirname, "../sdk/src/testing/index.ts"),
+      "@guardian-sdk/sdk": resolve(__dirname, "../sdk/src/index.ts"),
+      "@guardian-sdk/sdk/testing": resolve(__dirname, "../sdk/src/testing/index.ts"),
     },
   },
 });
@@ -413,13 +413,13 @@ export default defineConfig({
 - **Service-layer tests**: mock at the contract interface level. Use `vi.fn()` or implement mock classes — do NOT mock `fetch`/`axios` directly.
 - **RPC clients**: do not unit-test raw HTTP calls. Integration tests (not required for CI) can use [MSW](https://mswjs.io) for REST clients.
 - **Viem/EVM calls**: use a custom viem transport stub rather than trying to mock HTTP hex responses. See `packages/bsc/tests/services/staking-service.test.ts` for the pattern.
-- **Mock fixtures**: use `mockValidator()`, `mockDelegation()`, `mockStakingSummary()`, `mockFee()`, etc. from `@guardian/sdk/testing`. Add new mock helpers there if new types are introduced.
+- **Mock fixtures**: use `mockValidator()`, `mockDelegation()`, `mockStakingSummary()`, `mockFee()`, etc. from `@guardian-sdk/sdk/testing`. Add new mock helpers there if new types are introduced.
 
 ### Config validation test pattern
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { ConfigError } from "@guardian/sdk";
+import { ConfigError } from "@guardian-sdk/sdk";
 import { <chain> } from "../src/mainnet";
 
 describe("<chain>()", () => {
@@ -448,7 +448,7 @@ No change needed — `pnpm-workspace.yaml` already uses `packages/*` as a glob.
 The scaffold script patches `package.json` automatically. If doing it manually, add:
 
 ```json
-"build": "... && pnpm --filter @guardian/<chain> run build"
+"build": "... && pnpm --filter @guardian-sdk/<chain> run build"
 ```
 
 ### ESLint
@@ -493,8 +493,8 @@ pnpm run build
 Add a runnable example script. Create `examples/<chain>-sample.ts`:
 
 ```typescript
-import { GuardianSDK } from "@guardian/sdk";
-import { <chain>, chains } from "@guardian/<chain>";
+import { GuardianSDK } from "@guardian-sdk/sdk";
+import { <chain>, chains } from "@guardian-sdk/<chain>";
 
 const sdk = new GuardianSDK([
   <chain>({ rpcUrl: "https://<mainnet-rpc>" }),
@@ -529,14 +529,14 @@ Every chain package needs its own README. Required sections:
 |---------|---------|
 | **Overview** | What the chain is, protocol type (PoSA, DPoS, etc.), key protocol parameters |
 | **Protocol knowledge** | How staking works on this chain — delegation, unbonding, rewards, slashing. Link to official docs. This is the "encyclopedia" section — explain it thoroughly so developers don't need to look elsewhere. |
-| **Installation** | `npm install @guardian/<chain> viem` |
+| **Installation** | `npm install @guardian-sdk/<chain> viem` |
 | **Quick start** | Minimal code snippet to get validators + delegations using `chains.<chainName>Mainnet` |
 | **Transaction examples** | Table of real mainnet transactions on the explorer (Delegate, Undelegate, Redelegate, Claim) so developers can inspect the raw call data |
 | **Chain constants** | Table: chainId, symbol, decimals, RPC endpoints, explorer, staking contract address |
 | **Protocol parameters** | Min delegation amount, unbonding period, redelegation fee (if any), slashing conditions |
 | **Error codes** | Tables for `ConfigError`, `ValidationError`, `SigningError` — one row per code with trigger condition |
 | **Signing** | Direct (`sign()`), prehash/external (`prehash()` + `compile()`), with code examples |
-| **Testing** | How to use `@guardian/sdk/testing` mock fixtures in consumer tests |
+| **Testing** | How to use `@guardian-sdk/sdk/testing` mock fixtures in consumer tests |
 
 ### Real transaction examples table format
 
@@ -569,12 +569,12 @@ Add the new chain to:
 [ ] packages/<chain>/src/mainnet/rpc/             — low-level RPC clients
 [ ] packages/<chain>/src/mainnet/services/        — 5 service implementations
 [ ] packages/<chain>/src/mainnet/index.ts         — DI factory function with validateRpcUrl
-[ ] packages/<chain>/src/index.ts                 — public re-exports (re-exports @guardian/sdk, exports chains)
+[ ] packages/<chain>/src/index.ts                 — public re-exports (re-exports @guardian-sdk/sdk, exports chains)
 [ ] packages/<chain>/package.json                 — scripts, deps, exports map, publishConfig
 [ ] packages/<chain>/tsconfig.json                — CJS build
 [ ] packages/<chain>/tsconfig.esm.json            — ESM build
 [ ] packages/<chain>/tsconfig.test.json           — test paths
-[ ] packages/<chain>/vitest.config.ts             — @guardian/sdk alias
+[ ] packages/<chain>/vitest.config.ts             — @guardian-sdk/sdk alias
 [ ] packages/<chain>/tests/<chain>-config.test.ts — config validation tests
 [ ] packages/<chain>/tests/services/              — service unit tests
 [ ] eslint.config.mjs                             — add new tsconfigs to parserOptions.project
