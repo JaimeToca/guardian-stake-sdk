@@ -628,6 +628,7 @@ import { ValidationError } from "@guardian-sdk/bsc";
 | `INVALID_AMOUNT` | A `Delegate` transaction `amount` is below the 1 BNB protocol minimum  |
 | `INVALID_NONCE` | The `nonce` passed to `sign`, `preHash`, or `compile` is negative or not an integer |
 | `INVALID_FEE` | The `fee.gasLimit` or `fee.gasPrice` passed to `sign`, `preHash`, or `compile` is zero or negative |
+| `INVALID_PRIVATE_KEY` | The private key passed to `sign()` is not valid hex, is zero, or exceeds the secp256k1 curve order |
 
 ---
 

@@ -7,10 +7,10 @@ import type {
 } from "@guardian-sdk/sdk";
 
 /** EVM calldata and native value for a staking transaction. */
-export type CallData = {
+export interface CallData {
   data: `0x${string}`;
   amount: bigint;
-};
+}
 
 /** BSC-specific sign service contract — extends the chain-agnostic contract with EVM calldata building. */
 export interface BscSignServiceContract extends SignServiceContract {
@@ -18,7 +18,9 @@ export interface BscSignServiceContract extends SignServiceContract {
 }
 
 /** BSC-specific signing args that accept a viem `PrivateKeyAccount` instead of a raw private key. */
-export type SigningWithAccount = BaseSignArgs & { account: PrivateKeyAccount };
+export interface SigningWithAccount extends BaseSignArgs {
+  account: PrivateKeyAccount;
+}
 
 export function isSigningWithPrivateKey(
   args: SigningWithPrivateKey | SigningWithAccount

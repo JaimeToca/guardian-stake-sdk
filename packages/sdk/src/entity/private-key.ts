@@ -1,3 +1,5 @@
+import { ValidationError } from "./errors";
+
 const HEX_64_REGEX = /^[0-9a-fA-F]{64}$/;
 
 const SECP256K1_ORDER = BigInt(
@@ -26,17 +28,23 @@ export function privateKey(value: string): PrivateKey {
   const stripped = value.startsWith("0x") || value.startsWith("0X") ? value.slice(2) : value;
 
   if (!HEX_64_REGEX.test(stripped)) {
-    throw new Error("Invalid secp256k1 private key: expected 32 bytes (64 hex characters)");
+    throw new ValidationError(
+      "INVALID_PRIVATE_KEY",
+      "Invalid secp256k1 private key: expected 32 bytes (64 hex characters)"
+    );
   }
 
   const keyValue = BigInt("0x" + stripped);
 
   if (keyValue === 0n) {
-    throw new Error("Invalid secp256k1 private key: key cannot be zero");
+    throw new ValidationError("INVALID_PRIVATE_KEY", "Invalid secp256k1 private key: key cannot be zero");
   }
 
   if (keyValue >= SECP256K1_ORDER) {
-    throw new Error("Invalid secp256k1 private key: value exceeds curve order");
+    throw new ValidationError(
+      "INVALID_PRIVATE_KEY",
+      "Invalid secp256k1 private key: value exceeds curve order"
+    );
   }
 
   return `0x${stripped.toLowerCase()}` as PrivateKey;

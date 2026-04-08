@@ -1,6 +1,7 @@
 import type { Chain } from "viem";
 import { bsc } from "viem/chains";
 import type { GuardianChain } from "@guardian-sdk/sdk";
+import { ConfigError } from "@guardian-sdk/sdk";
 
 /** BNB Smart Chain mainnet configuration. */
 export const bscMainnet: GuardianChain = {
@@ -48,6 +49,6 @@ export const getViemChain = (chain: GuardianChain): Chain => {
     case bscMainnet.id:
       return bsc;
     default:
-      throw new Error(`Chain not supported ${chain.id}`);
+      throw new ConfigError("UNSUPPORTED_CHAIN", `Chain not supported: "${chain.id}"`);
   }
 };

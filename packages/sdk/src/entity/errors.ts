@@ -21,7 +21,8 @@ export type ValidationErrorCode =
   | "INVALID_ADDRESS"
   | "INVALID_AMOUNT"
   | "INVALID_NONCE"
-  | "INVALID_FEE";
+  | "INVALID_FEE"
+  | "INVALID_PRIVATE_KEY";
 
 export type ConfigErrorCode = "UNSUPPORTED_CHAIN" | "INVALID_RPC_URL";
 
@@ -82,3 +83,4 @@ export class SigningError extends GuardianError {
     this.name = "SigningError";
   }
 }
+

@@ -28,11 +28,7 @@ export class StakingRpcClient implements StakingRpcClientContract {
       to: STAKING_CONTRACT,
     });
 
-    if (!validatorsResponse.data) {
-      throw new Error("Missing data for call getValidatorsCreditContracts(contract)");
-    }
-
-    const decodedValidatorResponse = decodeGetValidators(validatorsResponse.data);
+    const decodedValidatorResponse = decodeGetValidators(validatorsResponse.data!);
     const operatorAddresses = decodedValidatorResponse[0] as Address[];
     const creditAddresses = decodedValidatorResponse[1] as Address[];
 
@@ -97,11 +93,7 @@ export class StakingRpcClient implements StakingRpcClientContract {
       to: creditContract,
     });
 
-    if (!unbondRequestDataResponse.data) {
-      throw new Error("Missing data for call getUnbondRequestData(delegator, index)");
-    }
-
-    const decodedUnbondResponse = decodeUnbond(unbondRequestDataResponse.data);
+    const decodedUnbondResponse = decodeUnbond(unbondRequestDataResponse.data!);
 
     return {
       shares: decodedUnbondResponse[0],
@@ -115,10 +107,7 @@ export class StakingRpcClient implements StakingRpcClientContract {
       to: creditContract,
       data: encodeBalanceOf(delegator),
     });
-    if (!response.data) {
-      throw new Error(`Missing data for call balanceOf(${delegator}) on ${creditContract}`);
-    }
-    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data);
+    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data!);
     return decoded[0];
   }
 
@@ -127,10 +116,7 @@ export class StakingRpcClient implements StakingRpcClientContract {
       to: creditContract,
       data: encodeGetSharesByPooledBNBData(amount),
     });
-    if (!response.data) {
-      throw new Error(`Missing data for call getSharesByPooledBNB(${amount}) on ${creditContract}`);
-    }
-    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data);
+    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data!);
     return decoded[0];
   }
 }

@@ -1,20 +1,22 @@
 import type { Fee } from "./fee-types";
 import type { Transaction } from "./transaction-types";
 
-export type BaseSignArgs = {
+export interface BaseSignArgs {
   transaction: Transaction;
   fee: Fee;
   nonce: number;
-};
+}
 
-export type SigningWithPrivateKey = BaseSignArgs & { privateKey: string };
+export interface SigningWithPrivateKey extends BaseSignArgs {
+  privateKey: string;
+}
 
-export type CompileArgs = {
+export interface CompileArgs {
   signArgs: BaseSignArgs;
   signature: string;
-};
+}
 
-export type PrehashResult = {
+export interface PrehashResult {
   serializedTransaction: string;
   signArgs: BaseSignArgs;
-};
+}
