@@ -8,6 +8,6 @@ import type {
 /** Chain-agnostic contract for cryptographic signing operations. */
 export interface SignServiceContract {
   sign(signingArgs: SigningWithPrivateKey): Promise<string>;
-  prehash(preHasArgs: BaseSignArgs): Promise<PrehashResult>;
+  prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult>;
   compile(compileArgs: CompileArgs): Promise<string>;
 }
