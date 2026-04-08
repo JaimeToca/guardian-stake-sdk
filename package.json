@@ -2,9 +2,6 @@
   "name": "guardian-sdk",
   "private": true,
   "version": "0.0.0",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "build": "pnpm --filter @guardian/sdk run build && pnpm --filter @guardian/bsc run build",
     "typecheck": "pnpm -r run typecheck && tsc --noEmit -p examples/tsconfig.json",
