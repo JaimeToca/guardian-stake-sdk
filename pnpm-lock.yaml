@@ -50,6 +50,9 @@ importers:
 
   packages/bsc:
     devDependencies:
+      '@guardian/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.8)(typescript@6.0.2)(yaml@2.8.3)
