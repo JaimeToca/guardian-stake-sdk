@@ -1,6 +1,6 @@
 {
   "name": "@guardian/bsc",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Guardian SDK for BNB Smart Chain",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
