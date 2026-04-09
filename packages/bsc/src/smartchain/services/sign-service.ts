@@ -134,6 +134,10 @@ export class SignService implements BscSignServiceContract {
     const fee = signArgs.fee;
     const nonce = signArgs.nonce;
 
+    if (fee.type !== "GasFee") {
+      throw new Error(`BSC sign service requires a GasFee, got "${fee.type}".`);
+    }
+
     return {
       to: STAKING_CONTRACT,
       value: amount,

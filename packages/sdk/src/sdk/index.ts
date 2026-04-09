@@ -58,7 +58,7 @@ export class GuardianSDK {
     return this.getService(transaction.chain).estimateFee(transaction);
   }
 
-  sign(signingArgs: SigningWithPrivateKey): Promise<string> {
+  sign(signingArgs: BaseSignArgs): Promise<string> {
     return this.getService(signingArgs.transaction.chain).sign(signingArgs);
   }
 

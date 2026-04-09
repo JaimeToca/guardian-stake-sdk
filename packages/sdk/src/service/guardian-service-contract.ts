@@ -16,7 +16,7 @@ export interface GuardianServiceContract {
   getBalances(address: string): Promise<Balance[]>;
   getNonce(address: string): Promise<number>;
   estimateFee(transaction: Transaction): Promise<Fee>;
-  sign(signingArgs: SigningWithPrivateKey): Promise<string>;
+  sign(signingArgs: BaseSignArgs): Promise<string>;
   prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult>;
   compile(compileArgs: CompileArgs): Promise<string>;
   broadcast(rawTx: string): Promise<string>;

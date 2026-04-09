@@ -1,0 +1,57 @@
+{
+  "name": "@guardian-sdk/cardano",
+  "version": "1.0.0",
+  "description": "Guardian SDK for Cardano",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cardano-sdk/core": "^0.46.12",
+    "@cardano-sdk/crypto": "^0.4.5",
+    "@guardian-sdk/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "vitest": "^4.1.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "cardano",
+    "ada",
+    "staking",
+    "native-staking",
+    "stake-pool",
+    "blockchain",
+    "sdk",
+    "guardian",
+    "guardian-sdk"
+  ],
+  "author": "JaimeToca",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaimeToca/guardian-stake-sdk.git"
+  },
+  "license": "MIT"
+}

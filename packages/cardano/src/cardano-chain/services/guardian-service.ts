@@ -2,11 +2,7 @@ import type { GuardianChain } from "@guardian-sdk/sdk";
 import type { Balance } from "@guardian-sdk/sdk";
 import type { Fee } from "@guardian-sdk/sdk";
 import type { GuardianServiceContract } from "@guardian-sdk/sdk";
-import type {
-  BaseSignArgs,
-  PrehashResult,
-  CompileArgs,
-} from "@guardian-sdk/sdk";
+import type { BaseSignArgs, CompileArgs, PrehashResult } from "@guardian-sdk/sdk";
 import type { Transaction } from "@guardian-sdk/sdk";
 import type {
   BalanceServiceContract,
@@ -18,24 +14,31 @@ import type {
   Validator,
   ValidatorStatus,
 } from "@guardian-sdk/sdk";
-import type { SigningWithAccount } from "../sign-types";
 import type { SignService } from "./sign-service";
 
-
 /**
- * BSC implementation of `GuardianServiceContract`.
- * Extends the base `sign()` contract to also accept a viem `PrivateKeyAccount`
- * via `SigningWithAccount` — a BSC-specific convenience.
+ * Cardano implementation of `GuardianServiceContract`.
+ *
+ * The `sign()` method accepts `CardanoSigningWithPrivateKey` — a `BaseSignArgs`
+ * extension with `paymentPrivateKey` and `stakingPrivateKey` fields:
+ *
+ * ```typescript
+ * await sdk.sign({
+ *   transaction, fee, nonce: 0,
+ *   paymentPrivateKey: "64-hex-chars",
+ *   stakingPrivateKey: "64-hex-chars",
+ * });
+ * ```
  */
 export class GuardianService implements GuardianServiceContract {
   constructor(
     private readonly chain: GuardianChain,
-    private balanceService: BalanceServiceContract,
-    private nonceService: NonceServiceContract,
-    private feeService: FeeServiceContract,
-    private signService: SignService,
-    private stakingService: StakingServiceContract,
-    private broadcastService: BroadcastServiceContract
+    private readonly balanceService: BalanceServiceContract,
+    private readonly nonceService: NonceServiceContract,
+    private readonly feeService: FeeServiceContract,
+    private readonly signService: SignService,
+    private readonly stakingService: StakingServiceContract,
+    private readonly broadcastService: BroadcastServiceContract
   ) {}
 
   getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
@@ -63,7 +66,7 @@ export class GuardianService implements GuardianServiceContract {
   }
 
   sign(signingArgs: BaseSignArgs): Promise<string> {
-    return this.signService.sign(signingArgs as SigningWithAccount);
+    return this.signService.sign(signingArgs);
   }
 
   prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult> {
