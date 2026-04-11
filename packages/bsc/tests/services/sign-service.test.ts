@@ -146,6 +146,24 @@ describe("SignService", () => {
         return true;
       });
     });
+
+    it("throws when fee.type is not GasFee", async () => {
+      const wrongFee = { type: "CardanoFee" as any, txSizeBytes: 300, total: 180_000n };
+      await expect(
+        service.sign({
+          transaction: {
+            type: "Delegate" as const,
+            chain: bscMainnet,
+            amount: parseEther("1"),
+            isMaxAmount: false,
+            validator: VALIDATOR,
+          },
+          fee: wrongFee,
+          nonce: 1,
+          privateKey: TEST_PRIVATE_KEY,
+        })
+      ).rejects.toThrow(/GasFee/);
+    });
   });
 
   describe("prehash", () => {
