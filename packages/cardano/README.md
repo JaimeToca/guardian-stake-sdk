@@ -63,7 +63,7 @@ The protocol targets roughly **4–5% annual yield** across all stake. Actual re
 
 **Saturation**: Each pool has a target size determined by the `k` parameter (currently 500 optimal pools, each ideally holding 1/500 of total ADA staked). Pools above saturation earn reduced rewards — this design incentivises delegators to spread ADA across many pools rather than concentrating in a few.
 
-The network currently has approximately **3,000 pools**, of which ~2,400 are active. Any pool registered on-chain is visible via `getValidators()`.
+The network currently has approximately **3,000 pools**, of which ~2,400 are active. `getValidators()` currently returns the top 100 pools by live stake — see the [pagination note](#getvalidators) below.
 
 ### Stake Keys and Addresses
 
@@ -390,6 +390,8 @@ interface CardanoConfig {
 
 Returns stake pools registered on Cardano. Fetches the first 100 pools sorted by live stake descending — the largest, most active pools first. Pool metadata (name, ticker, description) is batch-fetched in parallel and results are cached for 3 minutes.
 
+> **Pagination not yet supported.** The SDK currently returns only the top 100 pools by live stake. Full pagination across all ~3,000 registered pools will be added in a future release.
+
 ```typescript
 // All pools
 const pools = await sdk.getValidators(chains.cardanoMainnet);
@@ -429,7 +431,7 @@ type ValidatorStatus = "Active" | "Inactive";
 
 ### `getDelegations`
 
-Returns the current delegation state for a stake address and a summary of the staking protocol. Pass a `stake1...` address.
+Returns the current delegation state and a summary of the staking protocol. Accepts either a stake address (`stake1...`) or a base payment address (`addr1q...`) — the stake credential is extracted automatically from a payment address.
 
 ```typescript
 const { delegations, stakingSummary } = await sdk.getDelegations(
@@ -474,7 +476,7 @@ interface StakingSummary {
 
 ### `getBalances`
 
-Returns the four balance categories for a stake address. Pass a `stake1...` address — the stake address controls the total ADA across all payment addresses derived from the same root key.
+Returns the four balance categories for an address. Accepts either a stake address (`stake1...`) or a base payment address (`addr1q...`) — the stake credential is extracted automatically from a payment address. Balances reflect the total ADA controlled by the stake key across all associated payment addresses.
 
 ```typescript
 const balances = await sdk.getBalances(
@@ -490,7 +492,6 @@ const balances = await sdk.getBalances(
 [
   { type: "Available", amount: bigint },  // Blockfrost controlled_amount — fully spendable
   { type: "Staked",    amount: bigint },  // Same as Available — delegation does not lock ADA
-  { type: "Pending",   amount: 0n },      // Always 0 — no unbonding queue
   { type: "Claimable", amount: bigint },  // Blockfrost withdrawable_amount — rewards to claim
 ]
 ```
@@ -910,7 +911,7 @@ import { ValidationError } from "@guardian-sdk/sdk";
 
 | Code | Thrown when |
 |---|---|
-| `INVALID_ADDRESS` | An address string is not valid bech32, or the wrong type — e.g. `addr1` where `stake1` is expected, or `pool1` passed to `getDelegations` |
+| `INVALID_ADDRESS` | An address string is not valid bech32 — e.g. a pool ID passed to `getDelegations`, or an enterprise/pointer address passed where a base address or stake address is required |
 | `INVALID_AMOUNT` | Insufficient UTXOs to cover the required fee and deposit |
 | `INVALID_PRIVATE_KEY` | A key is not 32 bytes (64 hex characters) |
 
@@ -925,7 +926,7 @@ import { SigningError } from "@guardian-sdk/sdk";
 | Code | Thrown when |
 |---|---|
 | `INVALID_SIGNING_ARGS` | `paymentPrivateKey` or `stakingPrivateKey` missing from signing args |
-| `INVALID_SIGNING_ARGS` | `fee.type` is not `"CardanoFee"` — use `estimateFee()` to get a Cardano fee |
+| `INVALID_SIGNING_ARGS` | `fee.type` is not `"UtxoFee"` — use `estimateFee()` to get a Cardano fee |
 | `INVALID_SIGNING_ARGS` | The `signature` string passed to `compile()` does not contain exactly four `:` delimited components |
 
 ### `ConfigError`
@@ -947,7 +948,7 @@ try {
   await sdk.getBalances(chains.cardanoMainnet, rawInput);
 } catch (err) {
   if (err instanceof ValidationError && err.code === "INVALID_ADDRESS") {
-    showError("Please enter a valid stake address (stake1...).");
+    showError("Please enter a valid stake address (stake1...) or base payment address (addr1q...).");
   }
 }
 ```
