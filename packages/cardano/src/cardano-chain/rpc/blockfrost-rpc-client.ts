@@ -1,4 +1,5 @@
 import { fetchOrError, NoopLogger } from "@guardian-sdk/sdk";
+import { hexStringToBuffer } from "@cardano-sdk/util";
 import type { Logger } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "./blockfrost-rpc-client-contract";
 import type {
@@ -146,9 +147,6 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
     const url = `${this.baseUrl}/tx/submit`;
     this.logger.debug("BlockfrostRpcClient: submitting transaction");
 
-    // Blockfrost expects the raw CBOR bytes as application/cbor
-    const bytes = hexToBytes(cborHex);
-
     const txHash = await fetchOrError<string>({
       url,
       method: "POST",
@@ -156,19 +154,10 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
         ...this.headers,
         "Content-Type": "application/cbor",
       },
-      data: bytes,
+      data: hexStringToBuffer(cborHex),
     });
 
     this.logger.debug("BlockfrostRpcClient: transaction submitted", { txHash });
     return txHash;
   }
-}
-
-function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
 }

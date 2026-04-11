@@ -52,6 +52,39 @@ export function buildRewardAccount(stakeKeyHashHex: string): string {
 }
 
 /**
+ * Resolves any Cardano address to a mainnet stake address (stake1...).
+ *
+ * - If a stake/reward address is passed, it is returned as-is.
+ * - If a base payment address (addr1q...) is passed, the stake credential is
+ *   extracted from it and the corresponding stake address is returned.
+ * - Enterprise or pointer addresses have no staking component — throws.
+ */
+export function resolveStakeAddress(address: string): string {
+  const parsed = Cardano.Address.fromString(address);
+  if (!parsed) {
+    throw new ValidationError("INVALID_ADDRESS", `Cannot parse Cardano address: "${address}".`);
+  }
+
+  const type = parsed.getType();
+
+  if (type === Cardano.AddressType.RewardKey || type === Cardano.AddressType.RewardScript) {
+    return address;
+  }
+
+  const base = parsed.asBase();
+  if (!base) {
+    throw new ValidationError(
+      "INVALID_ADDRESS",
+      `Address "${address}" has no staking component. Provide a base address (addr1q...) or stake address (stake1...).`
+    );
+  }
+
+  const stakeCred = base.getStakeCredential();
+  const rewardAddr = Cardano.RewardAddress.fromCredentials(Cardano.NetworkId.Mainnet, stakeCred);
+  return rewardAddr.toAddress().toBech32();
+}
+
+/**
  * Validates a Cardano Ed25519 private key.
  * Accepts a 32-byte (64 hex char) Ed25519 scalar as hex string.
  */

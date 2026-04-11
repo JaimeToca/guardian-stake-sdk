@@ -6,4 +6,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   noExternal: ["@guardian-sdk/sdk"],
+  external: ["@cardano-sdk/core", "@cardano-sdk/crypto"],
 });

@@ -1,4 +1,5 @@
-import { Ed25519PrivateKey, blake2b } from "@cardano-sdk/crypto";
+import { Ed25519PrivateKey, Ed25519PrivateNormalKeyHex, blake2b } from "@cardano-sdk/crypto";
+import { HexBlob } from "@cardano-sdk/util";
 import type {
   BaseSignArgs,
   CompileArgs,
@@ -26,13 +27,6 @@ import {
   parsePoolId,
 } from "../validations";
 
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
-}
 
 /**
  * Cardano signing service.
@@ -74,15 +68,14 @@ export class SignService {
     const paymentPrivHex = parseCardanoPrivateKey(signingArgs.paymentPrivateKey);
     const stakingPrivHex = parseCardanoPrivateKey(signingArgs.stakingPrivateKey);
 
-    const paymentPrivKey = await Ed25519PrivateKey.fromNormalHex(paymentPrivHex);
-    const stakingPrivKey = await Ed25519PrivateKey.fromNormalHex(stakingPrivHex);
+    const paymentPrivKey = await Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(paymentPrivHex));
+    const stakingPrivKey = await Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(stakingPrivHex));
 
     const paymentPubKey = await paymentPrivKey.toPublic();
     const stakingPubKey = await stakingPrivKey.toPublic();
 
     // blake2b-224 (28 bytes) of the staking public key = stake key hash
-    const stakingPubKeyBytes = hexToBytes(stakingPubKey.hex());
-    const stakeKeyHashHex = blake2b.hash(stakingPubKeyBytes, 28);
+    const stakeKeyHashHex = blake2b.hash(HexBlob(stakingPubKey.hex()), 28);
 
     const { transaction, fee } = signingArgs;
 
@@ -118,8 +111,8 @@ export class SignService {
 
     const txBodyHash = body.hash();
 
-    const paymentSig = await paymentPrivKey.sign(hexToBytes(txBodyHash));
-    const stakingSig = await stakingPrivKey.sign(hexToBytes(txBodyHash));
+    const paymentSig = await paymentPrivKey.sign(HexBlob(txBodyHash));
+    const stakingSig = await stakingPrivKey.sign(HexBlob(txBodyHash));
 
     const witnesses: TxWitness[] = [
       { vkeyHex: paymentPubKey.hex(), sigHex: paymentSig.hex() },
@@ -201,8 +194,7 @@ export class SignService {
     parsePaymentAddress(transaction.account);
 
     // Derive stake key hash from the provided staking public key
-    const stakingPubKeyBytes = hexToBytes(stakingVKeyHex);
-    const stakeKeyHashHex = blake2b.hash(stakingPubKeyBytes, 28);
+    const stakeKeyHashHex = blake2b.hash(HexBlob(stakingVKeyHex), 28);
 
     const [protocolParams, utxos] = await Promise.all([
       this.rpcClient.getProtocolParams(),

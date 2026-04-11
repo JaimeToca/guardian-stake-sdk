@@ -12,7 +12,7 @@ function makeRpcClient(account: Partial<BlockfrostAccount> = {}) {
 describe("BalanceService", () => {
   const STAKE_ADDRESS = accountFixture.stake_address;
 
-  it("returns all four balance types", async () => {
+  it("returns Available, Staked, and Claimable balance types (no Pending — Cardano has no unbonding)", async () => {
     const service = new BalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
@@ -20,8 +20,8 @@ describe("BalanceService", () => {
 
     expect(types).toContain("Available");
     expect(types).toContain("Staked");
-    expect(types).toContain("Pending");
     expect(types).toContain("Claimable");
+    expect(types).not.toContain("Pending");
   });
 
   it("maps Available balance from controlled_amount", async () => {
@@ -42,13 +42,12 @@ describe("BalanceService", () => {
     expect(staked?.amount).toBe(BigInt(accountFixture.controlled_amount));
   });
 
-  it("maps Pending balance to 0 (no unbonding queue in Cardano)", async () => {
+  it("returns exactly 3 balance entries", async () => {
     const service = new BalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
-    const pending = balances.find((b) => b.type === "Pending");
 
-    expect(pending?.amount).toBe(0n);
+    expect(balances).toHaveLength(3);
   });
 
   it("maps Claimable balance from withdrawable_amount", async () => {

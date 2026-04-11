@@ -7,7 +7,7 @@
  */
 
 import { Cardano, Serialization } from "@cardano-sdk/core";
-import { Ed25519KeyHashHex } from "@cardano-sdk/crypto";
+import { Ed25519KeyHashHex, Ed25519PublicKeyHex, Ed25519SignatureHex, Hash28ByteBase16 } from "@cardano-sdk/crypto";
 
 const {
   Certificate,
@@ -94,7 +94,7 @@ export function buildSignedTransaction(
   const witnessSet = new TransactionWitnessSet();
   if (witnesses.length > 0) {
     const vkeys = CborSet.fromCore(
-      witnesses.map((w) => [w.vkeyHex, w.sigHex] as [string, string]),
+      witnesses.map((w): [Ed25519PublicKeyHex, Ed25519SignatureHex] => [Ed25519PublicKeyHex(w.vkeyHex), Ed25519SignatureHex(w.sigHex)]),
       VkeyWitness.fromCore
     );
     witnessSet.setVkeys(vkeys);
@@ -120,7 +120,7 @@ export function buildMockTransaction(params: TxBodyParams, witnessCount: number)
 function buildCertificate(cert: CardanoCertificate): Serialization.Certificate {
   const stakeCred = {
     type: Cardano.CredentialType.KeyHash,
-    hash: cert.stakeKeyHashHex,
+    hash: Hash28ByteBase16(cert.stakeKeyHashHex),
   };
 
   switch (cert.type) {
