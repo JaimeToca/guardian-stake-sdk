@@ -31,7 +31,7 @@ function makeRpcClient(params = PARAMS, utxos = UTXOS) {
 }
 
 describe("FeeService", () => {
-  it("returns a CardanoFee for a Delegate transaction", async () => {
+  it("returns a UtxoFee for a Delegate transaction", async () => {
     const service = new FeeService(makeRpcClient() as any);
 
     const fee = await service.estimateFee({
@@ -43,7 +43,7 @@ describe("FeeService", () => {
       account: PAYMENT_ADDRESS,
     });
 
-    expect(fee.type).toBe("CardanoFee");
+    expect(fee.type).toBe("UtxoFee");
   });
 
   it("applies the linear fee formula: total = min_fee_a * txSizeBytes + min_fee_b", async () => {
@@ -129,7 +129,7 @@ describe("FeeService", () => {
 
     const fee = await service.estimateFee(tx as any);
 
-    expect(fee.type).toBe("CardanoFee");
+    expect(fee.type).toBe("UtxoFee");
     expect(fee.total).toBeGreaterThan(0n);
   });
 

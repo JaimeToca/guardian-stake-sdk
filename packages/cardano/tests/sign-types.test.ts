@@ -11,7 +11,7 @@ const baseArgs: BaseSignArgs = {
     isMaxAmount: false,
     validator: "pool1...",
   },
-  fee: { type: "CardanoFee", txSizeBytes: 300, total: 200000n },
+  fee: { type: "UtxoFee", txSizeBytes: 300, total: 200000n },
   nonce: 0,
 };
 

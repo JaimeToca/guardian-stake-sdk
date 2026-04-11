@@ -30,7 +30,7 @@ const PARAMS = protocolParamsFixture as BlockfrostProtocolParams;
 const UTXOS = utxosFixture as BlockfrostUtxo[];
 
 const CARDANO_FEE = {
-  type: "CardanoFee" as const,
+  type: "UtxoFee" as const,
   txSizeBytes: 400,
   total: 200_000n,
 };
@@ -98,7 +98,7 @@ describe("SignService", () => {
       });
     });
 
-    it("throws SigningError when fee type is not CardanoFee", async () => {
+    it("throws SigningError when fee type is not UtxoFee", async () => {
       const service = new SignService(makeRpcClient() as any);
 
       await expect(
@@ -231,7 +231,7 @@ describe("SignService", () => {
       ).rejects.toBeInstanceOf(ValidationError);
     });
 
-    it("throws SigningError when fee type is not CardanoFee", async () => {
+    it("throws SigningError when fee type is not UtxoFee", async () => {
       const service = new SignService(makeRpcClient() as any);
 
       await expect(

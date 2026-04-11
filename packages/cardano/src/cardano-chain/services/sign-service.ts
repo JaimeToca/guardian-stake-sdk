@@ -86,10 +86,10 @@ export class SignService {
       );
     }
 
-    if (fee.type !== "CardanoFee") {
+    if (fee.type !== "UtxoFee") {
       throw new SigningError(
         "INVALID_SIGNING_ARGS",
-        "Cardano transactions require a `CardanoFee`. Call `estimateFee()` first."
+        "Cardano transactions require a `UtxoFee`. Call `estimateFee()` first."
       );
     }
 
@@ -137,10 +137,10 @@ export class SignService {
       );
     }
 
-    if (preHashArgs.fee.type !== "CardanoFee") {
+    if (preHashArgs.fee.type !== "UtxoFee") {
       throw new SigningError(
         "INVALID_SIGNING_ARGS",
-        "Cardano prehash requires a `CardanoFee`. Call `estimateFee()` first."
+        "Cardano prehash requires a `UtxoFee`. Call `estimateFee()` first."
       );
     }
 
@@ -187,8 +187,8 @@ export class SignService {
       throw new ValidationError("INVALID_ADDRESS", "transaction.account is required.");
     }
 
-    if (fee.type !== "CardanoFee") {
-      throw new SigningError("INVALID_SIGNING_ARGS", "Cardano compile requires a `CardanoFee`.");
+    if (fee.type !== "UtxoFee") {
+      throw new SigningError("INVALID_SIGNING_ARGS", "Cardano compile requires a `UtxoFee`.");
     }
 
     parsePaymentAddress(transaction.account);

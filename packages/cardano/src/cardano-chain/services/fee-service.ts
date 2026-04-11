@@ -66,7 +66,7 @@ export class FeeService implements FeeServiceContract {
 
     this.logger.debug("FeeService: fee estimated", { txSizeBytes, fee: fee.toString() });
 
-    return { type: "CardanoFee", txSizeBytes, total: fee } satisfies Fee;
+    return { type: "UtxoFee", txSizeBytes, total: fee } satisfies Fee;
   }
 
   private estimateTxSize(
