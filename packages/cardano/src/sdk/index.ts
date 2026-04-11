@@ -12,6 +12,14 @@ export interface CardanoConfig {
    * self-hosted Blockfrost instances or proxies that do not require a key.
    */
   apiKey?: string;
+  /**
+   * Override the Blockfrost API base URL.
+   * Defaults to "https://cardano-mainnet.blockfrost.io/api/v0".
+   * Useful for self-hosted Blockfrost instances, testnet endpoints, or local proxies.
+   *
+   * @example "https://cardano-preprod.blockfrost.io/api/v0"
+   */
+  baseUrl?: string;
   logger?: Logger;
 }
 
@@ -39,6 +47,7 @@ export function cardano(config: CardanoConfig = {}): GuardianServiceContract {
   return provideCardanoService(
     cardanoMainnet,
     config.apiKey,
-    config.logger ?? new NoopLogger()
+    config.logger ?? new NoopLogger(),
+    config.baseUrl
   );
 }

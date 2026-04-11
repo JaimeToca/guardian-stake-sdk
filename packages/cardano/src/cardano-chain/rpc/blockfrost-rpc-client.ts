@@ -18,20 +18,25 @@ import type {
  * Free tier: 50,000 requests/day.
  */
 export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
-  private static readonly BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
+  private static readonly DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
   private static readonly POOLS_PAGE_SIZE = 100;
+
+  private readonly baseUrl: string;
 
   constructor(
     private readonly apiKey: string | undefined,
-    private readonly logger: Logger = new NoopLogger()
-  ) {}
+    private readonly logger: Logger = new NoopLogger(),
+    baseUrl?: string
+  ) {
+    this.baseUrl = baseUrl ?? BlockfrostRpcClient.DEFAULT_BASE_URL;
+  }
 
   private get headers(): Record<string, string> {
     return this.apiKey ? { project_id: this.apiKey } : {};
   }
 
   async getPools(page = 1): Promise<BlockfrostPoolExtended[]> {
-    const url = `${BlockfrostRpcClient.BASE_URL}/pools/extended`;
+    const url = `${this.baseUrl}/pools/extended`;
     this.logger.debug("BlockfrostRpcClient: fetching pools", { url, page });
     const start = Date.now();
 
@@ -54,7 +59,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   }
 
   async getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null> {
-    const url = `${BlockfrostRpcClient.BASE_URL}/pools/${poolId}/metadata`;
+    const url = `${this.baseUrl}/pools/${poolId}/metadata`;
     this.logger.debug("BlockfrostRpcClient: fetching pool metadata", { poolId });
 
     try {
@@ -71,7 +76,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   }
 
   async getAccount(stakeAddress: string): Promise<BlockfrostAccount> {
-    const url = `${BlockfrostRpcClient.BASE_URL}/accounts/${stakeAddress}`;
+    const url = `${this.baseUrl}/accounts/${stakeAddress}`;
     this.logger.debug("BlockfrostRpcClient: fetching account", { stakeAddress });
     const start = Date.now();
 
@@ -90,7 +95,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   }
 
   async getUtxos(paymentAddress: string): Promise<BlockfrostUtxo[]> {
-    const url = `${BlockfrostRpcClient.BASE_URL}/addresses/${paymentAddress}/utxos`;
+    const url = `${this.baseUrl}/addresses/${paymentAddress}/utxos`;
     this.logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress });
     const start = Date.now();
 
@@ -109,7 +114,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   }
 
   async getProtocolParams(): Promise<BlockfrostProtocolParams> {
-    const url = `${BlockfrostRpcClient.BASE_URL}/epochs/latest/parameters`;
+    const url = `${this.baseUrl}/epochs/latest/parameters`;
     this.logger.debug("BlockfrostRpcClient: fetching protocol params");
 
     const params = await fetchOrError<BlockfrostProtocolParams>({
@@ -127,7 +132,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   }
 
   async getNetwork(): Promise<BlockfrostNetwork> {
-    const url = `${BlockfrostRpcClient.BASE_URL}/network`;
+    const url = `${this.baseUrl}/network`;
     this.logger.debug("BlockfrostRpcClient: fetching network info");
 
     return fetchOrError<BlockfrostNetwork>({
@@ -138,7 +143,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   }
 
   async submitTx(cborHex: string): Promise<string> {
-    const url = `${BlockfrostRpcClient.BASE_URL}/tx/submit`;
+    const url = `${this.baseUrl}/tx/submit`;
     this.logger.debug("BlockfrostRpcClient: submitting transaction");
 
     // Blockfrost expects the raw CBOR bytes as application/cbor

@@ -1,0 +1,83 @@
+import { describe, it, expect, vi } from "vitest";
+import { BalanceService } from "../../src/cardano-chain/services/balance-service";
+import accountFixture from "../fixtures/account.json";
+import type { BlockfrostAccount } from "../../src/cardano-chain/rpc/blockfrost-rpc-types";
+
+function makeRpcClient(account: Partial<BlockfrostAccount> = {}) {
+  return {
+    getAccount: vi.fn().mockResolvedValue({ ...accountFixture, ...account }),
+  };
+}
+
+describe("BalanceService", () => {
+  const STAKE_ADDRESS = accountFixture.stake_address;
+
+  it("returns all four balance types", async () => {
+    const service = new BalanceService(makeRpcClient() as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const types = balances.map((b) => b.type);
+
+    expect(types).toContain("Available");
+    expect(types).toContain("Staked");
+    expect(types).toContain("Pending");
+    expect(types).toContain("Claimable");
+  });
+
+  it("maps Available balance from controlled_amount", async () => {
+    const service = new BalanceService(makeRpcClient() as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const available = balances.find((b) => b.type === "Available");
+
+    expect(available?.amount).toBe(BigInt(accountFixture.controlled_amount));
+  });
+
+  it("maps Staked balance equal to controlled_amount (ADA is never locked in Cardano)", async () => {
+    const service = new BalanceService(makeRpcClient() as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const staked = balances.find((b) => b.type === "Staked");
+
+    expect(staked?.amount).toBe(BigInt(accountFixture.controlled_amount));
+  });
+
+  it("maps Pending balance to 0 (no unbonding queue in Cardano)", async () => {
+    const service = new BalanceService(makeRpcClient() as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const pending = balances.find((b) => b.type === "Pending");
+
+    expect(pending?.amount).toBe(0n);
+  });
+
+  it("maps Claimable balance from withdrawable_amount", async () => {
+    const service = new BalanceService(makeRpcClient() as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const claimable = balances.find((b) => b.type === "Claimable");
+
+    expect(claimable?.amount).toBe(BigInt(accountFixture.withdrawable_amount));
+  });
+
+  it("returns zero claimable when withdrawable_amount is 0", async () => {
+    const service = new BalanceService(makeRpcClient({ withdrawable_amount: "0" }) as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const claimable = balances.find((b) => b.type === "Claimable");
+
+    expect(claimable?.amount).toBe(0n);
+  });
+
+  it("reflects large balances correctly (bigint precision)", async () => {
+    const largeAmount = "45000000000000000"; // 45 billion ADA in lovelaces
+    const service = new BalanceService(
+      makeRpcClient({ controlled_amount: largeAmount, withdrawable_amount: "0" }) as any
+    );
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const available = balances.find((b) => b.type === "Available");
+
+    expect(available?.amount).toBe(BigInt(largeAmount));
+  });
+});

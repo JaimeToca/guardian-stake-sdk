@@ -2,11 +2,7 @@ import type { GuardianChain } from "@guardian-sdk/sdk";
 import type { Balance } from "@guardian-sdk/sdk";
 import type { Fee } from "@guardian-sdk/sdk";
 import type { GuardianServiceContract } from "@guardian-sdk/sdk";
-import type {
-  BaseSignArgs,
-  PrehashResult,
-  CompileArgs,
-} from "@guardian-sdk/sdk";
+import type { BaseSignArgs, PrehashResult, CompileArgs } from "@guardian-sdk/sdk";
 import type { Transaction } from "@guardian-sdk/sdk";
 import type {
   BalanceServiceContract,
@@ -20,7 +16,6 @@ import type {
 } from "@guardian-sdk/sdk";
 import type { SigningWithAccount } from "../sign-types";
 import type { SignService } from "./sign-service";
-
 
 /**
  * BSC implementation of `GuardianServiceContract`.

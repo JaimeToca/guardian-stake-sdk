@@ -37,7 +37,10 @@ export function privateKey(value: string): PrivateKey {
   const keyValue = BigInt("0x" + stripped);
 
   if (keyValue === 0n) {
-    throw new ValidationError("INVALID_PRIVATE_KEY", "Invalid secp256k1 private key: key cannot be zero");
+    throw new ValidationError(
+      "INVALID_PRIVATE_KEY",
+      "Invalid secp256k1 private key: key cannot be zero"
+    );
   }
 
   if (keyValue >= SECP256K1_ORDER) {

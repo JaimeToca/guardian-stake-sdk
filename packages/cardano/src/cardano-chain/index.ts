@@ -12,9 +12,10 @@ import { GuardianService } from "./services/guardian-service";
 export function provideCardanoService(
   chain: GuardianChain,
   apiKey: string | undefined,
-  logger: Logger
+  logger: Logger,
+  baseUrl?: string
 ): GuardianServiceContract {
-  const rpcClient = new BlockfrostRpcClient(apiKey, logger);
+  const rpcClient = new BlockfrostRpcClient(apiKey, logger, baseUrl);
   const cache = new InMemoryCache<string, Validator[]>();
 
   const stakingService = new StakingService(cache, rpcClient, logger);

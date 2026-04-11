@@ -3,12 +3,16 @@ import { NoopLogger, ValidationError } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
 import { selectUtxos } from "../tx/coin-selection";
-import {
-  buildMockTransaction,
-  type CardanoCertificate,
-  type TxBodyParams,
-} from "../tx/tx-builder";
-import { parsePaymentAddress, parsePoolId } from "../validations";
+import { buildMockTransaction, type CardanoCertificate, type TxBodyParams } from "../tx/tx-builder";
+import { buildRewardAccount, parsePaymentAddress, parsePoolId } from "../validations";
+
+/**
+ * A placeholder stake address used for Claim fee estimation.
+ * Any valid mainnet stake address works — the key hash doesn't matter because
+ * all mainnet stake addresses encode to the same CBOR byte length.
+ * Derived from an all-zeros 28-byte stake key hash.
+ */
+const PLACEHOLDER_REWARD_ACCOUNT = buildRewardAccount("00".repeat(28));
 
 /**
  * Cardano fee service.
@@ -52,7 +56,12 @@ export class FeeService implements FeeServiceContract {
       this.rpcClient.getUtxos(transaction.account),
     ]);
 
-    const txSizeBytes = this.estimateTxSize(transaction, transaction.account, utxos, protocolParams);
+    const txSizeBytes = this.estimateTxSize(
+      transaction,
+      transaction.account,
+      utxos,
+      protocolParams
+    );
     const fee = this.calculateFee(txSizeBytes, protocolParams);
 
     this.logger.debug("FeeService: fee estimated", { txSizeBytes, fee: fee.toString() });
@@ -70,7 +79,7 @@ export class FeeService implements FeeServiceContract {
     const certificates = this.buildCertificates(transaction);
     const withdrawals =
       transaction.type === "Claim"
-        ? new Map([["stake1u" + "0".repeat(53), transaction.amount]])
+        ? new Map([[PLACEHOLDER_REWARD_ACCOUNT, transaction.amount]])
         : undefined;
 
     const required = this.computeRequiredLovelaces(transaction, 0n, keyDeposit);
@@ -116,8 +125,7 @@ export class FeeService implements FeeServiceContract {
     if (transaction.type === "Delegate" || transaction.type === "Redelegate") {
       const validator =
         transaction.type === "Delegate" ? transaction.validator : transaction.toValidator;
-      const poolId =
-        typeof validator === "string" ? validator : validator.operatorAddress;
+      const poolId = typeof validator === "string" ? validator : validator.operatorAddress;
       const poolKeyHashHex = parsePoolId(poolId);
 
       const certs: CardanoCertificate[] = [];

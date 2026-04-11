@@ -19,7 +19,12 @@ import {
   type TxBodyParams,
   type TxWitness,
 } from "../tx/tx-builder";
-import { buildRewardAccount, parseCardanoPrivateKey, parsePaymentAddress, parsePoolId } from "../validations";
+import {
+  buildRewardAccount,
+  parseCardanoPrivateKey,
+  parsePaymentAddress,
+  parsePoolId,
+} from "../validations";
 
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
@@ -276,9 +281,10 @@ export class SignService {
     stakeKeyHashHex: string
   ): CardanoCertificate[] {
     if (transaction.type === "Delegate") {
-      const poolId = typeof transaction.validator === "string"
-        ? transaction.validator
-        : transaction.validator.operatorAddress;
+      const poolId =
+        typeof transaction.validator === "string"
+          ? transaction.validator
+          : transaction.validator.operatorAddress;
       const poolKeyHashHex = parsePoolId(poolId);
       return [
         { type: "StakeRegistration", stakeKeyHashHex },
@@ -287,9 +293,10 @@ export class SignService {
     }
 
     if (transaction.type === "Redelegate") {
-      const poolId = typeof transaction.toValidator === "string"
-        ? transaction.toValidator
-        : transaction.toValidator.operatorAddress;
+      const poolId =
+        typeof transaction.toValidator === "string"
+          ? transaction.toValidator
+          : transaction.toValidator.operatorAddress;
       const poolKeyHashHex = parsePoolId(poolId);
       return [{ type: "StakeDelegation", stakeKeyHashHex, poolKeyHashHex }];
     }
@@ -301,10 +308,7 @@ export class SignService {
     return [];
   }
 
-  private buildWithdrawals(
-    transaction: Transaction,
-    stakeKeyHashHex: string
-  ): Map<string, bigint> {
+  private buildWithdrawals(transaction: Transaction, stakeKeyHashHex: string): Map<string, bigint> {
     if (transaction.type !== "Claim") return new Map();
     const rewardAccount = buildRewardAccount(stakeKeyHashHex);
     return new Map([[rewardAccount, transaction.amount]]);

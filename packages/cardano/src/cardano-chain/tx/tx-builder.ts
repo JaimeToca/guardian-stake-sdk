@@ -77,9 +77,7 @@ export function buildTransactionBody(params: TxBodyParams): Serialization.Transa
   }
 
   if (params.withdrawals && params.withdrawals.size > 0) {
-    body.setWithdrawals(
-      params.withdrawals as Map<Cardano.RewardAccount, Cardano.Lovelace>
-    );
+    body.setWithdrawals(params.withdrawals as Map<Cardano.RewardAccount, Cardano.Lovelace>);
   }
 
   return body;

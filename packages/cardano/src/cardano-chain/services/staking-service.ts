@@ -83,7 +83,10 @@ export class StakingService implements StakingServiceContract {
     return validators;
   }
 
-  private toValidator(pool: BlockfrostPoolExtended, metadata: BlockfrostPoolMetadata | null): Validator {
+  private toValidator(
+    pool: BlockfrostPoolExtended,
+    metadata: BlockfrostPoolMetadata | null
+  ): Validator {
     const estimatedApy = this.estimateApy(pool);
     const isRetiring = pool.retirement.length > 0;
     const status: ValidatorStatus = isRetiring ? "Inactive" : "Active";
@@ -117,7 +120,10 @@ export class StakingService implements StakingServiceContract {
     // Fixed cost fraction (lower is better for delegators)
     const activeStake = BigInt(pool.active_stake);
     const fixedCost = BigInt(pool.fixed_cost);
-    const epochRewards = (activeStake * BigInt(Math.round(BASE_PROTOCOL_RATE * 100))) / 10000n / BigInt(StakingService.EPOCHS_PER_YEAR);
+    const epochRewards =
+      (activeStake * BigInt(Math.round(BASE_PROTOCOL_RATE * 100))) /
+      10000n /
+      BigInt(StakingService.EPOCHS_PER_YEAR);
     const fixedCostFraction = epochRewards > 0n ? Number(fixedCost) / Number(epochRewards) : 0;
 
     const estimatedApy =
