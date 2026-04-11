@@ -1,9 +1,7 @@
 import { Cardano } from "@cardano-sdk/core";
 import { Ed25519KeyHashHex } from "@cardano-sdk/crypto";
+import { assertIsHexString } from "@cardano-sdk/util";
 import { ValidationError } from "@guardian-sdk/sdk";
-
-/** Ed25519 private key is 32 bytes = 64 hex characters. */
-const HEX_64_REGEX = /^[0-9a-fA-F]{64}$/;
 
 /**
  * Validates a Cardano payment address (addr1...).
@@ -45,10 +43,7 @@ export function parsePoolId(poolId: string): string {
  * stake key hash given as a 56-char hex string.
  */
 export function buildRewardAccount(stakeKeyHashHex: string): string {
-  const keyHash = Ed25519KeyHashHex(stakeKeyHashHex);
-  const rewardCred = { type: Cardano.CredentialType.KeyHash, hash: keyHash };
-  const rewardAddr = Cardano.RewardAddress.fromCredentials(Cardano.NetworkId.Mainnet, rewardCred);
-  return rewardAddr.toAddress().toBech32();
+  return Cardano.createRewardAccount(Ed25519KeyHashHex(stakeKeyHashHex), Cardano.NetworkId.Mainnet);
 }
 
 /**
@@ -80,8 +75,10 @@ export function resolveStakeAddress(address: string): string {
   }
 
   const stakeCred = base.getStakeCredential();
-  const rewardAddr = Cardano.RewardAddress.fromCredentials(Cardano.NetworkId.Mainnet, stakeCred);
-  return rewardAddr.toAddress().toBech32();
+  return Cardano.createRewardAccount(
+    Ed25519KeyHashHex(stakeCred.hash),
+    Cardano.NetworkId.Mainnet
+  );
 }
 
 /**
@@ -90,7 +87,9 @@ export function resolveStakeAddress(address: string): string {
  */
 export function parseCardanoPrivateKey(value: string): string {
   const stripped = value.startsWith("0x") ? value.slice(2) : value;
-  if (!HEX_64_REGEX.test(stripped)) {
+  try {
+    assertIsHexString(stripped, 64);
+  } catch {
     throw new ValidationError(
       "INVALID_PRIVATE_KEY",
       "Cardano private key must be 32 bytes (64 hex characters)."

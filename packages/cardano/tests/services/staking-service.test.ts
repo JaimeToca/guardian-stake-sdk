@@ -172,7 +172,7 @@ describe("StakingService", () => {
       const rpcClient = makeRpcClient({ account: { active: false, pool_id: null } });
       const service = new StakingService(new InMemoryCache(), rpcClient as any);
 
-      const { delegations } = await service.getDelegations("stake1...");
+      const { delegations } = await service.getDelegations(accountFixture.stake_address);
 
       expect(delegations).toHaveLength(0);
     });
@@ -182,7 +182,7 @@ describe("StakingService", () => {
       const rpcClient = makeRpcClient({ account: { pool_id: unknownPoolId } });
       const service = new StakingService(new InMemoryCache(), rpcClient as any);
 
-      const { delegations } = await service.getDelegations("stake1...");
+      const { delegations } = await service.getDelegations(accountFixture.stake_address);
       const delegation = delegations.find((d) => d.status === "Active");
 
       expect(delegation).toBeDefined();

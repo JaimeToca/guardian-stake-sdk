@@ -8,6 +8,7 @@ import type {
   ValidatorStatus,
 } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
+import { resolveStakeAddress } from "../validations";
 import type {
   BlockfrostNetwork,
   BlockfrostPoolExtended,
@@ -136,9 +137,8 @@ export class StakingService implements StakingServiceContract {
   }
 
   async getDelegations(address: string): Promise<Delegations> {
-    // `address` is expected to be a stake address (stake1...)
     const [account, networkInfo] = await Promise.all([
-      this.rpcClient.getAccount(address),
+      this.rpcClient.getAccount(resolveStakeAddress(address)),
       this.rpcClient.getNetwork(),
     ]);
 
