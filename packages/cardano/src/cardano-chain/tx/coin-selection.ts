@@ -2,6 +2,18 @@ import { ValidationError } from "@guardian-sdk/sdk";
 import type { BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
 import type { TxInput } from "./tx-builder";
 
+/**
+ * Babbage-era default for `coins_per_utxo_size` (lovelaces per serialised byte).
+ * Used as a fallback when the protocol parameter is unavailable.
+ */
+export const DEFAULT_COINS_PER_UTXO_SIZE = "4310";
+
+/**
+ * Conservative estimate of the serialised byte size of a pure-ADA base-address output.
+ * Used to compute the minimum lovelace value a change output must carry.
+ */
+export const UTXO_OUTPUT_SIZE_BYTES = 160n;
+
 export interface SelectedUtxos {
   inputs: TxInput[];
   totalLovelaces: bigint;

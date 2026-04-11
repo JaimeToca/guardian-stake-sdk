@@ -16,7 +16,6 @@ import type {
  * All Cardano chain data queries go through this class.
  *
  * Blockfrost requires an API key (project_id) obtained from blockfrost.io.
- * Free tier: 50,000 requests/day.
  */
 export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   private static readonly DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
@@ -46,7 +45,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
       method: "GET",
       headers: this.headers,
       params: {
-        count: BlockfrostRpcClient.POOLS_PAGE_SIZE,
+        count: BlockfrostRpcClient.POOLS_PAGE_SIZE, // 100 pools per page (max allowed by Blockfrost), till pagination is supported
         page,
         order: "desc", // most active first
       },

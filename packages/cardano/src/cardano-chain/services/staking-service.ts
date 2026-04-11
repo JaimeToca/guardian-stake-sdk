@@ -18,7 +18,6 @@ import type {
 /**
  * Cardano staking service.
  *
- * Key differences from EVM staking:
  * - Delegation does NOT lock tokens. All ADA in the wallet earns rewards passively.
  * - There is no unbonding period — you can switch pools or stop delegating any time.
  * - Rewards accumulate every epoch (~5 days) and must be explicitly withdrawn.

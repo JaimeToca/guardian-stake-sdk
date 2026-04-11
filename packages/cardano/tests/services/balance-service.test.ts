@@ -24,6 +24,14 @@ describe("BalanceService", () => {
     expect(types).not.toContain("Pending");
   });
 
+  it("returns exactly 3 balance entries", async () => {
+    const service = new BalanceService(makeRpcClient() as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+
+    expect(balances).toHaveLength(3);
+  });
+
   it("maps Available balance from controlled_amount", async () => {
     const service = new BalanceService(makeRpcClient() as any);
 
@@ -33,21 +41,13 @@ describe("BalanceService", () => {
     expect(available?.amount).toBe(BigInt(accountFixture.controlled_amount));
   });
 
-  it("maps Staked balance equal to controlled_amount (ADA is never locked in Cardano)", async () => {
+  it("maps Staked balance equal to controlled_amount (ADA is never locked by delegation)", async () => {
     const service = new BalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const staked = balances.find((b) => b.type === "Staked");
 
     expect(staked?.amount).toBe(BigInt(accountFixture.controlled_amount));
-  });
-
-  it("returns exactly 3 balance entries", async () => {
-    const service = new BalanceService(makeRpcClient() as any);
-
-    const balances = await service.getBalances(STAKE_ADDRESS);
-
-    expect(balances).toHaveLength(3);
   });
 
   it("maps Claimable balance from withdrawable_amount", async () => {

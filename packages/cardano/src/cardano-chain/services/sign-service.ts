@@ -1,4 +1,4 @@
-import { Ed25519PrivateKey, Ed25519PrivateNormalKeyHex, blake2b } from "@cardano-sdk/crypto";
+import { Ed25519PrivateKey, Ed25519PrivateNormalKeyHex, Ed25519PublicKey, Ed25519PublicKeyHex } from "@cardano-sdk/crypto";
 import { HexBlob } from "@cardano-sdk/util";
 import type {
   BaseSignArgs,
@@ -12,7 +12,7 @@ import type { CardanoSigningWithPrivateKey } from "../sign-types";
 import { isCardanoSigningWithPrivateKey } from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
-import { selectUtxos } from "../tx/coin-selection";
+import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE, UTXO_OUTPUT_SIZE_BYTES } from "../tx/coin-selection";
 import {
   buildTransactionBody,
   buildSignedTransaction,
@@ -23,10 +23,9 @@ import {
 import {
   buildRewardAccount,
   parseCardanoPrivateKey,
-  parsePaymentAddress,
+  checkIfPaymentAddressIsValid,
   parsePoolId,
 } from "../validations";
-
 
 /**
  * Cardano signing service.
@@ -68,14 +67,14 @@ export class SignService {
     const paymentPrivHex = parseCardanoPrivateKey(signingArgs.paymentPrivateKey);
     const stakingPrivHex = parseCardanoPrivateKey(signingArgs.stakingPrivateKey);
 
-    const paymentPrivKey = await Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(paymentPrivHex));
-    const stakingPrivKey = await Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(stakingPrivHex));
+    const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(paymentPrivHex));
+    const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(stakingPrivHex));
 
-    const paymentPubKey = await paymentPrivKey.toPublic();
-    const stakingPubKey = await stakingPrivKey.toPublic();
+    const paymentPubKey = paymentPrivKey.toPublic();
+    const stakingPubKey = stakingPrivKey.toPublic();
 
     // blake2b-224 (28 bytes) of the staking public key = stake key hash
-    const stakeKeyHashHex = blake2b.hash(HexBlob(stakingPubKey.hex()), 28);
+    const stakeKeyHashHex = stakingPubKey.hash().hex();
 
     const { transaction, fee } = signingArgs;
 
@@ -93,7 +92,7 @@ export class SignService {
       );
     }
 
-    parsePaymentAddress(transaction.account);
+    checkIfPaymentAddressIsValid(transaction.account);
 
     const [protocolParams, utxos] = await Promise.all([
       this.rpcClient.getProtocolParams(),
@@ -111,8 +110,8 @@ export class SignService {
 
     const txBodyHash = body.hash();
 
-    const paymentSig = await paymentPrivKey.sign(HexBlob(txBodyHash));
-    const stakingSig = await stakingPrivKey.sign(HexBlob(txBodyHash));
+    const paymentSig = paymentPrivKey.sign(HexBlob(txBodyHash));
+    const stakingSig = stakingPrivKey.sign(HexBlob(txBodyHash));
 
     const witnesses: TxWitness[] = [
       { vkeyHex: paymentPubKey.hex(), sigHex: paymentSig.hex() },
@@ -144,7 +143,7 @@ export class SignService {
       );
     }
 
-    parsePaymentAddress(preHashArgs.transaction.account);
+    checkIfPaymentAddressIsValid(preHashArgs.transaction.account);
 
     const [protocolParams, utxos] = await Promise.all([
       this.rpcClient.getProtocolParams(),
@@ -191,10 +190,10 @@ export class SignService {
       throw new SigningError("INVALID_SIGNING_ARGS", "Cardano compile requires a `UtxoFee`.");
     }
 
-    parsePaymentAddress(transaction.account);
+    checkIfPaymentAddressIsValid(transaction.account);
 
     // Derive stake key hash from the provided staking public key
-    const stakeKeyHashHex = blake2b.hash(HexBlob(stakingVKeyHex), 28);
+    const stakeKeyHashHex = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(stakingVKeyHex)).hash().hex();
 
     const [protocolParams, utxos] = await Promise.all([
       this.rpcClient.getProtocolParams(),
@@ -229,11 +228,15 @@ export class SignService {
     stakeKeyHashHex: string
   ): ReturnType<typeof buildTransactionBody> {
     const keyDeposit = BigInt(protocolParams.key_deposit);
+    // Minimum lovelace every output must contain, derived from protocol params.
+    // 160 is a conservative estimate of the serialised byte size of a pure-ADA base-address output.
+    const minUtxo = BigInt(protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) * UTXO_OUTPUT_SIZE_BYTES;
     const certificates = this.buildCertificates(transaction, stakeKeyHashHex);
     const withdrawals = this.buildWithdrawals(transaction, stakeKeyHashHex);
 
     const requiredLovelaces = this.computeRequiredLovelaces(transaction, fee, keyDeposit);
-    const { inputs, totalLovelaces } = selectUtxos(utxos, requiredLovelaces);
+    // Select enough inputs to cover required + minUtxo so the change output is always valid.
+    const { inputs, totalLovelaces } = selectUtxos(utxos, requiredLovelaces + minUtxo);
 
     const rewardAmount = transaction.type === "Claim" ? transaction.amount : 0n;
     const depositReturn = transaction.type === "Undelegate" ? keyDeposit : 0n;

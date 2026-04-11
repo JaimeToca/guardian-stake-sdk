@@ -7,7 +7,7 @@ import { ValidationError } from "@guardian-sdk/sdk";
  * Validates a Cardano payment address (addr1...).
  * Throws if the string is not a valid non-reward bech32 Cardano address.
  */
-export function parsePaymentAddress(address: string): string {
+export function checkIfPaymentAddressIsValid(address: string) {
   const parsed = Cardano.Address.fromString(address);
   if (
     !parsed ||
@@ -19,7 +19,6 @@ export function parsePaymentAddress(address: string): string {
       `Expected a payment address (addr1...), got: "${address}".`
     );
   }
-  return address;
 }
 
 /**
@@ -75,10 +74,7 @@ export function resolveStakeAddress(address: string): string {
   }
 
   const stakeCred = base.getStakeCredential();
-  return Cardano.createRewardAccount(
-    Ed25519KeyHashHex(stakeCred.hash),
-    Cardano.NetworkId.Mainnet
-  );
+  return Cardano.createRewardAccount(Ed25519KeyHashHex(stakeCred.hash), Cardano.NetworkId.Mainnet);
 }
 
 /**
