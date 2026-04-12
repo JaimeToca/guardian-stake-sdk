@@ -2,15 +2,12 @@ import type { Fee, FeeServiceContract, Logger, Transaction } from "@guardian-sdk
 import { NoopLogger, ValidationError } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
-import {
-  selectUtxos,
-  DEFAULT_COINS_PER_UTXO_SIZE,
-  UTXO_OUTPUT_SIZE_BYTES,
-} from "../tx/coin-selection";
+import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE } from "../tx/coin-selection";
 import { buildMockTransaction, type TxBodyParams } from "../tx/tx-builder";
 import {
   buildCertificates,
   buildWithdrawals,
+  computeMinOutputLovelace,
   computeRequiredLovelaces,
 } from "../tx/tx-helpers";
 import { checkIfPaymentAddressIsValid } from "../validations";
@@ -83,20 +80,21 @@ export class FeeService implements FeeServiceContract {
     params: BlockfrostProtocolParams
   ): number {
     const keyDeposit = BigInt(params.key_deposit);
-    const minUtxo =
-      BigInt(params.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) * UTXO_OUTPUT_SIZE_BYTES;
+    const coinsPerUtxoByte = BigInt(params.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE);
+    const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
 
     // Fee estimation uses worst-case: stake key always assumed unregistered.
     const certificates = buildCertificates(transaction, PLACEHOLDER_STAKE_KEY_HASH, false);
     const withdrawals = buildWithdrawals(transaction, PLACEHOLDER_STAKE_KEY_HASH);
     const required = computeRequiredLovelaces(transaction, 0n, keyDeposit, false);
 
-    const { inputs, totalLovelaces } = selectUtxos(utxos, required + minUtxo);
+    const { inputs, totalLovelaces, inputAssets } = selectUtxos(utxos, required + minUtxo);
 
     const txParams: TxBodyParams = {
       inputs,
       outputAddress: paymentAddress,
       outputLovelaces: totalLovelaces - required,
+      outputAssets: inputAssets,
       fee: 0n,
       certificates: certificates.length > 0 ? certificates : undefined,
       withdrawals: withdrawals.size > 0 ? withdrawals : undefined,

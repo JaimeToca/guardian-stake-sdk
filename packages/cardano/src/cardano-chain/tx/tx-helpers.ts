@@ -1,6 +1,59 @@
+import { Cardano, Serialization } from "@cardano-sdk/core";
 import type { Transaction } from "@guardian-sdk/sdk";
 import { buildRewardAccount, parsePoolId } from "../validations";
 import type { CardanoCertificate } from "./tx-builder";
+
+/** Fixed UTxO map entry overhead: 20 words × 8 bytes per word. */
+const MIN_UTXO_OVERHEAD = 160;
+
+/**
+ * Returns the byte length of a CBOR-encoded unsigned integer.
+ * CBOR major type 0: 1 byte for 0-23, 2 for 24-255, 3 for 256-65535,
+ * 5 for 65536-4294967295, 9 for larger values.
+ */
+function cborUintSize(n: bigint): number {
+  if (n < 24n) return 1;
+  if (n < 0x100n) return 2;
+  if (n < 0x10000n) return 3;
+  if (n < 0x100000000n) return 5;
+  return 9;
+}
+
+/**
+ * Computes the minimum lovelace required for a pure-ADA change output at the given address.
+ *
+ * Uses the Babbage-era formula: `(serializedOutputSize + 160) × coinsPerUtxoByte`.
+ * The serialized output size is computed from the actual address bytes (not a fixed constant),
+ * and the result is refined iteratively to account for the fact that the minimum ADA amount
+ * itself changes the CBOR encoding size of the coin field.
+ *
+ * Mirrors the algorithm used in @cardano-sdk/tx-construction `minAdaRequired`.
+ */
+export function computeMinOutputLovelace(paymentAddress: string, coinsPerUtxoByte: bigint): bigint {
+  const placeholder: Cardano.TxOut = {
+    address: Cardano.PaymentAddress(paymentAddress),
+    value: { coins: 1n },
+  };
+
+  // Compute the serialized output size once — it is constant regardless of the coin value
+  // because the size difference from the coin CBOR is tracked separately via sizeDiff.
+  const outputSize = Serialization.TransactionOutput.fromCore(placeholder).toCbor().length / 2;
+  const baseCoinSize = cborUintSize(1n);
+
+  let latestCoinSize = baseCoinSize;
+  let isDone = false;
+
+  while (!isDone) {
+    const sizeDiff = latestCoinSize - baseCoinSize;
+    const tentativeMinAda = BigInt(outputSize + MIN_UTXO_OVERHEAD + sizeDiff) * coinsPerUtxoByte;
+    const newCoinSize = cborUintSize(tentativeMinAda);
+    isDone = latestCoinSize === newCoinSize;
+    latestCoinSize = newCoinSize;
+  }
+
+  const sizeChange = latestCoinSize - baseCoinSize;
+  return BigInt(outputSize + MIN_UTXO_OVERHEAD + sizeChange) * coinsPerUtxoByte;
+}
 
 /**
  * Builds the staking certificates for a transaction.

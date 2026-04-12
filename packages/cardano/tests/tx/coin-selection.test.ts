@@ -16,6 +16,26 @@ function makeUtxo(lovelaces: string, txHash = "aa".repeat(32), index = 0): Block
   };
 }
 
+function makeMultiAssetUtxo(
+  lovelaces: string,
+  assets: Array<{ unit: string; quantity: string }>,
+  txHash = "cc".repeat(32),
+  index = 0
+): BlockfrostUtxo {
+  return {
+    tx_hash: txHash,
+    tx_index: index,
+    output_index: index,
+    amount: [{ unit: "lovelace", quantity: lovelaces }, ...assets],
+    block: "dd".repeat(32),
+    data_hash: null,
+    inline_datum: null,
+    reference_script_hash: null,
+  };
+}
+
+const POLICY_ASSET = "29d222ce763455e3d7a09a665ce554f00ac89d2e99a1a83d267170c6d494e";
+
 describe("selectUtxos", () => {
   it("selects the single UTXO when it covers the required amount", () => {
     const utxos = [makeUtxo("5000000")];
@@ -24,6 +44,7 @@ describe("selectUtxos", () => {
     expect(result.inputs).toHaveLength(1);
     expect(result.totalLovelaces).toBe(5_000_000n);
     expect(result.inputs[0].txHashHex).toBe("aa".repeat(32));
+    expect(result.inputAssets).toBeUndefined();
   });
 
   it("selects the minimum number of UTXOs using largest-first order", () => {
@@ -71,33 +92,12 @@ describe("selectUtxos", () => {
     expect(() => selectUtxos([], 1_000_000n)).toThrow(ValidationError);
   });
 
-  it("includes UTXOs with multi-assets (tracks only the lovelace component)", () => {
-    const multiAssetUtxo: BlockfrostUtxo = {
-      tx_hash: "cc".repeat(32),
-      tx_index: 0,
-      output_index: 0,
-      amount: [
-        { unit: "lovelace", quantity: "4000000" },
-        { unit: "policyidassetname", quantity: "50" },
-      ],
-      block: "dd".repeat(32),
-      data_hash: null,
-      inline_datum: null,
-      reference_script_hash: null,
-    };
-
-    const result = selectUtxos([multiAssetUtxo], 3_000_000n);
-
-    expect(result.inputs).toHaveLength(1);
-    expect(result.totalLovelaces).toBe(4_000_000n);
-  });
-
   it("ignores UTXOs that have no lovelace amount", () => {
     const noLovelaceUtxo: BlockfrostUtxo = {
       tx_hash: "ee".repeat(32),
       tx_index: 0,
       output_index: 0,
-      amount: [{ unit: "policyidassetname", quantity: "100" }],
+      amount: [{ unit: POLICY_ASSET, quantity: "100" }],
       block: "ff".repeat(32),
       data_hash: null,
       inline_datum: null,
@@ -131,5 +131,83 @@ describe("selectUtxos", () => {
 
     expect(result.inputs).toHaveLength(0);
     expect(result.totalLovelaces).toBe(0n);
+  });
+
+  describe("multi-asset UTXOs", () => {
+    it("prefers ADA-only UTXOs over multi-asset UTXOs of equal lovelace", () => {
+      const adaOnly = makeUtxo("5000000", "11".repeat(32), 0);
+      const multiAsset = makeMultiAssetUtxo(
+        "5000000",
+        [{ unit: POLICY_ASSET, quantity: "100" }],
+        "22".repeat(32)
+      );
+
+      const result = selectUtxos([multiAsset, adaOnly], 3_000_000n);
+
+      expect(result.inputs).toHaveLength(1);
+      expect(result.inputs[0].txHashHex).toBe("11".repeat(32));
+      expect(result.inputAssets).toBeUndefined();
+    });
+
+    it("prefers a smaller ADA-only UTXO over a larger multi-asset UTXO", () => {
+      const adaOnly = makeUtxo("4000000", "11".repeat(32), 0);
+      const multiAsset = makeMultiAssetUtxo(
+        "8000000",
+        [{ unit: POLICY_ASSET, quantity: "100" }],
+        "22".repeat(32)
+      );
+
+      const result = selectUtxos([multiAsset, adaOnly], 3_000_000n);
+
+      expect(result.inputs).toHaveLength(1);
+      expect(result.inputs[0].txHashHex).toBe("11".repeat(32));
+      expect(result.inputAssets).toBeUndefined();
+    });
+
+    it("falls back to a multi-asset UTXO when ADA-only UTXOs are insufficient", () => {
+      const adaOnly = makeUtxo("2000000", "11".repeat(32), 0);
+      const multiAsset = makeMultiAssetUtxo(
+        "5000000",
+        [{ unit: POLICY_ASSET, quantity: "100" }],
+        "22".repeat(32)
+      );
+
+      const result = selectUtxos([adaOnly, multiAsset], 6_000_000n);
+
+      expect(result.inputs).toHaveLength(2);
+      expect(result.totalLovelaces).toBe(7_000_000n);
+      expect(result.inputAssets).toBeDefined();
+      expect(result.inputAssets!.get(POLICY_ASSET)).toBe(100n);
+    });
+
+    it("returns inputAssets with correct quantities when only multi-asset UTXOs cover the amount", () => {
+      const multiAsset = makeMultiAssetUtxo(
+        "10000000",
+        [{ unit: POLICY_ASSET, quantity: "200" }],
+        "33".repeat(32)
+      );
+
+      const result = selectUtxos([multiAsset], 8_000_000n);
+
+      expect(result.inputs).toHaveLength(1);
+      expect(result.inputAssets!.get(POLICY_ASSET)).toBe(200n);
+    });
+
+    it("accumulates native tokens from multiple selected multi-asset UTXOs", () => {
+      const ma1 = makeMultiAssetUtxo(
+        "3000000",
+        [{ unit: POLICY_ASSET, quantity: "50" }],
+        "11".repeat(32)
+      );
+      const ma2 = makeMultiAssetUtxo(
+        "3000000",
+        [{ unit: POLICY_ASSET, quantity: "75" }],
+        "22".repeat(32)
+      );
+
+      const result = selectUtxos([ma1, ma2], 5_000_000n);
+
+      expect(result.inputAssets!.get(POLICY_ASSET)).toBe(125n);
+    });
   });
 });

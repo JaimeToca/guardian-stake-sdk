@@ -102,6 +102,22 @@ describe("buildTransactionBody", () => {
     expect(body.toCbor()).toMatch(/^[0-9a-f]+$/);
   });
 
+  it("builds a body with native tokens in the change output (multi-asset UTXO input)", () => {
+    const POLICY_ASSET = "29d222ce763455e3d7a09a665ce554f00ac89d2e99a1a83d267170c6d494e";
+    const params: TxBodyParams = {
+      ...BASE_PARAMS,
+      outputAssets: new Map([[POLICY_ASSET, 100n]]),
+    };
+    const body = buildTransactionBody(params);
+    const cbor = body.toCbor();
+
+    // CBOR should be longer than the base (ADA-only) version because the value
+    // field is now a map {0: coins, 1: token_map} instead of a bare integer.
+    const baseCbor = buildTransactionBody(BASE_PARAMS).toCbor();
+    expect(cbor.length).toBeGreaterThan(baseCbor.length);
+    expect(cbor).toMatch(/^[0-9a-f]+$/);
+  });
+
   it("builds a body with a reward withdrawal", () => {
     const params: TxBodyParams = {
       ...BASE_PARAMS,

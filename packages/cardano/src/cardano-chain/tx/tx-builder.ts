@@ -33,6 +33,12 @@ export interface TxBodyParams {
   inputs: TxInput[];
   outputAddress: string; // bech32 payment address
   outputLovelaces: bigint;
+  /**
+   * Native tokens to include in the change output.
+   * Must be set when multi-asset UTXOs are consumed as inputs — Cardano
+   * transactions cannot drop native tokens or they are permanently lost.
+   */
+  outputAssets?: Map<string, bigint>; // Blockfrost asset ID (policyId + assetName hex) → quantity
   fee: bigint;
   /** Absolute slot number after which the transaction is invalid. */
   ttl?: number;
@@ -52,7 +58,19 @@ export interface TxWitness {
 export function buildTransactionBody(params: TxBodyParams): Serialization.TransactionBody {
   const coreBody: Cardano.TxBody = {
     inputs: params.inputs.map((i) => ({ txId: Cardano.TransactionId(i.txHashHex), index: i.index })),
-    outputs: [{ address: Cardano.PaymentAddress(params.outputAddress), value: { coins: params.outputLovelaces } }],
+    outputs: [
+      {
+        address: Cardano.PaymentAddress(params.outputAddress),
+        value: {
+          coins: params.outputLovelaces,
+          ...(params.outputAssets?.size && {
+            assets: new Map(
+              [...params.outputAssets.entries()].map(([id, qty]) => [Cardano.AssetId(id), qty])
+            ),
+          }),
+        },
+      },
+    ],
     fee: params.fee,
   };
 

@@ -17,18 +17,19 @@ import type { CardanoSigningWithPrivateKey, CardanoPrehashArgs } from "../sign-t
 import { isCardanoSigningWithPrivateKey, isCardanoPrehashArgs } from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
-import {
-  selectUtxos,
-  DEFAULT_COINS_PER_UTXO_SIZE,
-  UTXO_OUTPUT_SIZE_BYTES,
-} from "../tx/coin-selection";
+import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE } from "../tx/coin-selection";
 import {
   buildTransactionBody,
   buildSignedTransaction,
   type TxBodyParams,
   type TxWitness,
 } from "../tx/tx-builder";
-import { buildCertificates, buildWithdrawals, computeRequiredLovelaces } from "../tx/tx-helpers";
+import {
+  buildCertificates,
+  buildWithdrawals,
+  computeMinOutputLovelace,
+  computeRequiredLovelaces,
+} from "../tx/tx-helpers";
 import {
   buildRewardAccount,
   parseCardanoPrivateKey,
@@ -284,9 +285,8 @@ export class SignService {
     isStakeKeyRegistered: boolean
   ): ReturnType<typeof buildTransactionBody> {
     const keyDeposit = BigInt(protocolParams.key_deposit);
-    const minUtxo =
-      BigInt(protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) *
-      UTXO_OUTPUT_SIZE_BYTES;
+    const coinsPerUtxoByte = BigInt(protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE);
+    const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
 
     const certificates = buildCertificates(transaction, stakeKeyHashHex, isStakeKeyRegistered);
     const withdrawals = buildWithdrawals(transaction, stakeKeyHashHex);
@@ -298,7 +298,7 @@ export class SignService {
     );
 
     // Select enough inputs to cover required + minUtxo so the change output is always valid.
-    const { inputs, totalLovelaces } = selectUtxos(utxos, requiredLovelaces + minUtxo);
+    const { inputs, totalLovelaces, inputAssets } = selectUtxos(utxos, requiredLovelaces + minUtxo);
 
     const rewardAmount = transaction.type === "Claim" ? transaction.amount : 0n;
     const depositReturn = transaction.type === "Undelegate" ? keyDeposit : 0n;
@@ -308,6 +308,7 @@ export class SignService {
       inputs,
       outputAddress: paymentAddress,
       outputLovelaces,
+      outputAssets: inputAssets,
       fee,
       ttl,
       certificates: certificates.length > 0 ? certificates : undefined,
