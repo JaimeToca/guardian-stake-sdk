@@ -85,6 +85,11 @@ export interface BlockfrostProtocolParams {
   coins_per_utxo_size: string | null;
 }
 
+/** Blockfrost /blocks/latest */
+export interface BlockfrostBlock {
+  slot: number;
+}
+
 /** Blockfrost /network — for total stake info */
 export interface BlockfrostNetwork {
   supply: {

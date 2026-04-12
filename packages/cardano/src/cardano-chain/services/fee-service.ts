@@ -7,16 +7,19 @@ import {
   DEFAULT_COINS_PER_UTXO_SIZE,
   UTXO_OUTPUT_SIZE_BYTES,
 } from "../tx/coin-selection";
-import { buildMockTransaction, type CardanoCertificate, type TxBodyParams } from "../tx/tx-builder";
-import { buildRewardAccount, checkIfPaymentAddressIsValid, parsePoolId } from "../validations";
+import { buildMockTransaction, type TxBodyParams } from "../tx/tx-builder";
+import {
+  buildCertificates,
+  buildWithdrawals,
+  computeRequiredLovelaces,
+} from "../tx/tx-helpers";
+import { checkIfPaymentAddressIsValid } from "../validations";
 
 /**
- * A placeholder stake address used for Claim fee estimation.
- * Any valid mainnet stake address works — the key hash doesn't matter because
- * all mainnet stake addresses encode to the same CBOR byte length.
- * Derived from an all-zeros 28-byte stake key hash.
+ * Stake key hash placeholder used for fee estimation.
+ * Any 28-byte value works — all mainnet stake addresses serialise to the same CBOR byte length.
  */
-const PLACEHOLDER_REWARD_ACCOUNT = buildRewardAccount("00".repeat(28));
+const PLACEHOLDER_STAKE_KEY_HASH = "00".repeat(28);
 
 /**
  * Cardano fee service.
@@ -82,70 +85,28 @@ export class FeeService implements FeeServiceContract {
     const keyDeposit = BigInt(params.key_deposit);
     const minUtxo =
       BigInt(params.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) * UTXO_OUTPUT_SIZE_BYTES;
-    const certificates = this.buildCertificates(transaction);
-    const withdrawals =
-      transaction.type === "Claim"
-        ? new Map([[PLACEHOLDER_REWARD_ACCOUNT, transaction.amount]])
-        : undefined;
 
-    const required = this.computeRequiredLovelaces(transaction, 0n, keyDeposit);
+    // Fee estimation uses worst-case: stake key always assumed unregistered.
+    const certificates = buildCertificates(transaction, PLACEHOLDER_STAKE_KEY_HASH, false);
+    const withdrawals = buildWithdrawals(transaction, PLACEHOLDER_STAKE_KEY_HASH);
+    const required = computeRequiredLovelaces(transaction, 0n, keyDeposit, false);
+
     const { inputs, totalLovelaces } = selectUtxos(utxos, required + minUtxo);
 
-    const params_: TxBodyParams = {
+    const txParams: TxBodyParams = {
       inputs,
       outputAddress: paymentAddress,
       outputLovelaces: totalLovelaces - required,
       fee: 0n,
       certificates: certificates.length > 0 ? certificates : undefined,
-      withdrawals,
+      withdrawals: withdrawals.size > 0 ? withdrawals : undefined,
     };
 
-    const mockCborHex = buildMockTransaction(params_, FeeService.STAKING_WITNESS_COUNT);
+    const mockCborHex = buildMockTransaction(txParams, FeeService.STAKING_WITNESS_COUNT);
     return mockCborHex.length / 2;
   }
 
   private calculateFee(txSizeBytes: number, params: BlockfrostProtocolParams): bigint {
     return BigInt(params.min_fee_a) * BigInt(txSizeBytes) + BigInt(params.min_fee_b);
-  }
-
-  private computeRequiredLovelaces(
-    transaction: Transaction,
-    fee: bigint,
-    keyDeposit: bigint
-  ): bigint {
-    switch (transaction.type) {
-      case "Delegate":
-        return fee + keyDeposit;
-      case "Undelegate":
-        return fee;
-      case "Claim":
-        return fee;
-      case "Redelegate":
-        return fee;
-    }
-  }
-
-  private buildCertificates(transaction: Transaction): CardanoCertificate[] {
-    const placeholderHash = "00".repeat(28);
-
-    if (transaction.type === "Delegate" || transaction.type === "Redelegate") {
-      const validator =
-        transaction.type === "Delegate" ? transaction.validator : transaction.toValidator;
-      const poolId = typeof validator === "string" ? validator : validator.operatorAddress;
-      const poolKeyHashHex = parsePoolId(poolId);
-
-      const certs: CardanoCertificate[] = [];
-      if (transaction.type === "Delegate") {
-        certs.push({ type: "StakeRegistration", stakeKeyHashHex: placeholderHash });
-      }
-      certs.push({ type: "StakeDelegation", stakeKeyHashHex: placeholderHash, poolKeyHashHex });
-      return certs;
-    }
-
-    if (transaction.type === "Undelegate") {
-      return [{ type: "StakeDeregistration", stakeKeyHashHex: placeholderHash }];
-    }
-
-    return [];
   }
 }

@@ -13,8 +13,8 @@ import type {
   Transaction,
 } from "@guardian-sdk/sdk";
 import { NoopLogger, SigningError, ValidationError } from "@guardian-sdk/sdk";
-import type { CardanoSigningWithPrivateKey } from "../sign-types";
-import { isCardanoSigningWithPrivateKey } from "../sign-types";
+import type { CardanoSigningWithPrivateKey, CardanoPrehashArgs } from "../sign-types";
+import { isCardanoSigningWithPrivateKey, isCardanoPrehashArgs } from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
 import {
@@ -25,16 +25,18 @@ import {
 import {
   buildTransactionBody,
   buildSignedTransaction,
-  type CardanoCertificate,
   type TxBodyParams,
   type TxWitness,
 } from "../tx/tx-builder";
+import { buildCertificates, buildWithdrawals, computeRequiredLovelaces } from "../tx/tx-helpers";
 import {
   buildRewardAccount,
   parseCardanoPrivateKey,
   checkIfPaymentAddressIsValid,
-  parsePoolId,
 } from "../validations";
+
+/** Transactions expire after ~2 hours (1 slot ≈ 1 second on mainnet). */
+const TTL_VALIDITY_SLOTS = 7_200;
 
 /**
  * Cardano signing service.
@@ -76,17 +78,11 @@ export class SignService {
     const paymentPrivHex = parseCardanoPrivateKey(signingArgs.paymentPrivateKey);
     const stakingPrivHex = parseCardanoPrivateKey(signingArgs.stakingPrivateKey);
 
-    const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(
-      Ed25519PrivateNormalKeyHex(paymentPrivHex)
-    );
-    const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(
-      Ed25519PrivateNormalKeyHex(stakingPrivHex)
-    );
+    const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(paymentPrivHex));
+    const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(stakingPrivHex));
 
     const paymentPubKey = paymentPrivKey.toPublic();
     const stakingPubKey = stakingPrivKey.toPublic();
-
-    // blake2b-224 (28 bytes) of the staking public key = stake key hash
     const stakeKeyHashHex = stakingPubKey.hash().hex();
 
     const { transaction, fee } = signingArgs;
@@ -107,10 +103,20 @@ export class SignService {
 
     checkIfPaymentAddressIsValid(transaction.account);
 
-    const [protocolParams, utxos] = await Promise.all([
+    const rewardAccount = buildRewardAccount(stakeKeyHashHex);
+    const [protocolParams, utxos, latestBlock, existingAccount] = await Promise.all([
       this.rpcClient.getProtocolParams(),
       this.rpcClient.getUtxos(transaction.account),
+      this.rpcClient.getLatestBlock(),
+      transaction.type === "Delegate"
+        ? this.rpcClient.getAccountOrNull(rewardAccount)
+        : Promise.resolve(null),
     ]);
+
+    const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
+    // Stake key is considered registered only when the account is actively delegating.
+    // active: false covers both "never registered" and "deregistered" cases — both need StakeRegistration.
+    const isStakeKeyRegistered = existingAccount?.active === true;
 
     const body = this.buildBody(
       transaction,
@@ -118,7 +124,9 @@ export class SignService {
       utxos,
       fee.total,
       protocolParams,
-      stakeKeyHashHex
+      stakeKeyHashHex,
+      ttl,
+      isStakeKeyRegistered
     );
 
     const txBodyHash = body.hash();
@@ -156,12 +164,31 @@ export class SignService {
       );
     }
 
+    if (!isCardanoPrehashArgs(preHashArgs)) {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        "Cardano prehash requires `stakingPublicKey` (32-byte Ed25519 public key hex). " +
+          "See CardanoPrehashArgs."
+      );
+    }
+
     checkIfPaymentAddressIsValid(preHashArgs.transaction.account);
 
-    const [protocolParams, utxos] = await Promise.all([
+    const stakingPubKey = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(preHashArgs.stakingPublicKey));
+    const stakeKeyHashHex = stakingPubKey.hash().hex();
+    const rewardAccount = buildRewardAccount(stakeKeyHashHex);
+
+    const [protocolParams, utxos, latestBlock, existingAccount] = await Promise.all([
       this.rpcClient.getProtocolParams(),
       this.rpcClient.getUtxos(preHashArgs.transaction.account),
+      this.rpcClient.getLatestBlock(),
+      preHashArgs.transaction.type === "Delegate"
+        ? this.rpcClient.getAccountOrNull(rewardAccount)
+        : Promise.resolve(null),
     ]);
+
+    const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
+    const isStakeKeyRegistered = existingAccount?.active === true;
 
     const body = this.buildBody(
       preHashArgs.transaction,
@@ -169,11 +196,14 @@ export class SignService {
       utxos,
       preHashArgs.fee.total,
       protocolParams,
-      "00".repeat(28) // placeholder staking key hash — replaced in compile()
+      stakeKeyHashHex,
+      ttl,
+      isStakeKeyRegistered
     );
 
+    // Return the tx body hash — the exact 32-byte preimage the external signer must sign with Ed25519.
     return {
-      serializedTransaction: body.toCbor(),
+      serializedTransaction: body.hash(),
       signArgs: preHashArgs,
     };
   }
@@ -205,15 +235,22 @@ export class SignService {
 
     checkIfPaymentAddressIsValid(transaction.account);
 
-    // Derive stake key hash from the provided staking public key
     const stakeKeyHashHex = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(stakingVKeyHex))
       .hash()
       .hex();
+    const rewardAccount = buildRewardAccount(stakeKeyHashHex);
 
-    const [protocolParams, utxos] = await Promise.all([
+    const [protocolParams, utxos, latestBlock, existingAccount] = await Promise.all([
       this.rpcClient.getProtocolParams(),
       this.rpcClient.getUtxos(transaction.account),
+      this.rpcClient.getLatestBlock(),
+      transaction.type === "Delegate"
+        ? this.rpcClient.getAccountOrNull(rewardAccount)
+        : Promise.resolve(null),
     ]);
+
+    const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
+    const isStakeKeyRegistered = existingAccount?.active === true;
 
     const body = this.buildBody(
       transaction,
@@ -221,7 +258,9 @@ export class SignService {
       utxos,
       fee.total,
       protocolParams,
-      stakeKeyHashHex
+      stakeKeyHashHex,
+      ttl,
+      isStakeKeyRegistered
     );
 
     const witnesses: TxWitness[] = [
@@ -240,18 +279,24 @@ export class SignService {
     utxos: BlockfrostUtxo[],
     fee: bigint,
     protocolParams: BlockfrostProtocolParams,
-    stakeKeyHashHex: string
+    stakeKeyHashHex: string,
+    ttl: number,
+    isStakeKeyRegistered: boolean
   ): ReturnType<typeof buildTransactionBody> {
     const keyDeposit = BigInt(protocolParams.key_deposit);
-    // Minimum lovelace every output must contain, derived from protocol params.
-    // 160 is a conservative estimate of the serialised byte size of a pure-ADA base-address output.
     const minUtxo =
       BigInt(protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) *
       UTXO_OUTPUT_SIZE_BYTES;
-    const certificates = this.buildCertificates(transaction, stakeKeyHashHex);
-    const withdrawals = this.buildWithdrawals(transaction, stakeKeyHashHex);
 
-    const requiredLovelaces = this.computeRequiredLovelaces(transaction, fee, keyDeposit);
+    const certificates = buildCertificates(transaction, stakeKeyHashHex, isStakeKeyRegistered);
+    const withdrawals = buildWithdrawals(transaction, stakeKeyHashHex);
+    const requiredLovelaces = computeRequiredLovelaces(
+      transaction,
+      fee,
+      keyDeposit,
+      isStakeKeyRegistered
+    );
+
     // Select enough inputs to cover required + minUtxo so the change output is always valid.
     const { inputs, totalLovelaces } = selectUtxos(utxos, requiredLovelaces + minUtxo);
 
@@ -259,70 +304,14 @@ export class SignService {
     const depositReturn = transaction.type === "Undelegate" ? keyDeposit : 0n;
     const outputLovelaces = totalLovelaces + rewardAmount + depositReturn - requiredLovelaces;
 
-    const params: TxBodyParams = {
+    return buildTransactionBody({
       inputs,
       outputAddress: paymentAddress,
       outputLovelaces,
       fee,
+      ttl,
       certificates: certificates.length > 0 ? certificates : undefined,
       withdrawals: withdrawals.size > 0 ? withdrawals : undefined,
-    };
-
-    return buildTransactionBody(params);
-  }
-
-  private computeRequiredLovelaces(
-    transaction: Transaction,
-    fee: bigint,
-    keyDeposit: bigint
-  ): bigint {
-    switch (transaction.type) {
-      case "Delegate":
-        return fee + keyDeposit;
-      case "Redelegate":
-        return fee;
-      case "Undelegate":
-        return fee;
-      case "Claim":
-        return fee;
-    }
-  }
-
-  private buildCertificates(
-    transaction: Transaction,
-    stakeKeyHashHex: string
-  ): CardanoCertificate[] {
-    if (transaction.type === "Delegate") {
-      const poolId =
-        typeof transaction.validator === "string"
-          ? transaction.validator
-          : transaction.validator.operatorAddress;
-      const poolKeyHashHex = parsePoolId(poolId);
-      return [
-        { type: "StakeRegistration", stakeKeyHashHex },
-        { type: "StakeDelegation", stakeKeyHashHex, poolKeyHashHex },
-      ];
-    }
-
-    if (transaction.type === "Redelegate") {
-      const poolId =
-        typeof transaction.toValidator === "string"
-          ? transaction.toValidator
-          : transaction.toValidator.operatorAddress;
-      const poolKeyHashHex = parsePoolId(poolId);
-      return [{ type: "StakeDelegation", stakeKeyHashHex, poolKeyHashHex }];
-    }
-
-    if (transaction.type === "Undelegate") {
-      return [{ type: "StakeDeregistration", stakeKeyHashHex }];
-    }
-
-    return [];
-  }
-
-  private buildWithdrawals(transaction: Transaction, stakeKeyHashHex: string): Map<string, bigint> {
-    if (transaction.type !== "Claim") return new Map();
-    const rewardAccount = buildRewardAccount(stakeKeyHashHex);
-    return new Map([[rewardAccount, transaction.amount]]);
+    });
   }
 }

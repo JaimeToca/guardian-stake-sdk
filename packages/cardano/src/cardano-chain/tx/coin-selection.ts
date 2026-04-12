@@ -9,10 +9,13 @@ import type { TxInput } from "./tx-builder";
 export const DEFAULT_COINS_PER_UTXO_SIZE = "4310";
 
 /**
- * Conservative estimate of the serialised byte size of a pure-ADA base-address output.
- * Used to compute the minimum lovelace value a change output must carry.
+ * Minimum UTxO size constant used in: minUTxO = (serializedOutputSize + 160) * coinsPerUTxOByte
+ *
+ * 160 = fixed UTxO entry overhead (key/value storage in the ledger map).
+ * ~70 = typical CBOR size of a pure-ADA base-address output (57-byte address + amount + framing).
+ * Total conservative estimate: 230 bytes → 4310 × 230 ≈ 991,300 lovelace ≈ 1 ADA minimum.
  */
-export const UTXO_OUTPUT_SIZE_BYTES = 160n;
+export const UTXO_OUTPUT_SIZE_BYTES = 230n;
 
 export interface SelectedUtxos {
   inputs: TxInput[];

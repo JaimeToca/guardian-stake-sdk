@@ -8,6 +8,7 @@ import type {
   BlockfrostProtocolParams,
   BlockfrostUtxo,
 } from "../../src/cardano-chain/rpc/blockfrost-rpc-types";
+import { Ed25519PrivateKey, Ed25519PrivateNormalKeyHex } from "@cardano-sdk/crypto";
 
 /**
  * Real mainnet values, verified with @cardano-sdk/core.
@@ -35,10 +36,14 @@ const CARDANO_FEE = {
   total: 200_000n,
 };
 
+let STAKING_PUBLIC_KEY: string;
+
 function makeRpcClient() {
   return {
     getProtocolParams: vi.fn().mockResolvedValue(PARAMS),
     getUtxos: vi.fn().mockResolvedValue(UTXOS),
+    getLatestBlock: vi.fn().mockResolvedValue({ slot: 100_000_000 }),
+    getAccountOrNull: vi.fn().mockResolvedValue(null), // unregistered by default
     submitTx: vi.fn(),
   };
 }
@@ -47,6 +52,13 @@ function makeRpcClient() {
 beforeAll(async () => {
   const { blake2b } = await import("@cardano-sdk/crypto");
   blake2b.hash(new Uint8Array(4), 28); // confirms sodium is ready
+
+  // Derive staking public key from the test staking private key for prehash tests.
+  STAKING_PUBLIC_KEY = Ed25519PrivateKey.fromNormalHex(
+    Ed25519PrivateNormalKeyHex(STAKING_KEY)
+  )
+    .toPublic()
+    .hex();
 });
 
 describe("SignService", () => {
@@ -250,7 +262,27 @@ describe("SignService", () => {
       ).rejects.toBeInstanceOf(SigningError);
     });
 
-    it("returns serializedTransaction (CBOR hex of the tx body) and signArgs", async () => {
+    it("throws SigningError when stakingPublicKey is missing", async () => {
+      const service = new SignService(makeRpcClient() as any);
+
+      await expect(
+        service.prehash({
+          transaction: {
+            type: "Delegate",
+            chain: cardanoMainnet,
+            amount: 5_000_000n,
+            isMaxAmount: false,
+            validator: POOL_ID,
+            account: PAYMENT_ADDRESS,
+          },
+          fee: CARDANO_FEE,
+          nonce: 0,
+          // no stakingPublicKey
+        } as any)
+      ).rejects.toBeInstanceOf(SigningError);
+    });
+
+    it("returns serializedTransaction (tx body hash) and signArgs", async () => {
       const service = new SignService(makeRpcClient() as any);
 
       const signArgs = {
@@ -264,12 +296,14 @@ describe("SignService", () => {
         },
         fee: CARDANO_FEE,
         nonce: 0,
+        stakingPublicKey: STAKING_PUBLIC_KEY,
       };
 
       const result = await service.prehash(signArgs as any);
 
+      // serializedTransaction is the 32-byte (64 hex-char) Blake2b-256 hash of the tx body
       expect(typeof result.serializedTransaction).toBe("string");
-      expect(result.serializedTransaction).toMatch(/^[0-9a-f]+$/);
+      expect(result.serializedTransaction).toMatch(/^[0-9a-f]{64}$/);
       expect(result.signArgs).toEqual(signArgs);
     });
   });

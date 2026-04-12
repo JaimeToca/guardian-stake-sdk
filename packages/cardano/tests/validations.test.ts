@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { ValidationError } from "@guardian-sdk/sdk";
 import {
-  parsePaymentAddress,
+  checkIfPaymentAddressIsValid,
   parsePoolId,
   buildRewardAccount,
   parseCardanoPrivateKey,
@@ -25,14 +25,14 @@ const POOL_ID = "pool1pu5jlj4q9w9jlxeu370a3c9myx47md5j5m2str0naunn2q3lkdy";
 const POOL_KEY_HASH = "0f292fcaa02b8b2f9b3c8f9fd8e0bb21abedb692a6d5058df3ef2735";
 const STAKE_KEY_HASH = "337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c47251";
 
-describe("parsePaymentAddress", () => {
-  it("accepts a valid mainnet base address (addr1q...)", () => {
-    expect(parsePaymentAddress(PAYMENT_ADDRESS)).toBe(PAYMENT_ADDRESS);
+describe("checkIfPaymentAddressIsValid", () => {
+  it("accepts a valid mainnet base address (addr1q...) without throwing", () => {
+    expect(() => checkIfPaymentAddressIsValid(PAYMENT_ADDRESS)).not.toThrow();
   });
 
   it("throws for a reward/stake address (stake1...)", () => {
-    expect(() => parsePaymentAddress(STAKE_ADDRESS)).toThrow(ValidationError);
-    expect(() => parsePaymentAddress(STAKE_ADDRESS)).toSatisfy((fn: () => void) => {
+    expect(() => checkIfPaymentAddressIsValid(STAKE_ADDRESS)).toThrow(ValidationError);
+    expect(() => checkIfPaymentAddressIsValid(STAKE_ADDRESS)).toSatisfy((fn: () => void) => {
       try {
         fn();
       } catch (e) {
@@ -43,15 +43,15 @@ describe("parsePaymentAddress", () => {
   });
 
   it("throws for a random non-bech32 string", () => {
-    expect(() => parsePaymentAddress("not-a-cardano-address")).toThrow(ValidationError);
+    expect(() => checkIfPaymentAddressIsValid("not-a-cardano-address")).toThrow(ValidationError);
   });
 
   it("throws for an empty string", () => {
-    expect(() => parsePaymentAddress("")).toThrow(ValidationError);
+    expect(() => checkIfPaymentAddressIsValid("")).toThrow(ValidationError);
   });
 
   it("throws for a pool ID (pool1...)", () => {
-    expect(() => parsePaymentAddress(POOL_ID)).toThrow(ValidationError);
+    expect(() => checkIfPaymentAddressIsValid(POOL_ID)).toThrow(ValidationError);
   });
 });
 

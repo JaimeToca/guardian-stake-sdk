@@ -4,6 +4,7 @@ import type { Logger } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "./blockfrost-rpc-client-contract";
 import type {
   BlockfrostAccount,
+  BlockfrostBlock,
   BlockfrostNetwork,
   BlockfrostPoolExtended,
   BlockfrostPoolMetadata,
@@ -94,6 +95,14 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
     return account;
   }
 
+  async getAccountOrNull(stakeAddress: string): Promise<BlockfrostAccount | null> {
+    try {
+      return await this.getAccount(stakeAddress);
+    } catch {
+      return null;
+    }
+  }
+
   async getUtxos(paymentAddress: string): Promise<BlockfrostUtxo[]> {
     const url = `${this.baseUrl}/addresses/${paymentAddress}/utxos`;
     this.logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress });
@@ -129,6 +138,17 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
       minFeeB: params.min_fee_b,
     });
     return params;
+  }
+
+  async getLatestBlock(): Promise<BlockfrostBlock> {
+    const url = `${this.baseUrl}/blocks/latest`;
+    this.logger.debug("BlockfrostRpcClient: fetching latest block");
+
+    return fetchOrError<BlockfrostBlock>({
+      url,
+      method: "GET",
+      headers: this.headers,
+    });
   }
 
   async getNetwork(): Promise<BlockfrostNetwork> {

@@ -1,9 +1,10 @@
 /**
  * Cardano transaction builder powered by @cardano-sdk/core.
  *
- * Assembles Serialization.TransactionBody objects from higher-level params
- * and serialises the full signed transaction to a CBOR hex string ready for
- * broadcast via Blockfrost.
+ * Assembles Cardano.TxBody plain objects and converts them to
+ * Serialization.TransactionBody via fromCore(), letting the SDK handle all
+ * CBOR encoding details.  The full signed transaction is serialised to a
+ * CBOR hex string ready for broadcast via Blockfrost.
  */
 
 import { Cardano, Serialization } from "@cardano-sdk/core";
@@ -14,20 +15,7 @@ import {
   Hash28ByteBase16,
 } from "@cardano-sdk/crypto";
 
-const {
-  Certificate,
-  StakeDelegation,
-  StakeRegistration,
-  StakeDeregistration,
-  TransactionBody,
-  TransactionInput,
-  TransactionOutput,
-  Value,
-  Transaction,
-  TransactionWitnessSet,
-  VkeyWitness,
-  CborSet,
-} = Serialization;
+const { Transaction, TransactionWitnessSet, VkeyWitness, CborSet } = Serialization;
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -46,6 +34,8 @@ export interface TxBodyParams {
   outputAddress: string; // bech32 payment address
   outputLovelaces: bigint;
   fee: bigint;
+  /** Absolute slot number after which the transaction is invalid. */
+  ttl?: number;
   certificates?: CardanoCertificate[];
   /** Reward withdrawals: stake1... bech32 → lovelaces */
   withdrawals?: Map<string, bigint>;
@@ -60,32 +50,28 @@ export interface TxWitness {
 
 /** Builds a TransactionBody from the given params. */
 export function buildTransactionBody(params: TxBodyParams): Serialization.TransactionBody {
-  const inputsSet = CborSet.fromCore(
-    params.inputs.map((i) =>
-      new TransactionInput(Cardano.TransactionId(i.txHashHex), BigInt(i.index)).toCore()
-    ),
-    TransactionInput.fromCore
-  );
+  const coreBody: Cardano.TxBody = {
+    inputs: params.inputs.map((i) => ({ txId: Cardano.TransactionId(i.txHashHex), index: i.index })),
+    outputs: [{ address: Cardano.PaymentAddress(params.outputAddress), value: { coins: params.outputLovelaces } }],
+    fee: params.fee,
+  };
 
-  const addr = Cardano.Address.fromString(params.outputAddress);
-  if (!addr) throw new Error(`Invalid Cardano address: ${params.outputAddress}`);
-
-  const output = new TransactionOutput(addr, Value.fromCore({ coins: params.outputLovelaces }));
-  const body = new TransactionBody(inputsSet, [output], params.fee);
-
-  if (params.certificates && params.certificates.length > 0) {
-    const certsSet = CborSet.fromCore(
-      params.certificates.map((c) => buildCertificate(c).toCore()),
-      Certificate.fromCore
-    );
-    body.setCerts(certsSet);
+  if (params.ttl !== undefined) {
+    coreBody.validityInterval = { invalidHereafter: Cardano.Slot(params.ttl) };
   }
 
-  if (params.withdrawals && params.withdrawals.size > 0) {
-    body.setWithdrawals(params.withdrawals as Map<Cardano.RewardAccount, Cardano.Lovelace>);
+  if (params.certificates?.length) {
+    coreBody.certificates = params.certificates.map(buildCoreCertificate);
   }
 
-  return body;
+  if (params.withdrawals?.size) {
+    coreBody.withdrawals = Array.from(params.withdrawals.entries()).map(([stakeAddress, quantity]) => ({
+      stakeAddress: stakeAddress as Cardano.RewardAccount,
+      quantity,
+    }));
+  }
+
+  return Serialization.TransactionBody.fromCore(coreBody);
 }
 
 /**
@@ -125,20 +111,28 @@ export function buildMockTransaction(params: TxBodyParams, witnessCount: number)
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-function buildCertificate(cert: CardanoCertificate): Serialization.Certificate {
-  const stakeCred = {
+function buildCoreCertificate(cert: CardanoCertificate): Cardano.Certificate {
+  const stakeCredential: Cardano.Credential = {
     type: Cardano.CredentialType.KeyHash,
     hash: Hash28ByteBase16(cert.stakeKeyHashHex),
   };
 
   switch (cert.type) {
     case "StakeRegistration":
-      return Certificate.newStakeRegistration(new StakeRegistration(stakeCred));
+      return {
+        __typename: Cardano.CertificateType.StakeRegistration,
+        stakeCredential,
+      };
     case "StakeDeregistration":
-      return Certificate.newStakeDeregistration(new StakeDeregistration(stakeCred));
+      return {
+        __typename: Cardano.CertificateType.StakeDeregistration,
+        stakeCredential,
+      };
     case "StakeDelegation":
-      return Certificate.newStakeDelegation(
-        new StakeDelegation(stakeCred, Ed25519KeyHashHex(cert.poolKeyHashHex))
-      );
+      return {
+        __typename: Cardano.CertificateType.StakeDelegation,
+        stakeCredential,
+        poolId: Cardano.PoolId.fromKeyHash(Ed25519KeyHashHex(cert.poolKeyHashHex)),
+      };
   }
 }
