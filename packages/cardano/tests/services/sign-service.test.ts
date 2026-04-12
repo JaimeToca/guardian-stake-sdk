@@ -54,9 +54,7 @@ beforeAll(async () => {
   blake2b.hash(new Uint8Array(4), 28); // confirms sodium is ready
 
   // Derive staking public key from the test staking private key for prehash tests.
-  STAKING_PUBLIC_KEY = Ed25519PrivateKey.fromNormalHex(
-    Ed25519PrivateNormalKeyHex(STAKING_KEY)
-  )
+  STAKING_PUBLIC_KEY = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(STAKING_KEY))
     .toPublic()
     .hex();
 });

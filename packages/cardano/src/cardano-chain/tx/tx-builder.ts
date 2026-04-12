@@ -57,7 +57,10 @@ export interface TxWitness {
 /** Builds a TransactionBody from the given params. */
 export function buildTransactionBody(params: TxBodyParams): Serialization.TransactionBody {
   const coreBody: Cardano.TxBody = {
-    inputs: params.inputs.map((i) => ({ txId: Cardano.TransactionId(i.txHashHex), index: i.index })),
+    inputs: params.inputs.map((i) => ({
+      txId: Cardano.TransactionId(i.txHashHex),
+      index: i.index,
+    })),
     outputs: [
       {
         address: Cardano.PaymentAddress(params.outputAddress),
@@ -83,10 +86,12 @@ export function buildTransactionBody(params: TxBodyParams): Serialization.Transa
   }
 
   if (params.withdrawals?.size) {
-    coreBody.withdrawals = Array.from(params.withdrawals.entries()).map(([stakeAddress, quantity]) => ({
-      stakeAddress: stakeAddress as Cardano.RewardAccount,
-      quantity,
-    }));
+    coreBody.withdrawals = Array.from(params.withdrawals.entries()).map(
+      ([stakeAddress, quantity]) => ({
+        stakeAddress: stakeAddress as Cardano.RewardAccount,
+        quantity,
+      })
+    );
   }
 
   return Serialization.TransactionBody.fromCore(coreBody);

@@ -38,7 +38,6 @@ export interface CardanoPrehashArgs extends BaseSignArgs {
 
 export function isCardanoPrehashArgs(args: BaseSignArgs): args is CardanoPrehashArgs {
   return (
-    "stakingPublicKey" in args &&
-    typeof (args as CardanoPrehashArgs).stakingPublicKey === "string"
+    "stakingPublicKey" in args && typeof (args as CardanoPrehashArgs).stakingPublicKey === "string"
   );
 }

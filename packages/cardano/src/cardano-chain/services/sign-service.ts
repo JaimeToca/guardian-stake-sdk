@@ -79,8 +79,12 @@ export class SignService {
     const paymentPrivHex = parseCardanoPrivateKey(signingArgs.paymentPrivateKey);
     const stakingPrivHex = parseCardanoPrivateKey(signingArgs.stakingPrivateKey);
 
-    const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(paymentPrivHex));
-    const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(stakingPrivHex));
+    const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(
+      Ed25519PrivateNormalKeyHex(paymentPrivHex)
+    );
+    const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(
+      Ed25519PrivateNormalKeyHex(stakingPrivHex)
+    );
 
     const paymentPubKey = paymentPrivKey.toPublic();
     const stakingPubKey = stakingPrivKey.toPublic();
@@ -175,7 +179,9 @@ export class SignService {
 
     checkIfPaymentAddressIsValid(preHashArgs.transaction.account);
 
-    const stakingPubKey = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(preHashArgs.stakingPublicKey));
+    const stakingPubKey = Ed25519PublicKey.fromHex(
+      Ed25519PublicKeyHex(preHashArgs.stakingPublicKey)
+    );
     const stakeKeyHashHex = stakingPubKey.hash().hex();
     const rewardAccount = buildRewardAccount(stakeKeyHashHex);
 
@@ -285,7 +291,9 @@ export class SignService {
     isStakeKeyRegistered: boolean
   ): ReturnType<typeof buildTransactionBody> {
     const keyDeposit = BigInt(protocolParams.key_deposit);
-    const coinsPerUtxoByte = BigInt(protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE);
+    const coinsPerUtxoByte = BigInt(
+      protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE
+    );
     const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
 
     const certificates = buildCertificates(transaction, stakeKeyHashHex, isStakeKeyRegistered);
