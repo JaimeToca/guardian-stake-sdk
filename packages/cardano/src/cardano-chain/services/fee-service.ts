@@ -2,7 +2,11 @@ import type { Fee, FeeServiceContract, Logger, Transaction } from "@guardian-sdk
 import { NoopLogger, ValidationError } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
-import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE, UTXO_OUTPUT_SIZE_BYTES } from "../tx/coin-selection";
+import {
+  selectUtxos,
+  DEFAULT_COINS_PER_UTXO_SIZE,
+  UTXO_OUTPUT_SIZE_BYTES,
+} from "../tx/coin-selection";
 import { buildMockTransaction, type CardanoCertificate, type TxBodyParams } from "../tx/tx-builder";
 import { buildRewardAccount, checkIfPaymentAddressIsValid, parsePoolId } from "../validations";
 
@@ -76,7 +80,8 @@ export class FeeService implements FeeServiceContract {
     params: BlockfrostProtocolParams
   ): number {
     const keyDeposit = BigInt(params.key_deposit);
-    const minUtxo = BigInt(params.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) * UTXO_OUTPUT_SIZE_BYTES;
+    const minUtxo =
+      BigInt(params.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) * UTXO_OUTPUT_SIZE_BYTES;
     const certificates = this.buildCertificates(transaction);
     const withdrawals =
       transaction.type === "Claim"

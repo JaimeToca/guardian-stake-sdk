@@ -1,4 +1,9 @@
-import { Ed25519PrivateKey, Ed25519PrivateNormalKeyHex, Ed25519PublicKey, Ed25519PublicKeyHex } from "@cardano-sdk/crypto";
+import {
+  Ed25519PrivateKey,
+  Ed25519PrivateNormalKeyHex,
+  Ed25519PublicKey,
+  Ed25519PublicKeyHex,
+} from "@cardano-sdk/crypto";
 import { HexBlob } from "@cardano-sdk/util";
 import type {
   BaseSignArgs,
@@ -12,7 +17,11 @@ import type { CardanoSigningWithPrivateKey } from "../sign-types";
 import { isCardanoSigningWithPrivateKey } from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
-import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE, UTXO_OUTPUT_SIZE_BYTES } from "../tx/coin-selection";
+import {
+  selectUtxos,
+  DEFAULT_COINS_PER_UTXO_SIZE,
+  UTXO_OUTPUT_SIZE_BYTES,
+} from "../tx/coin-selection";
 import {
   buildTransactionBody,
   buildSignedTransaction,
@@ -67,8 +76,12 @@ export class SignService {
     const paymentPrivHex = parseCardanoPrivateKey(signingArgs.paymentPrivateKey);
     const stakingPrivHex = parseCardanoPrivateKey(signingArgs.stakingPrivateKey);
 
-    const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(paymentPrivHex));
-    const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(Ed25519PrivateNormalKeyHex(stakingPrivHex));
+    const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(
+      Ed25519PrivateNormalKeyHex(paymentPrivHex)
+    );
+    const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(
+      Ed25519PrivateNormalKeyHex(stakingPrivHex)
+    );
 
     const paymentPubKey = paymentPrivKey.toPublic();
     const stakingPubKey = stakingPrivKey.toPublic();
@@ -193,7 +206,9 @@ export class SignService {
     checkIfPaymentAddressIsValid(transaction.account);
 
     // Derive stake key hash from the provided staking public key
-    const stakeKeyHashHex = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(stakingVKeyHex)).hash().hex();
+    const stakeKeyHashHex = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(stakingVKeyHex))
+      .hash()
+      .hex();
 
     const [protocolParams, utxos] = await Promise.all([
       this.rpcClient.getProtocolParams(),
@@ -230,7 +245,9 @@ export class SignService {
     const keyDeposit = BigInt(protocolParams.key_deposit);
     // Minimum lovelace every output must contain, derived from protocol params.
     // 160 is a conservative estimate of the serialised byte size of a pure-ADA base-address output.
-    const minUtxo = BigInt(protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) * UTXO_OUTPUT_SIZE_BYTES;
+    const minUtxo =
+      BigInt(protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE) *
+      UTXO_OUTPUT_SIZE_BYTES;
     const certificates = this.buildCertificates(transaction, stakeKeyHashHex);
     const withdrawals = this.buildWithdrawals(transaction, stakeKeyHashHex);
 
