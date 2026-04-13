@@ -9,7 +9,6 @@ import type { NonceServiceContract } from "@guardian-sdk/sdk";
  * The actual double-spend protection is handled by UTXO selection in the sign service.
  */
 export class NonceService implements NonceServiceContract {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getNonce(_address: string): Promise<number> {
     return Promise.resolve(0);
   }

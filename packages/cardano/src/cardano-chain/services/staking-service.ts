@@ -9,11 +9,7 @@ import type {
 } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import { resolveStakeAddress } from "../validations";
-import type {
-  BlockfrostNetwork,
-  BlockfrostPoolExtended,
-  BlockfrostPoolMetadata,
-} from "../rpc/blockfrost-rpc-types";
+import type { BlockfrostPoolExtended, BlockfrostPoolMetadata } from "../rpc/blockfrost-rpc-types";
 
 /**
  * Cardano staking service.

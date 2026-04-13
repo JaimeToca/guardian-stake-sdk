@@ -3,12 +3,7 @@ import { ConfigError } from "../entity/errors";
 import type { Balance } from "../entity/balance-types";
 import type { Fee } from "../entity/fee-types";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
-import type {
-  BaseSignArgs,
-  CompileArgs,
-  PrehashResult,
-  SigningWithPrivateKey,
-} from "../entity/sign-types";
+import type { BaseSignArgs, CompileArgs, PrehashResult } from "../entity/sign-types";
 import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
 import type { Transaction } from "../entity/transaction-types";
 

@@ -13,17 +13,11 @@ import type {
   Transaction,
 } from "@guardian-sdk/sdk";
 import { NoopLogger, SigningError, ValidationError } from "@guardian-sdk/sdk";
-import type { CardanoSigningWithPrivateKey, CardanoPrehashArgs } from "../sign-types";
 import { isCardanoSigningWithPrivateKey, isCardanoPrehashArgs } from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
 import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE } from "../tx/coin-selection";
-import {
-  buildTransactionBody,
-  buildSignedTransaction,
-  type TxBodyParams,
-  type TxWitness,
-} from "../tx/tx-builder";
+import { buildTransactionBody, buildSignedTransaction, type TxWitness } from "../tx/tx-builder";
 import {
   buildCertificates,
   buildWithdrawals,
