@@ -57,8 +57,7 @@ export class StakingService implements StakingServiceContract {
 
     this.logger.debug("StakingService: validators cache miss — fetching from Blockfrost");
 
-    // Fetch first page of pools (100 pools sorted by live stake descending)
-    const pools = await this.rpcClient.getPools(1);
+    const pools = await this.rpcClient.getPools();
 
     // Batch-fetch metadata for all pools in parallel
     const metadataResults = await Promise.allSettled(
@@ -84,7 +83,7 @@ export class StakingService implements StakingServiceContract {
     metadata: BlockfrostPoolMetadata | null
   ): Validator {
     const estimatedApy = this.estimateApy(pool);
-    const isRetiring = pool.retirement.length > 0;
+    const isRetiring = (pool.retirement?.length ?? 0) > 0;
     const status: ValidatorStatus = isRetiring ? "Inactive" : "Active";
 
     return {

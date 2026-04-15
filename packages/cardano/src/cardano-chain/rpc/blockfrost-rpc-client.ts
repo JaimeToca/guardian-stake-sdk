@@ -20,7 +20,7 @@ import type {
  */
 export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   private static readonly DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
-  private static readonly POOLS_PAGE_SIZE = 100;
+  private static readonly POOLS_PAGE_SIZE = 20;
 
   private readonly baseUrl: string;
 

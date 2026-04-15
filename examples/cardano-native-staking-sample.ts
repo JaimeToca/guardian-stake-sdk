@@ -18,12 +18,10 @@ const { cardanoMainnet } = chains;
  */
 const sdk = new GuardianSDK([
   cardano({
-    apiKey: "mainnetXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    apiKey: "",
     logger: new ConsoleLogger("debug"),
   }),
 ]);
-
-// ─── Addresses ────────────────────────────────────────────────────────────────
 
 /**
  * In Cardano, balances and delegations are queried via the *stake address* (stake1...).
@@ -35,10 +33,8 @@ const sdk = new GuardianSDK([
  *
  * Key management is outside the scope of this SDK — supply your own keys.
  */
-// CIP-0019 official test vector addresses — replace with your real wallet addresses
-// spend key hash: 9493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e
-// stake key hash: 337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c47251
-const STAKE_ADDRESS = "stake1uyehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gh6ffgw";
+const STAKE_ADDRESS = 
+"stake1ux2f79kupeyy0n7cl8ddzewcgdamhh7xahz5y6uzv3u8lksa3dwn3";
 const PAYMENT_ADDRESS =
   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x";
 
@@ -48,8 +44,6 @@ const PAYMENT_ADDRESS =
  */
 const PAYMENT_PRIVATE_KEY = "<64-char hex payment private key>";
 const STAKING_PRIVATE_KEY = "<64-char hex staking private key>";
-
-// ─── Read-only queries ─────────────────────────────────────────────────────────
 
 /**
  * Demonstrates how to read staking data:
@@ -61,19 +55,18 @@ const STAKING_PRIVATE_KEY = "<64-char hex staking private key>";
  * rewards passively while remaining fully spendable.
  */
 async function sample_check_delegations() {
-  // Available ADA, staked (= same as available — ADA is never locked), and claimable rewards
   const balances = await sdk.getBalances(cardanoMainnet, STAKE_ADDRESS);
   console.log("Balances:", balances);
 
   // Active stake pools sorted by live stake (first page of 100)
   const validators = await sdk.getValidators(cardanoMainnet);
   console.log(`Stake pools: ${validators.length} total`);
+
   for (const v of validators.slice(0, 3)) {
     console.log(`  ${v.name} — APY ≈ ${v.apy.toFixed(2)}% — delegators: ${v.delegators}`);
   }
 
-  // Current delegation: which pool you're delegating to and how much ADA is staked
-  const { delegations, stakingSummary } = await sdk.getDelegations(
+  /*const { delegations, stakingSummary } = await sdk.getDelegations(
     cardanoMainnet,
     STAKE_ADDRESS
   );
@@ -82,7 +75,7 @@ async function sample_check_delegations() {
     console.log(
       `  ${d.validator.name} (${d.validator.operatorAddress}) | status: ${d.status} | amount: ${d.amount} lovelaces`
     );
-  }
+  } */
 }
 
 // ─── Delegate ─────────────────────────────────────────────────────────────────

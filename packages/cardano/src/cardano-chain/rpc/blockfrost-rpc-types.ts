@@ -18,7 +18,7 @@ export interface BlockfrostPoolExtended {
   reward_account: string; // stake address
   owners: string[];
   registration: string[];
-  retirement: string[];
+  retirement?: string[];
 }
 
 /** Blockfrost /pools/{pool_id}/metadata */
