@@ -58,7 +58,7 @@ async function sample_check_delegations() {
   const balances = await sdk.getBalances(cardanoMainnet, STAKE_ADDRESS);
   console.log("Balances:", balances);
 
-  // Active stake pools sorted by live stake (first page of 100)
+  // Active stake pools sorted by live stake (first page of 20)
   const validators = await sdk.getValidators(cardanoMainnet);
   console.log(`Stake pools: ${validators.length} total`);
 
