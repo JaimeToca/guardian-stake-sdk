@@ -70,13 +70,13 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | Package | Chain | Status | Docs |
 |---|---|---|---|
 | [`@guardian-sdk/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
+| `@guardian/cardano` | Cardano | In Progress (PR #28) | — |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — |
 | `@guardian-sdk/sui` | SUI | Planned | — |
 | `@guardian-sdk/tron` | Tron | Planned | — |
 | `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — |
 | `@guardian-sdk/solana` | Solana | Planned | — |
 | `@guardian/aptos` | Aptos | Planned | — |
-| `@guardian/cardano` | Cardano | Planned | — |
 | `@guardian/polkadot` | Polkadot | Planned | — |
 | `@guardian/near` | NEAR | Planned | — |
 
