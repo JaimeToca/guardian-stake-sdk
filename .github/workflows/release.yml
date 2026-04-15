@@ -1,18 +1,19 @@
 name: Release
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   release:
-    name: CI + Semantic Release
+    name: Version or Publish
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write       # push changelog + version commits
-      issues: write         # comment on released issues
-      pull-requests: write  # comment on released PRs
-      id-token: write       # npm provenance
+      contents: write
+      pull-requests: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -47,8 +48,12 @@ jobs:
       - name: Test
         run: pnpm run test
 
-      - name: Release
+      - name: Create release PR or publish
+        uses: changesets/action@v1
+        with:
+          publish: pnpm publish
+          title: "chore: version packages"
+          commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm dlx semantic-release

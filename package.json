@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "build": "pnpm --filter @guardian-sdk/sdk run build && pnpm --filter @guardian-sdk/bsc run build",
+    "build": "pnpm --filter @guardian-sdk/sdk run build && pnpm --filter @guardian-sdk/bsc run build && pnpm --filter @guardian-sdk/cardano run build",
     "typecheck": "pnpm -r run typecheck && tsc --noEmit -p examples/tsconfig.json",
     "test": "pnpm --filter @guardian-sdk/bsc run test",
     "docs": "typedoc",
@@ -11,32 +11,32 @@
     "lint:fix": "eslint packages/*/src packages/*/tests --fix",
     "format": "prettier --write packages/*/src packages/*/tests",
     "format:check": "prettier --check packages/*/src packages/*/tests",
-    "release": "semantic-release"
+    "changeset": "changeset",
+    "version": "changeset version",
+    "publish": "pnpm build && changeset publish"
   },
   "engines": {
     "node": ">=22"
   },
   "packageManager": "pnpm@10.33.0",
   "pnpm": {
-    "publicHoistPattern": ["@guardian-sdk/sdk"],
+    "publicHoistPattern": [
+      "@guardian-sdk/sdk"
+    ],
     "confirmModulesPurge": false
   },
   "author": "JaimeToca",
   "license": "MIT",
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "@guardian-sdk/sdk": "workspace:*",
     "@scure/bip32": "^2.0.1",
     "@scure/bip39": "^2.0.1",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^12.0.6",
-    "@semantic-release/npm": "^13.1.5",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
-    "semantic-release": "^25.0.3",
     "typedoc": "^0.28.18",
     "typedoc-plugin-merge-modules": "^7.0.0",
     "typescript": "^6.0.2",
