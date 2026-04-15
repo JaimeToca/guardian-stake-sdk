@@ -83,4 +83,3 @@ export class SigningError extends GuardianError {
     this.name = "SigningError";
   }
 }
-

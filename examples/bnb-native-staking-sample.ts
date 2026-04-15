@@ -3,6 +3,7 @@ import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
 import { GuardianSDK, chains, bsc, ConsoleLogger } from "@guardian-sdk/bsc";
 import type {
+  ClaimTransaction,
   DelegateTransaction,
   RedelegateTransaction,
   UndelegateTransaction,
@@ -194,6 +195,62 @@ async function sample_undelegate_transaction() {
   // broadcast
   const txHash = await sdk.broadcast(bscMainnet, rawTx);
   console.log(`Broadcasted tx hash: ${txHash}`);
+}
+
+/**
+ * Demonstrates a full claim flow for unbonded BNB:
+ * 1. Fetch delegations and find positions with status "Claimable"
+ *    (unbonding period has elapsed — 7 days on BSC mainnet)
+ * 2. For each claimable position, estimate the gas fee and fetch the nonce
+ * 3. Sign and broadcast the claim transaction
+ *
+ * Each undelegation creates a separate unbonding entry tracked by its index.
+ * The `index` field on the ClaimTransaction corresponds to `delegation.delegationIndex`.
+ */
+async function sample_claim_transaction() {
+  const MNEMONIC = "<your mnemonic>";
+  const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
+  const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
+
+  // Fetch delegations — Claimable entries are unbonded positions ready to withdraw
+  const { delegations } = await sdk.getDelegations(bscMainnet, ADDRESS);
+  const claimable = delegations.filter((d) => d.status === "Claimable");
+
+  if (claimable.length === 0) {
+    console.log("No claimable delegations found.");
+    return;
+  }
+
+  for (const delegation of claimable) {
+    console.log(
+      `Claiming ${delegation.amount} wei from ${delegation.validator.name} (index ${delegation.delegationIndex})`
+    );
+
+    const transaction: ClaimTransaction = {
+      type: "Claim",
+      chain: bscMainnet,
+      amount: delegation.amount,
+      account: ADDRESS,
+      validator: delegation.validator,
+      index: delegation.delegationIndex,
+    };
+
+    // Estimate fee
+    const fee = await sdk.estimateFee(transaction);
+    console.log(`Fee: ${fee.total} wei (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})`);
+
+    // Fetch nonce
+    const nonce = await sdk.getNonce(bscMainnet, ADDRESS);
+    console.log(`Nonce: ${nonce}`);
+
+    // Sign — returns a signed raw transaction hex string ready to broadcast
+    const rawTx = await sdk.sign({ transaction, fee, nonce, privateKey: PRIVATE_KEY });
+    console.log(`Signed tx: ${rawTx}`);
+
+    // Broadcast
+    const txHash = await sdk.broadcast(bscMainnet, rawTx);
+    console.log(`Broadcasted tx hash: ${txHash}`);
+  }
 }
 
 /**
