@@ -241,14 +241,15 @@ async function sample_claim_transaction() {
 
     // Estimate fee
     const fee = await sdk.estimateFee(transaction);
-    console.log(`Fee: ${fee.total} wei (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})`);
+    console.log(`Fee: ${fee.total} wei${fee.type === "GasFee" ? ` (gasPrice: ${fee.gasPrice}, gasLimit: ${fee.gasLimit})` : ""}`);
 
     // Fetch nonce
     const nonce = await sdk.getNonce(bscMainnet, ADDRESS);
     console.log(`Nonce: ${nonce}`);
 
     // Sign — returns a signed raw transaction hex string ready to broadcast
-    const rawTx = await sdk.sign({ transaction, fee, nonce, privateKey: PRIVATE_KEY });
+    const signingArgs: SigningWithPrivateKey = { transaction, fee, nonce, privateKey: PRIVATE_KEY };
+    const rawTx = await sdk.sign(signingArgs);
     console.log(`Signed tx: ${rawTx}`);
 
     // Broadcast
