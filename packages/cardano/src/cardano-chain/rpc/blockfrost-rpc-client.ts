@@ -59,7 +59,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   }
 
   async getPool(poolId: string): Promise<BlockfrostPoolExtended> {
-    const url = `${this.baseUrl}/pools/${poolId}/extended`;
+    const url = `${this.baseUrl}/pools/${poolId}`;
     this.logger.debug("BlockfrostRpcClient: fetching pool", { poolId });
 
     return fetchOrError<BlockfrostPoolExtended>({

@@ -18,7 +18,7 @@ const { cardanoMainnet } = chains;
  */
 const sdk = new GuardianSDK([
   cardano({
-    apiKey: "<your Blockfrost API key>",
+    apiKey: "",
     logger: new ConsoleLogger("debug"),
   }),
 ]);
@@ -62,20 +62,18 @@ async function sample_check_delegations() {
   const validators = await sdk.getValidators(cardanoMainnet);
   console.log(`Stake pools: ${validators.length} total`);
 
-  for (const v of validators.slice(0, 3)) {
+  for (const v of validators) {
     console.log(`  ${v.name} — APY ≈ ${v.apy.toFixed(2)}% — delegators: ${v.delegators}`);
   }
 
-  /*const { delegations, stakingSummary } = await sdk.getDelegations(
+  const { delegations, stakingSummary } = await sdk.getDelegations(
     cardanoMainnet,
     STAKE_ADDRESS
   );
   console.log("Staking summary:", stakingSummary);
   for (const d of delegations) {
-    console.log(
-      `  ${d.validator.name} (${d.validator.operatorAddress}) | status: ${d.status} | amount: ${d.amount} lovelaces`
-    );
-  } */
+    console.log(d);
+  }
 }
 
 // ─── Delegate ─────────────────────────────────────────────────────────────────
