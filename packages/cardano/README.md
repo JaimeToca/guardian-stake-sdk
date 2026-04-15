@@ -300,10 +300,10 @@ The SDK caches validator lists for 3 minutes to reduce API calls. Stake account 
 ## Installation
 
 ```bash
-npm install @guardian-sdk/cardano
+npm install @guardian-sdk/cardano @guardian-sdk/sdk @cardano-sdk/core @cardano-sdk/crypto @cardano-sdk/util
 ```
 
-`@guardian-sdk/sdk` is included automatically as a dependency. No peer dependencies are required — unlike the BNB package, Cardano has no external blockchain library dependency. The signing and hashing libraries (`@noble/ed25519`, `@noble/hashes`, `@scure/base`) are bundled as regular dependencies.
+All peer dependencies must be installed alongside this package. If your project already has any of them, the same instances will be shared — no duplicate copies. The signing and hashing libraries (`@noble/ed25519`, `@noble/hashes`, `@scure/base`) are bundled as regular dependencies.
 
 ---
 

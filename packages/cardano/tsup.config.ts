@@ -5,5 +5,5 @@ export default defineConfig({
   format: ["cjs", "esm"],
   dts: true,
   clean: true,
-  external: ["@cardano-sdk/core", "@cardano-sdk/crypto", "@guardian-sdk/sdk"],
+  external: ["@cardano-sdk/core", "@cardano-sdk/crypto", "@cardano-sdk/util", "@guardian-sdk/sdk"],
 });

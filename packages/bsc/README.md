@@ -183,10 +183,10 @@ Jailed validators cannot receive new delegations. Existing delegations remain ac
 ## Installation
 
 ```bash
-npm install @guardian-sdk/bsc viem
+npm install @guardian-sdk/bsc @guardian-sdk/sdk viem
 ```
 
-`@guardian-sdk/sdk` is included automatically as a dependency of `@guardian-sdk/bsc`. `viem` is a peer dependency — if your project already uses it, the same instance will be shared.
+`@guardian-sdk/sdk` and `viem` are peer dependencies — if your project already uses them, the same instances will be shared with no duplicate copies.
 
 ---
 
