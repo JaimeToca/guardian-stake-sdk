@@ -10,6 +10,7 @@ import type {
 
 export interface BlockfrostRpcClientContract {
   getPools(page?: number): Promise<BlockfrostPoolExtended[]>;
+  getPool(poolId: string): Promise<BlockfrostPoolExtended>;
   getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null>;
   getAccount(stakeAddress: string): Promise<BlockfrostAccount>;
   /** Returns null when the stake address is not registered (404). */

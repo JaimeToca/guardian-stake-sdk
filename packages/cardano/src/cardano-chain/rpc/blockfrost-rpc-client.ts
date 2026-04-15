@@ -46,9 +46,8 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
       method: "GET",
       headers: this.headers,
       params: {
-        count: BlockfrostRpcClient.POOLS_PAGE_SIZE, // 100 pools per page (max allowed by Blockfrost), till pagination is supported
+        count: BlockfrostRpcClient.POOLS_PAGE_SIZE,
         page,
-        order: "desc", // most active first
       },
     });
 
@@ -57,6 +56,17 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
       ms: Date.now() - start,
     });
     return pools;
+  }
+
+  async getPool(poolId: string): Promise<BlockfrostPoolExtended> {
+    const url = `${this.baseUrl}/pools/${poolId}/extended`;
+    this.logger.debug("BlockfrostRpcClient: fetching pool", { poolId });
+
+    return fetchOrError<BlockfrostPoolExtended>({
+      url,
+      method: "GET",
+      headers: this.headers,
+    });
   }
 
   async getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null> {

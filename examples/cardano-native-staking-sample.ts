@@ -18,7 +18,7 @@ const { cardanoMainnet } = chains;
  */
 const sdk = new GuardianSDK([
   cardano({
-    apiKey: "",
+    apiKey: "<your Blockfrost API key here>",
     logger: new ConsoleLogger("debug"),
   }),
 ]);

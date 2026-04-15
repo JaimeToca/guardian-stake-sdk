@@ -34,7 +34,7 @@ export class StakingService implements StakingServiceContract {
    * Minimum amount to stake: 2 ADA (stake key registration deposit).
    * In practice any amount is stakeable but 2 ADA must be available for deposit.
    */
-  private static readonly MIN_AMOUNT_TO_STAKE = 2_000_000n; // lovelaces
+  private static readonly MIN_AMOUNT_TO_STAKE = 2_000_000n;
 
   private static readonly VALIDATOR_CACHE_KEY = "cardano-validators";
 
@@ -136,22 +136,21 @@ export class StakingService implements StakingServiceContract {
       this.rpcClient.getNetwork(),
     ]);
 
-    const validators = await this.fetchAllValidators();
     const delegations: Delegation[] = [];
+    let currentValidator: Validator | undefined;
 
     if (account.active && account.pool_id) {
-      // Find the validator for the current pool
-      const currentValidator =
-        validators.find((v) => v.operatorAddress === account.pool_id) ??
-        this.makeUnknownValidator(account.pool_id);
+      const [pool, metadata] = await Promise.all([
+        this.rpcClient.getPool(account.pool_id),
+        this.rpcClient.getPoolMetadata(account.pool_id),
+      ]);
 
-      // In Cardano, all controlled ADA is implicitly staked — no "locked" amount
-      const stakedAmount = BigInt(account.controlled_amount);
+      currentValidator = this.toValidator(pool, metadata);
 
       delegations.push({
         id: `delegation_active_${account.pool_id}`,
         validator: currentValidator,
-        amount: stakedAmount,
+        amount: BigInt(account.controlled_amount),
         status: "Active",
         delegationIndex: 0n, // Not applicable in Cardano
         pendingUntil: 0, // No unbonding period
@@ -159,19 +158,17 @@ export class StakingService implements StakingServiceContract {
     }
 
     const totalStake = BigInt(networkInfo.stake.live);
-    const maxApy = validators.reduce((max, v) => Math.max(max, v.apy), 0);
-    const activeValidators = validators.filter((v) => v.status === "Active").length;
 
     return {
       delegations,
       stakingSummary: {
         totalProtocolStake: Number(totalStake / 1_000_000n), // convert to ADA
-        maxApy,
+        maxApy: currentValidator?.apy ?? 0,
         minAmountToStake: StakingService.MIN_AMOUNT_TO_STAKE,
         unboundPeriodInMillis: StakingService.UNBOUND_PERIOD_MS,
         redelegateFeeRate: StakingService.REDELEGATE_FEE_RATE,
-        activeValidators,
-        totalValidators: validators.length,
+        activeValidators: 0,
+        totalValidators: 0,
       },
     };
   }
