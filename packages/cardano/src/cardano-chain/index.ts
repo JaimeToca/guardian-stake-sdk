@@ -66,7 +66,7 @@ function provideCardanoService(
   baseUrl?: string
 ): GuardianServiceContract {
   const rpcClient = new BlockfrostRpcClient(apiKey, logger, baseUrl);
-  const cache = new InMemoryCache<string, Validator[]>();
+  const cache = new InMemoryCache<string, Validator[]>(600_000); // 10 min
 
   const stakingService = new StakingService(cache, rpcClient, logger);
   const balanceService = new BalanceService(rpcClient);

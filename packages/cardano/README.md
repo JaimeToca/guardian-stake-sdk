@@ -63,7 +63,7 @@ The protocol targets roughly **4–5% annual yield** across all stake. Actual re
 
 **Saturation**: Each pool has a target size determined by the `k` parameter (currently 500 optimal pools, each ideally holding 1/500 of total ADA staked). Pools above saturation earn reduced rewards — this design incentivises delegators to spread ADA across many pools rather than concentrating in a few.
 
-The network currently has approximately **3,000 pools**, of which ~2,400 are active. `getValidators()` currently returns the top 100 pools by live stake — see the [pagination note](#getvalidators) below.
+As of 2026, the network has approximately **3,000 pools**, of which ~2,400 are active.
 
 ### Stake Keys and Addresses
 
@@ -293,7 +293,7 @@ cardano({ apiKey: "mainnetXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" })
 | Starter | 500,000 |
 | Professional | 5,000,000 |
 
-The SDK caches validator lists for 3 minutes to reduce API calls. Stake account queries and UTXOs are always fetched fresh.
+The SDK caches validator lists for 10 minutes to reduce API calls. Stake account queries and UTXOs are always fetched fresh.
 
 ---
 
@@ -388,9 +388,9 @@ interface CardanoConfig {
 
 ### `getValidators`
 
-Returns stake pools registered on Cardano. Fetches the first 100 pools sorted by live stake descending — the largest, most active pools first. Pool metadata (name, ticker, description) is batch-fetched in parallel and results are cached for 3 minutes.
+Returns stake pools registered on Cardano. Fetches the first 20 pools sorted by live stake descending — the largest, most active pools first. Pool metadata (name, ticker, description) is batch-fetched in parallel and results are cached for 10 minutes.
 
-> **Pagination not yet supported.** The SDK currently returns only the top 100 pools by live stake. Full pagination across all ~3,000 registered pools will be added in a future release.
+> **Pagination not yet supported.** The SDK currently returns only the top 20 pools by live stake. Full pagination across all ~3,000 registered pools will be added in an upcoming release. If you are delegating to a pool outside this set, `getDelegations()` fetches it directly by pool ID — your delegation is always indexed regardless of whether your pool appears in `getValidators()`.
 
 ```typescript
 // All pools
@@ -413,7 +413,7 @@ interface Validator {
   description: string;       // Pool description from metadata
   image: undefined;          // Cardano pools have no standard logo URL format
   apy: number;               // Estimated annual yield (%)
-  delegators: number;        // Live delegator count
+  delegators: number | undefined; // Live delegator count (undefined when fetched via getDelegations)
   operatorAddress: string;   // bech32 pool ID — use in transaction.validator
   creditAddress: string;     // Same as operatorAddress (no separate credit contract)
 }
@@ -425,7 +425,7 @@ type ValidatorStatus = "Active" | "Inactive";
 
 > **APY estimation**: Blockfrost does not expose a pre-calculated ROA field. The SDK estimates it as `4.5% × (1 − margin) × saturationFactor × (1 − fixedCostFraction)`, where 4.5% is the approximate protocol-level yield. Actual earned rewards depend on pool luck and real-time performance. For precise historical ROA, call Blockfrost's `/pools/{id}/history` directly.
 
-> **Caching**: Validator data is cached in memory for 3 minutes per `GuardianSDK` instance. Elections and pool changes happen at epoch boundaries (~5 days), so short-lived caches are appropriate.
+> **Caching**: Validator data is cached in memory for 10 minutes per `GuardianSDK` instance. Elections and pool changes happen at epoch boundaries (~5 days), so short-lived caches are appropriate.
 
 ---
 
@@ -459,12 +459,12 @@ interface Delegation {
 
 interface StakingSummary {
   totalProtocolStake: number;   // Total ADA staked network-wide (in ADA, not lovelaces)
-  maxApy: number;               // Highest estimated APY across returned pools
+  maxApy: number;               // Highest estimated APY across the top 20 pools by live stake
   minAmountToStake: 2_000_000n; // 2 ADA stake key registration deposit (in lovelaces)
   unboundPeriodInMillis: 0;     // No unbonding period
   redelegateFeeRate: 0;         // No fee to switch pools
-  activeValidators: number;
-  totalValidators: number;
+  activeValidators: undefined;  // Not available from getDelegations — use getValidators()
+  totalValidators: undefined;   // Not available from getDelegations — use getValidators()
 }
 ```
 

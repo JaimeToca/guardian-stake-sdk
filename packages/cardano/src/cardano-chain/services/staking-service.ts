@@ -24,6 +24,9 @@ export class StakingService implements StakingServiceContract {
   /** Epochs per year (1 epoch ≈ 5 days → 365/5 ≈ 73 epochs). */
   private static readonly EPOCHS_PER_YEAR = 73;
 
+  /** Cardano's approximate annual protocol staking yield. */
+  private static readonly BASE_PROTOCOL_RATE = 4.5;
+
   /** Cardano has no unbonding period. */
   private static readonly UNBOUND_PERIOD_MS = 0;
 
@@ -107,8 +110,6 @@ export class StakingService implements StakingServiceContract {
    * This is a rough estimate — actual ROA depends on pool performance and saturation.
    */
   private estimateApy(pool: BlockfrostPoolExtended): number {
-    const BASE_PROTOCOL_RATE = 4.5; // %
-
     // Oversaturated pools earn less rewards
     const saturationPenalty = pool.live_saturation > 1 ? 1 / pool.live_saturation : 1;
 
@@ -116,13 +117,13 @@ export class StakingService implements StakingServiceContract {
     const activeStake = BigInt(pool.active_stake);
     const fixedCost = BigInt(pool.fixed_cost);
     const epochRewards =
-      (activeStake * BigInt(Math.round(BASE_PROTOCOL_RATE * 100))) /
+      (activeStake * BigInt(Math.round(StakingService.BASE_PROTOCOL_RATE * 100))) /
       10000n /
       BigInt(StakingService.EPOCHS_PER_YEAR);
     const fixedCostFraction = epochRewards > 0n ? Number(fixedCost) / Number(epochRewards) : 0;
 
     const estimatedApy =
-      BASE_PROTOCOL_RATE *
+      StakingService.BASE_PROTOCOL_RATE *
       (1 - pool.margin_cost) *
       saturationPenalty *
       Math.max(0, 1 - fixedCostFraction);
@@ -131,13 +132,13 @@ export class StakingService implements StakingServiceContract {
   }
 
   async getDelegations(address: string): Promise<Delegations> {
-    const [account, networkInfo] = await Promise.all([
+    const [account, networkInfo, pools] = await Promise.all([
       this.rpcClient.getAccount(resolveStakeAddress(address)),
       this.rpcClient.getNetwork(),
+      this.rpcClient.getPools(),
     ]);
 
     const delegations: Delegation[] = [];
-    let currentValidator: Validator | undefined;
 
     if (account.active && account.pool_id) {
       const [pool, metadata] = await Promise.all([
@@ -145,11 +146,9 @@ export class StakingService implements StakingServiceContract {
         this.rpcClient.getPoolMetadata(account.pool_id),
       ]);
 
-      currentValidator = this.toValidator(pool, metadata);
-
       delegations.push({
         id: `delegation_active_${account.pool_id}`,
-        validator: currentValidator,
+        validator: this.toValidator(pool, metadata),
         amount: BigInt(account.controlled_amount),
         status: "Active",
         delegationIndex: 0n, // Not applicable in Cardano
@@ -158,17 +157,20 @@ export class StakingService implements StakingServiceContract {
     }
 
     const totalStake = BigInt(networkInfo.stake.live);
+    const maxApy = pools.length > 0
+      ? pools.reduce((max, p) => Math.max(max, this.estimateApy(p)), 0)
+      : StakingService.BASE_PROTOCOL_RATE;
 
     return {
       delegations,
       stakingSummary: {
         totalProtocolStake: Number(totalStake / 1_000_000n), // convert to ADA
-        maxApy: currentValidator?.apy ?? 0,
+        maxApy,
         minAmountToStake: StakingService.MIN_AMOUNT_TO_STAKE,
         unboundPeriodInMillis: StakingService.UNBOUND_PERIOD_MS,
         redelegateFeeRate: StakingService.REDELEGATE_FEE_RATE,
-        activeValidators: 0,
-        totalValidators: 0,
+        activeValidators: undefined,
+        totalValidators: undefined,
       },
     };
   }

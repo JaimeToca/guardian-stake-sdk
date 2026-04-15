@@ -43,6 +43,6 @@ export interface StakingSummary {
   minAmountToStake: bigint;
   unboundPeriodInMillis: number;
   redelegateFeeRate: number;
-  activeValidators: number;
-  totalValidators: number;
+  activeValidators: number | undefined;
+  totalValidators: number | undefined;
 }
