@@ -157,9 +157,10 @@ export class StakingService implements StakingServiceContract {
     }
 
     const totalStake = BigInt(networkInfo.stake.live);
-    const maxApy = pools.length > 0
-      ? pools.reduce((max, p) => Math.max(max, this.estimateApy(p)), 0)
-      : StakingService.BASE_PROTOCOL_RATE;
+    const maxApy =
+      pools.length > 0
+        ? pools.reduce((max, p) => Math.max(max, this.estimateApy(p)), 0)
+        : StakingService.BASE_PROTOCOL_RATE;
 
     return {
       delegations,
