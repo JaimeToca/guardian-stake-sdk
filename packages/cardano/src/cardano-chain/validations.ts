@@ -93,3 +93,19 @@ export function parseCardanoPrivateKey(value: string): string {
   }
   return stripped;
 }
+
+/**
+ * Validates a Cardano Ed25519 public key.
+ * Accepts a 32-byte (64 hex char) Ed25519 public key as hex string.
+ */
+export function parseCardanoPublicKey(value: string): string {
+  try {
+    assertIsHexString(value, 64);
+  } catch {
+    throw new ValidationError(
+      "INVALID_ADDRESS",
+      "Cardano public key must be 32 bytes (64 hex characters)."
+    );
+  }
+  return value;
+}

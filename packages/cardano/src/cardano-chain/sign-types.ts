@@ -34,6 +34,13 @@ export function isCardanoSigningWithPrivateKey(
  */
 export interface CardanoPrehashArgs extends BaseSignArgs {
   stakingPublicKey: string; // 32-byte Ed25519 public key as 64-char hex
+  /**
+   * @internal Populated by `prehash()` and forwarded through `PrehashResult.signArgs`.
+   * Consumed by `compile()` to reconstruct the transaction body without re-fetching
+   * chain state, preventing a signature mismatch if UTXOs or the block tip change
+   * between the prehash and compile calls.
+   */
+  _txBodyCbor?: string;
 }
 
 export function isCardanoPrehashArgs(args: BaseSignArgs): args is CardanoPrehashArgs {

@@ -90,10 +90,13 @@ export class FeeService implements FeeServiceContract {
 
     const { inputs, totalLovelaces, inputAssets } = selectUtxos(utxos, required + minUtxo);
 
+    // Clamp to minUtxo: the mock change output must satisfy the minimum-ADA rule
+    // so the serialised size (and therefore the fee estimate) is accurate.
+    const rawChange = totalLovelaces - required;
     const txParams: TxBodyParams = {
       inputs,
       outputAddress: paymentAddress,
-      outputLovelaces: totalLovelaces - required,
+      outputLovelaces: rawChange < minUtxo ? minUtxo : rawChange,
       outputAssets: inputAssets,
       fee: 0n,
       certificates: certificates.length > 0 ? certificates : undefined,

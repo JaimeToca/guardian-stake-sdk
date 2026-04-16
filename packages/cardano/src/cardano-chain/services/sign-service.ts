@@ -1,3 +1,4 @@
+import { Serialization } from "@cardano-sdk/core";
 import {
   Ed25519PrivateKey,
   Ed25519PrivateNormalKeyHex,
@@ -13,7 +14,7 @@ import type {
   Transaction,
 } from "@guardian-sdk/sdk";
 import { NoopLogger, SigningError, ValidationError } from "@guardian-sdk/sdk";
-import { isCardanoSigningWithPrivateKey, isCardanoPrehashArgs } from "../sign-types";
+import { isCardanoSigningWithPrivateKey, isCardanoPrehashArgs, type CardanoPrehashArgs } from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
 import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE } from "../tx/coin-selection";
@@ -27,6 +28,7 @@ import {
 import {
   buildRewardAccount,
   parseCardanoPrivateKey,
+  parseCardanoPublicKey,
   checkIfPaymentAddressIsValid,
 } from "../validations";
 
@@ -112,9 +114,17 @@ export class SignService {
         : Promise.resolve(null),
     ]);
 
+    // #8: Sanity-check the slot number before computing the TTL.
+    if (latestBlock.slot <= 0) {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        "Received an invalid slot number from the node. Cannot compute a safe TTL."
+      );
+    }
     const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
     // Stake key is considered registered only when the account is actively delegating.
     // active: false covers both "never registered" and "deregistered" cases — both need StakeRegistration.
+    // active: null is treated identically to false (conservative — include registration cert).
     const isStakeKeyRegistered = existingAccount?.active === true;
 
     const body = this.buildBody(
@@ -171,6 +181,7 @@ export class SignService {
       );
     }
 
+    parseCardanoPublicKey(preHashArgs.stakingPublicKey); // #4: validate format
     checkIfPaymentAddressIsValid(preHashArgs.transaction.account);
 
     const stakingPubKey = Ed25519PublicKey.fromHex(
@@ -188,7 +199,15 @@ export class SignService {
         : Promise.resolve(null),
     ]);
 
+    // #8: Sanity-check the slot number before computing the TTL.
+    if (latestBlock.slot <= 0) {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        "Received an invalid slot number from the node. Cannot compute a safe TTL."
+      );
+    }
     const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
+    // active: null is treated identically to false — include registration cert (conservative).
     const isStakeKeyRegistered = existingAccount?.active === true;
 
     const body = this.buildBody(
@@ -203,9 +222,11 @@ export class SignService {
     );
 
     // Return the tx body hash — the exact 32-byte preimage the external signer must sign with Ed25519.
+    // #2: Embed the serialised tx body so compile() can reconstruct it without re-fetching chain
+    // state, preventing a signature mismatch if UTXOs or the block tip change in the interim.
     return {
       serializedTransaction: body.hash(),
-      signArgs: preHashArgs,
+      signArgs: { ...preHashArgs, _txBodyCbor: body.toCbor() } as CardanoPrehashArgs,
     };
   }
 
@@ -213,6 +234,10 @@ export class SignService {
    * Compiles a pre-hashed Cardano transaction with externally produced signatures.
    *
    * `compileArgs.signature` must be: `paymentSigHex:stakingVKeyHex:stakingSigHex:paymentVKeyHex`
+   *
+   * When called after `prehash()`, the tx body is reconstructed from the CBOR embedded
+   * in `compileArgs.signArgs._txBodyCbor` — no network requests are made and there is
+   * no risk of the body diverging from what was actually signed.
    */
   async compile(compileArgs: CompileArgs): Promise<string> {
     const parts = compileArgs.signature.split(":");
@@ -224,6 +249,31 @@ export class SignService {
     }
 
     const [paymentSigHex, stakingVKeyHex, stakingSigHex, paymentVKeyHex] = parts;
+
+    // #3: Validate the format of each signature part before using them.
+    const HEX64 = /^[0-9a-fA-F]{64}$/;
+    const HEX128 = /^[0-9a-fA-F]{128}$/;
+    if (
+      !HEX128.test(paymentSigHex) ||
+      !HEX64.test(stakingVKeyHex) ||
+      !HEX128.test(stakingSigHex) ||
+      !HEX64.test(paymentVKeyHex)
+    ) {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        "Malformed signature: expected `paymentSigHex(128):stakingVKeyHex(64):stakingSigHex(128):paymentVKeyHex(64)` " +
+          "where each value is a lowercase or uppercase hex string of the indicated length."
+      );
+    }
+
+    // #5: Ensure the two witness keys are distinct.
+    if (paymentVKeyHex.toLowerCase() === stakingVKeyHex.toLowerCase()) {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        "paymentVKeyHex and stakingVKeyHex must be different keys."
+      );
+    }
+
     const { transaction, fee } = compileArgs.signArgs;
 
     if (!transaction.account) {
@@ -239,30 +289,33 @@ export class SignService {
     const stakeKeyHashHex = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(stakingVKeyHex))
       .hash()
       .hex();
-    const rewardAccount = buildRewardAccount(stakeKeyHashHex);
 
-    const [protocolParams, utxos, latestBlock, existingAccount] = await Promise.all([
-      this.rpcClient.getProtocolParams(),
-      this.rpcClient.getUtxos(transaction.account),
-      this.rpcClient.getLatestBlock(),
-      transaction.type === "Delegate"
-        ? this.rpcClient.getAccountOrNull(rewardAccount)
-        : Promise.resolve(null),
-    ]);
+    // #9: When compileArgs.signArgs came from prehash(), verify the staking key matches.
+    const prehashArgs = isCardanoPrehashArgs(compileArgs.signArgs) ? compileArgs.signArgs : undefined;
+    if (prehashArgs) {
+      const expectedStakeHash = Ed25519PublicKey.fromHex(
+        Ed25519PublicKeyHex(prehashArgs.stakingPublicKey)
+      )
+        .hash()
+        .hex();
+      if (stakeKeyHashHex !== expectedStakeHash) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "stakingVKeyHex does not match the stakingPublicKey that was used in prehash(). " +
+            "The compiled transaction would be invalid."
+        );
+      }
+    }
 
-    const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
-    const isStakeKeyRegistered = existingAccount?.active === true;
-
-    const body = this.buildBody(
-      transaction,
-      transaction.account,
-      utxos,
-      fee.total,
-      protocolParams,
-      stakeKeyHashHex,
-      ttl,
-      isStakeKeyRegistered
-    );
+    // #2: Reconstruct the tx body from the CBOR cached by prehash(). compile() is only
+    // valid after prehash() — _txBodyCbor is always present in that flow.
+    if (!prehashArgs?._txBodyCbor) {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        "compile() requires signArgs produced by prehash(). No serialized tx body found."
+      );
+    }
+    const body = Serialization.TransactionBody.fromCbor(HexBlob(prehashArgs._txBodyCbor));
 
     const witnesses: TxWitness[] = [
       { vkeyHex: paymentVKeyHex, sigHex: paymentSigHex },
@@ -305,6 +358,19 @@ export class SignService {
     const rewardAmount = transaction.type === "Claim" ? transaction.amount : 0n;
     const depositReturn = transaction.type === "Undelegate" ? keyDeposit : 0n;
     const outputLovelaces = totalLovelaces + rewardAmount + depositReturn - requiredLovelaces;
+
+    // #1: Guard against an under-funded change output. This can happen if the fee
+    // passed by the caller is significantly higher than the estimate (e.g. manual override)
+    // or if the wallet's UTxO set changed between fee estimation and signing.
+    if (outputLovelaces < minUtxo) {
+      throw new ValidationError(
+        "INVALID_AMOUNT",
+        `Insufficient funds: the change output would be ${outputLovelaces} lovelace but the minimum UTxO is ${minUtxo}. ` +
+          `Ensure the wallet has enough ADA to cover the fee${
+            transaction.type === "Delegate" && !isStakeKeyRegistered ? " and the key deposit" : ""
+          }.`
+      );
+    }
 
     return buildTransactionBody({
       inputs,

@@ -1,5 +1,6 @@
 import { Cardano, Serialization } from "@cardano-sdk/core";
 import type { Transaction } from "@guardian-sdk/sdk";
+import { ValidationError } from "@guardian-sdk/sdk";
 import { buildRewardAccount, parsePoolId } from "../validations";
 import type { CardanoCertificate } from "./tx-builder";
 
@@ -107,6 +108,9 @@ export function buildWithdrawals(
   stakeKeyHashHex: string
 ): Map<string, bigint> {
   if (transaction.type !== "Claim") return new Map();
+  if (transaction.amount <= 0n) {
+    throw new ValidationError("INVALID_AMOUNT", "Claim amount must be greater than zero.");
+  }
   const rewardAccount = buildRewardAccount(stakeKeyHashHex);
   return new Map([[rewardAccount, transaction.amount]]);
 }

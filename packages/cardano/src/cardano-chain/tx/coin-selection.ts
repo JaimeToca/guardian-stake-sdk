@@ -33,6 +33,13 @@ export interface SelectedUtxos {
  * @throws ValidationError if insufficient funds.
  */
 export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint): SelectedUtxos {
+  if (requiredLovelaces < 0n) {
+    throw new ValidationError(
+      "INVALID_AMOUNT",
+      `requiredLovelaces must be non-negative, got ${requiredLovelaces}.`
+    );
+  }
+
   const withLovelaces = utxos
     .map((utxo) => {
       const lovelaceEntry = utxo.amount.find((a) => a.unit === "lovelace");
