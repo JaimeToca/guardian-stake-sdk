@@ -184,6 +184,7 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
         "Content-Type": "application/cbor",
       },
       data: hexStringToBuffer(cborHex),
+      responseType: "text",
     });
 
     this.logger.debug("BlockfrostRpcClient: transaction submitted", { txHash });
