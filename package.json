@@ -13,7 +13,8 @@
     "format:check": "prettier --check packages/*/src packages/*/tests",
     "changeset": "changeset",
     "version": "changeset version",
-    "publish": "pnpm build && changeset publish"
+    "publish": "pnpm build && changeset publish",
+    "prepare": "sh scripts/install-hooks.sh"
   },
   "engines": {
     "node": ">=22"
