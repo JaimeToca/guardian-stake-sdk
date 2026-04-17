@@ -26,7 +26,7 @@ Abstracts Blockfrost API calls and CBOR transaction construction behind a clean,
   - [getNonce](#getnonce)
   - [estimateFee](#estimatefee)
   - [sign](#sign)
-  - [preHash / compile](#prehash--compile)
+  - [preHash and compile](#prehash-and-compile)
   - [broadcast](#broadcast)
 - [Transaction Flows](#transaction-flows)
   - [Delegate — register and start staking](#delegate--register-and-start-staking)
@@ -620,7 +620,7 @@ The SDK:
 
 ---
 
-### `preHash` / `compile`
+### `preHash` and `compile`
 
 For **MPC wallets, hardware signers, or custody setups** where private keys are not available in the application process. Splits signing into two steps:
 
