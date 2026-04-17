@@ -5,7 +5,7 @@
   "scripts": {
     "build": "pnpm --filter @guardian-sdk/sdk run build && pnpm --filter @guardian-sdk/bsc run build && pnpm --filter @guardian-sdk/cardano run build",
     "typecheck": "pnpm -r run typecheck && tsc --noEmit -p examples/tsconfig.json",
-    "test": "pnpm --filter @guardian-sdk/bsc run test",
+    "test": "pnpm --filter @guardian-sdk/bsc run test && pnpm --filter @guardian-sdk/cardano run test",
     "docs": "typedoc",
     "lint": "eslint packages/*/src packages/*/tests",
     "lint:fix": "eslint packages/*/src packages/*/tests --fix",
