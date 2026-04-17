@@ -58,14 +58,16 @@ describe("checkIfPaymentAddressIsValid", () => {
 
   it("throws for a testnet payment address (addr_test1...)", () => {
     expect(() => checkIfPaymentAddressIsValid(TESTNET_PAYMENT_ADDRESS)).toThrow(ValidationError);
-    expect(() => checkIfPaymentAddressIsValid(TESTNET_PAYMENT_ADDRESS)).toSatisfy((fn: () => void) => {
-      try {
-        fn();
-      } catch (e) {
-        return (e as ValidationError).code === "INVALID_ADDRESS";
+    expect(() => checkIfPaymentAddressIsValid(TESTNET_PAYMENT_ADDRESS)).toSatisfy(
+      (fn: () => void) => {
+        try {
+          fn();
+        } catch (e) {
+          return (e as ValidationError).code === "INVALID_ADDRESS";
+        }
+        return false;
       }
-      return false;
-    });
+    );
   });
 });
 

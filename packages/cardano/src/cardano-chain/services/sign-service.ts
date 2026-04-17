@@ -14,7 +14,11 @@ import type {
   Transaction,
 } from "@guardian-sdk/sdk";
 import { NoopLogger, SigningError, ValidationError } from "@guardian-sdk/sdk";
-import { isCardanoSigningWithPrivateKey, isCardanoPrehashArgs, type CardanoPrehashArgs } from "../sign-types";
+import {
+  isCardanoSigningWithPrivateKey,
+  isCardanoPrehashArgs,
+  type CardanoPrehashArgs,
+} from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
 import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE } from "../tx/coin-selection";
@@ -291,7 +295,9 @@ export class SignService {
       .hex();
 
     // #9: When compileArgs.signArgs came from prehash(), verify the staking key matches.
-    const prehashArgs = isCardanoPrehashArgs(compileArgs.signArgs) ? compileArgs.signArgs : undefined;
+    const prehashArgs = isCardanoPrehashArgs(compileArgs.signArgs)
+      ? compileArgs.signArgs
+      : undefined;
     if (prehashArgs) {
       const expectedStakeHash = Ed25519PublicKey.fromHex(
         Ed25519PublicKeyHex(prehashArgs.stakingPublicKey)

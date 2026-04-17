@@ -10,7 +10,11 @@ import { ValidationError } from "@guardian-sdk/sdk";
 export function checkIfPaymentAddressIsValid(address: string) {
   const parsed = Cardano.Address.fromString(address);
   const type = parsed?.getType();
-  if (!parsed || type === Cardano.AddressType.RewardKey || type === Cardano.AddressType.RewardScript) {
+  if (
+    !parsed ||
+    type === Cardano.AddressType.RewardKey ||
+    type === Cardano.AddressType.RewardScript
+  ) {
     throw new ValidationError(
       "INVALID_ADDRESS",
       `Expected a payment address (addr1...), got: "${address}".`
