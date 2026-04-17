@@ -33,6 +33,10 @@ function makeRpcClient(
 
   return {
     getPools: vi.fn().mockResolvedValue(pools),
+    getPool: vi.fn().mockImplementation((poolId: string) => {
+      const found = pools.find((p) => p.pool_id === poolId);
+      return Promise.resolve(found ?? { ...pools[0], pool_id: poolId });
+    }),
     getPoolMetadata: vi.fn().mockResolvedValue(metadataResult),
     getAccount: vi.fn().mockResolvedValue(account),
     getNetwork: vi.fn().mockResolvedValue(network),

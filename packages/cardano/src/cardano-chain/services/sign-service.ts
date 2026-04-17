@@ -26,6 +26,7 @@ import { buildTransactionBody, buildSignedTransaction, type TxWitness } from "..
 import {
   buildCertificates,
   buildWithdrawals,
+  rewardAccountWithdrawal,
   computeMinOutputLovelace,
   computeRequiredLovelaces,
 } from "../tx/tx-helpers";
@@ -113,7 +114,7 @@ export class SignService {
       this.rpcClient.getProtocolParams(),
       this.rpcClient.getUtxos(transaction.account),
       this.rpcClient.getLatestBlock(),
-      transaction.type === "Delegate"
+      transaction.type === "Delegate" || transaction.type === "Undelegate"
         ? this.rpcClient.getAccountOrNull(rewardAccount)
         : Promise.resolve(null),
     ]);
@@ -130,6 +131,10 @@ export class SignService {
     // active: false covers both "never registered" and "deregistered" cases — both need StakeRegistration.
     // active: null is treated identically to false (conservative — include registration cert).
     const isStakeKeyRegistered = existingAccount?.active === true;
+    const rewardsAvailableToSweep =
+      transaction.type === "Undelegate"
+        ? BigInt(existingAccount?.withdrawable_amount ?? "0")
+        : 0n;
 
     const body = this.buildBody(
       transaction,
@@ -139,7 +144,8 @@ export class SignService {
       protocolParams,
       stakeKeyHashHex,
       ttl,
-      isStakeKeyRegistered
+      isStakeKeyRegistered,
+      rewardsAvailableToSweep
     );
 
     const txBodyHash = body.hash();
@@ -198,7 +204,8 @@ export class SignService {
       this.rpcClient.getProtocolParams(),
       this.rpcClient.getUtxos(preHashArgs.transaction.account),
       this.rpcClient.getLatestBlock(),
-      preHashArgs.transaction.type === "Delegate"
+      preHashArgs.transaction.type === "Delegate" ||
+      preHashArgs.transaction.type === "Undelegate"
         ? this.rpcClient.getAccountOrNull(rewardAccount)
         : Promise.resolve(null),
     ]);
@@ -213,6 +220,10 @@ export class SignService {
     const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
     // active: null is treated identically to false — include registration cert (conservative).
     const isStakeKeyRegistered = existingAccount?.active === true;
+    const rewardsAvailableToSweep =
+      preHashArgs.transaction.type === "Undelegate"
+        ? BigInt(existingAccount?.withdrawable_amount ?? "0")
+        : 0n;
 
     const body = this.buildBody(
       preHashArgs.transaction,
@@ -222,7 +233,8 @@ export class SignService {
       protocolParams,
       stakeKeyHashHex,
       ttl,
-      isStakeKeyRegistered
+      isStakeKeyRegistered,
+      rewardsAvailableToSweep
     );
 
     // Return the tx body hash — the exact 32-byte preimage the external signer must sign with Ed25519.
@@ -341,7 +353,8 @@ export class SignService {
     protocolParams: BlockfrostProtocolParams,
     stakeKeyHashHex: string,
     ttl: number,
-    isStakeKeyRegistered: boolean
+    isStakeKeyRegistered: boolean,
+    rewardsAvailableToSweep = 0n
   ): ReturnType<typeof buildTransactionBody> {
     const keyDeposit = BigInt(protocolParams.key_deposit);
     const coinsPerUtxoByte = BigInt(
@@ -350,7 +363,7 @@ export class SignService {
     const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
 
     const certificates = buildCertificates(transaction, stakeKeyHashHex, isStakeKeyRegistered);
-    const withdrawals = buildWithdrawals(transaction, stakeKeyHashHex);
+    const withdrawals = buildWithdrawals(transaction, stakeKeyHashHex, rewardsAvailableToSweep);
     const requiredLovelaces = computeRequiredLovelaces(
       transaction,
       fee,
@@ -361,9 +374,14 @@ export class SignService {
     // Select enough inputs to cover required + minUtxo so the change output is always valid.
     const { inputs, totalLovelaces, inputAssets } = selectUtxos(utxos, requiredLovelaces + minUtxo);
 
-    const rewardAmount = transaction.type === "Claim" ? transaction.amount : 0n;
-    const depositReturn = transaction.type === "Undelegate" ? keyDeposit : 0n;
-    const outputLovelaces = totalLovelaces + rewardAmount + depositReturn - requiredLovelaces;
+    // Rewards moving from the reward account into the wallet (0 for Delegate/Redelegate).
+    const rewardsReceived = rewardAccountWithdrawal(transaction, rewardsAvailableToSweep);
+
+    // The 2 ADA key deposit is refunded by the protocol when the stake key is deregistered.
+    const keyDepositRefund = transaction.type === "Undelegate" ? keyDeposit : 0n;
+
+    // Change = UTXOs consumed − what we owe (fee + any deposit paid) + what flows back in
+    const outputLovelaces = totalLovelaces - requiredLovelaces + rewardsReceived + keyDepositRefund;
 
     // #1: Guard against an under-funded change output. This can happen if the fee
     // passed by the caller is significantly higher than the estimate (e.g. manual override)

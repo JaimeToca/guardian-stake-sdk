@@ -176,18 +176,4 @@ export class StakingService implements StakingServiceContract {
     };
   }
 
-  /** Creates a placeholder validator object for a pool not in the cached list. */
-  private makeUnknownValidator(poolId: string): Validator {
-    return {
-      id: poolId,
-      status: "Active",
-      name: poolId.slice(0, 16) + "...",
-      description: "",
-      image: undefined,
-      apy: 0,
-      delegators: 0,
-      operatorAddress: poolId,
-      creditAddress: poolId,
-    };
-  }
 }

@@ -99,20 +99,46 @@ export function buildCertificates(
 }
 
 /**
- * Builds the reward withdrawals map for a Claim transaction.
+ * How much to move from the reward account into the wallet for this transaction.
+ *
+ * Background: Cardano keeps staking rewards in a separate reward account (stake1...).
+ * Moving rewards back into the wallet requires an explicit "withdrawal" field in the tx body.
+ *
+ * - Claim: the user explicitly requested a reward payout — use the requested amount.
+ * - Undelegate: the protocol refuses to deregister a stake key while the reward account
+ *   is non-empty, so we must sweep whatever is sitting there in the same transaction.
+ * - Everything else: no rewards move.
+ */
+export function rewardAccountWithdrawal(
+  transaction: Transaction,
+  rewardsAvailableToSweep: bigint
+): bigint {
+  if (transaction.type === "Claim") return transaction.amount;
+  if (transaction.type === "Undelegate") return rewardsAvailableToSweep;
+  return 0n;
+}
+
+/**
+ * Builds the withdrawals map that goes into the Cardano tx body.
+ * An entry here instructs the node to move `amount` lovelaces from the reward
+ * account to the wallet as part of this transaction.
  *
  * @param stakeKeyHashHex - 56-char hex stake key hash. Pass `"00".repeat(28)` for fee estimation.
+ * @param rewardsAvailableToSweep - On-chain reward balance, used only for Undelegate.
  */
 export function buildWithdrawals(
   transaction: Transaction,
-  stakeKeyHashHex: string
+  stakeKeyHashHex: string,
+  rewardsAvailableToSweep = 0n
 ): Map<string, bigint> {
-  if (transaction.type !== "Claim") return new Map();
-  if (transaction.amount <= 0n) {
+  if (transaction.type === "Claim" && transaction.amount <= 0n) {
     throw new ValidationError("INVALID_AMOUNT", "Claim amount must be greater than zero.");
   }
-  const rewardAccount = buildRewardAccount(stakeKeyHashHex);
-  return new Map([[rewardAccount, transaction.amount]]);
+
+  const amount = rewardAccountWithdrawal(transaction, rewardsAvailableToSweep);
+  if (amount === 0n) return new Map();
+
+  return new Map([[buildRewardAccount(stakeKeyHashHex), amount]]);
 }
 
 /**
