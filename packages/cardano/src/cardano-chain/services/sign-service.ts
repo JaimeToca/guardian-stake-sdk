@@ -132,9 +132,7 @@ export class SignService {
     // active: null is treated identically to false (conservative — include registration cert).
     const isStakeKeyRegistered = existingAccount?.active === true;
     const rewardsAvailableToSweep =
-      transaction.type === "Undelegate"
-        ? BigInt(existingAccount?.withdrawable_amount ?? "0")
-        : 0n;
+      transaction.type === "Undelegate" ? BigInt(existingAccount?.withdrawable_amount ?? "0") : 0n;
 
     const body = this.buildBody(
       transaction,
@@ -204,8 +202,7 @@ export class SignService {
       this.rpcClient.getProtocolParams(),
       this.rpcClient.getUtxos(preHashArgs.transaction.account),
       this.rpcClient.getLatestBlock(),
-      preHashArgs.transaction.type === "Delegate" ||
-      preHashArgs.transaction.type === "Undelegate"
+      preHashArgs.transaction.type === "Delegate" || preHashArgs.transaction.type === "Undelegate"
         ? this.rpcClient.getAccountOrNull(rewardAccount)
         : Promise.resolve(null),
     ]);

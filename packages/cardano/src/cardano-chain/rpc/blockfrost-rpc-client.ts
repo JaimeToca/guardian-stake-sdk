@@ -1,4 +1,4 @@
-import { fetchOrError, NoopLogger } from "@guardian-sdk/sdk";
+import { fetchOrError, NoopLogger, ApiError } from "@guardian-sdk/sdk";
 import { hexStringToBuffer } from "@cardano-sdk/util";
 import type { Logger } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "./blockfrost-rpc-client-contract";
@@ -79,10 +79,12 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
         method: "GET",
         headers: this.headers,
       });
-      return metadata;
-    } catch {
-      // Pool has no metadata (on-chain pools can omit metadata)
-      return null;
+      // Blockfrost returns {} (no pool_id field) when a pool has never registered metadata.
+      return metadata.pool_id ? metadata : null;
+    } catch (err) {
+      // Safety net: Blockfrost documents 404 for non-existent pools.
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
     }
   }
 
@@ -108,8 +110,12 @@ export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
   async getAccountOrNull(stakeAddress: string): Promise<BlockfrostAccount | null> {
     try {
       return await this.getAccount(stakeAddress);
-    } catch {
-      return null;
+    } catch (err) {
+      // In practice Blockfrost always returns 200 for valid stake addresses
+      // (unregistered keys come back with active: false, registered: false).
+      // 404 is a safety net for any edge case not covered by that behaviour.
+      if (err instanceof ApiError && err.status === 404) return null;
+      throw err;
     }
   }
 
