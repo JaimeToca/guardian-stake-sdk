@@ -18,7 +18,7 @@
 **`@guardian-sdk/sdk`** — extensions to support Cardano
 
 - `GuardianChainType` and `ChainEcosystemType` extended with `"Cardano"`
-- `Utxo` added to the `Fee` union
+- `UtxoFee` added to the `Fee` union
 - `Validator.delegators` widened to `number | undefined`
 - `StakingSummary.activeValidators` and `totalValidators` widened to `number | undefined`
 - `GuardianServiceContract.sign()` and `GuardianSDK.sign()` widened to `BaseSignArgs`

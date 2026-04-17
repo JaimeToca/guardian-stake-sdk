@@ -9,14 +9,17 @@ import { ValidationError } from "@guardian-sdk/sdk";
  */
 export function checkIfPaymentAddressIsValid(address: string) {
   const parsed = Cardano.Address.fromString(address);
-  if (
-    !parsed ||
-    parsed.getType() === Cardano.AddressType.RewardKey ||
-    parsed.getType() === Cardano.AddressType.RewardScript
-  ) {
+  const type = parsed?.getType();
+  if (!parsed || type === Cardano.AddressType.RewardKey || type === Cardano.AddressType.RewardScript) {
     throw new ValidationError(
       "INVALID_ADDRESS",
       `Expected a payment address (addr1...), got: "${address}".`
+    );
+  }
+  if (parsed.getNetworkId() !== Cardano.NetworkId.Mainnet) {
+    throw new ValidationError(
+      "INVALID_ADDRESS",
+      `Expected a mainnet payment address (addr1...), got a testnet address: "${address}".`
     );
   }
 }
@@ -57,6 +60,13 @@ export function resolveStakeAddress(address: string): string {
   const parsed = Cardano.Address.fromString(address);
   if (!parsed) {
     throw new ValidationError("INVALID_ADDRESS", `Cannot parse Cardano address: "${address}".`);
+  }
+
+  if (parsed.getNetworkId() !== Cardano.NetworkId.Mainnet) {
+    throw new ValidationError(
+      "INVALID_ADDRESS",
+      `Expected a mainnet address, got a testnet address: "${address}".`
+    );
   }
 
   const type = parsed.getType();

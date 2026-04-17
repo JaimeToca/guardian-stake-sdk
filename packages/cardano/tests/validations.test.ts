@@ -20,6 +20,8 @@ import {
  */
 const PAYMENT_ADDRESS =
   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x";
+const TESTNET_PAYMENT_ADDRESS =
+  "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae";
 const STAKE_ADDRESS = "stake1uyehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gh6ffgw";
 const POOL_ID = "pool1pu5jlj4q9w9jlxeu370a3c9myx47md5j5m2str0naunn2q3lkdy";
 const POOL_KEY_HASH = "0f292fcaa02b8b2f9b3c8f9fd8e0bb21abedb692a6d5058df3ef2735";
@@ -52,6 +54,18 @@ describe("checkIfPaymentAddressIsValid", () => {
 
   it("throws for a pool ID (pool1...)", () => {
     expect(() => checkIfPaymentAddressIsValid(POOL_ID)).toThrow(ValidationError);
+  });
+
+  it("throws for a testnet payment address (addr_test1...)", () => {
+    expect(() => checkIfPaymentAddressIsValid(TESTNET_PAYMENT_ADDRESS)).toThrow(ValidationError);
+    expect(() => checkIfPaymentAddressIsValid(TESTNET_PAYMENT_ADDRESS)).toSatisfy((fn: () => void) => {
+      try {
+        fn();
+      } catch (e) {
+        return (e as ValidationError).code === "INVALID_ADDRESS";
+      }
+      return false;
+    });
   });
 });
 
