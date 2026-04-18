@@ -56,4 +56,9 @@ interface RewardsBalance extends BalanceBase {
   type: "Rewards";
 }
 
-export type Balance = AvailableBalance | StakedBalance | PendingBalance | ClaimableBalance | RewardsBalance;
+export type Balance =
+  | AvailableBalance
+  | StakedBalance
+  | PendingBalance
+  | ClaimableBalance
+  | RewardsBalance;
