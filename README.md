@@ -226,27 +226,19 @@ for (const d of delegations) {
 
 ### `getBalances(chain, address)`
 
-Returns the four balance categories for an address.
+Returns the balance categories for an address. Each `Balance` has a `type` and an `amount` in the chain's native unit. The exact types returned and their meaning vary by chain — see the chain-specific docs for details:
+
+- [BNB Smart Chain — getBalances](./packages/bsc/README.md#getbalances)
+- [Cardano — getBalances](./packages/cardano/README.md#getbalances)
 
 **Returns:** `Promise<Balance[]>`
 
-Each `Balance` has a `type` and an `amount` in the chain's native unit. The meaning of each type varies by chain:
-
-| Type | BSC | Cardano |
-|---|---|---|
-| **Available** | Wallet BNB, free to spend or delegate | All ADA controlled by the stake key — nothing is ever locked |
-| **Staked** | Active + Inactive delegations — **rewards are folded in**: validators auto-compound rewards into the delegation amount, so `Staked` grows over time without any action | Same as Available — delegation does not move or lock funds |
-| **Pending** | Undelegating, in the 7-day unbonding window — not yet spendable | Not applicable — Cardano has no unbonding period |
-| **Claimable** | Unbonding complete — BNB held in the StakeCredit contract, ready to claim | Accumulated rewards in the reward account, withdrawable right now |
-
-> **BSC note on Staked:** `Staked` includes accrued rewards because BSC validators fold rewards back into the pooled BNB. There is no separate unclaimed-rewards counter — to realise rewards you undelegate and go through `Pending → Claimable`.
-
 ```typescript
-type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
+type BalanceType = "Available" | "Staked" | "Pending" | "Claimable" | "Rewards";
 
 interface Balance {
   type: BalanceType;
-  amount: bigint;   // In wei / lovelaces
+  amount: bigint; // in the chain's native unit (wei, lovelaces, …)
 }
 ```
 
@@ -259,7 +251,7 @@ for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount));
 }
 // Available  1.5
-// Staked     10.0
+// Staked     10.0   ← includes accrued rewards on BSC
 // Pending    2.0
 // Claimable  0.5
 ```
