@@ -3,12 +3,7 @@ import { ConfigError } from "../entity/errors";
 import type { Balance } from "../entity/balance-types";
 import type { Fee } from "../entity/fee-types";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
-import type {
-  BaseSignArgs,
-  CompileArgs,
-  PrehashResult,
-  SigningWithPrivateKey,
-} from "../entity/sign-types";
+import type { BaseSignArgs, CompileArgs, PrehashResult } from "../entity/sign-types";
 import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
 import type { Transaction } from "../entity/transaction-types";
 
@@ -58,7 +53,7 @@ export class GuardianSDK {
     return this.getService(transaction.chain).estimateFee(transaction);
   }
 
-  sign(signingArgs: SigningWithPrivateKey): Promise<string> {
+  sign(signingArgs: BaseSignArgs): Promise<string> {
     return this.getService(signingArgs.transaction.chain).sign(signingArgs);
   }
 

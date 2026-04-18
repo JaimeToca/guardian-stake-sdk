@@ -2,12 +2,7 @@ import type { GuardianChain } from "../chain";
 import type { Balance } from "../entity/balance-types";
 import type { Transaction } from "../entity/transaction-types";
 import type { Fee } from "../entity/fee-types";
-import type {
-  BaseSignArgs,
-  CompileArgs,
-  PrehashResult,
-  SigningWithPrivateKey,
-} from "../entity/sign-types";
+import type { BaseSignArgs, CompileArgs, PrehashResult } from "../entity/sign-types";
 import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
 /** Chain-agnostic contract for the Guardian Service facade. Implemented by each chain package. */
 export interface GuardianServiceContract {
@@ -16,7 +11,7 @@ export interface GuardianServiceContract {
   getBalances(address: string): Promise<Balance[]>;
   getNonce(address: string): Promise<number>;
   estimateFee(transaction: Transaction): Promise<Fee>;
-  sign(signingArgs: SigningWithPrivateKey): Promise<string>;
+  sign(signingArgs: BaseSignArgs): Promise<string>;
   prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult>;
   compile(compileArgs: CompileArgs): Promise<string>;
   broadcast(rawTx: string): Promise<string>;

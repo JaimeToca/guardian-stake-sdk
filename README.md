@@ -226,21 +226,20 @@ for (const d of delegations) {
 
 ### `getBalances(chain, address)`
 
-Returns the four balance categories for an address.
+Returns the balance categories for an address. Each `Balance` has a `type` and an `amount` in the chain's native unit. The exact types returned and their meaning vary by chain — see the chain-specific docs for details:
+
+- [BNB Smart Chain — getBalances](./packages/bsc/README.md#getbalances)
+- [Cardano — getBalances](./packages/cardano/README.md#getbalances)
 
 **Returns:** `Promise<Balance[]>`
 
 ```typescript
-type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
+type BalanceType = "Available" | "Staked" | "Pending" | "Claimable" | "Rewards";
 
 interface Balance {
   type: BalanceType;
-  amount: bigint;   // In wei
+  amount: bigint; // in the chain's native unit (wei, lovelaces, …)
 }
-// Available  — Wallet balance, immediately spendable
-// Staked     — Delegated and earning rewards
-// Pending    — In the unbonding window
-// Claimable  — Unbonding complete, ready to withdraw
 ```
 
 ```typescript
@@ -252,7 +251,7 @@ for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount));
 }
 // Available  1.5
-// Staked     10.0
+// Staked     10.0   ← includes accrued rewards on BSC
 // Pending    2.0
 // Claimable  0.5
 ```

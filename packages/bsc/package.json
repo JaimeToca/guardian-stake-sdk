@@ -26,9 +26,11 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
+    "@guardian-sdk/sdk": "workspace:*",
     "viem": "2"
   },
   "devDependencies": {
+    "@guardian-sdk/sdk": "workspace:*",
     "tsup": "^8.5.1",
     "viem": "^2.47.10",
     "vitest": "^4.1.3"
