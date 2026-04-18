@@ -356,12 +356,15 @@ const balances = await sdk.getBalances(chains.bscMainnet, "0xYourAddress");
 
 **Returns:** `Promise<Balance[]>`
 
+| Type | What it represents on BSC |
+|---|---|
+| **Available** | Wallet BNB, free to spend, delegate, or transfer |
+| **Staked** | Sum of all Active + Inactive delegations — **rewards are included**: BSC validators fold accrued rewards back into the pooled BNB in `StakeCredit`, so your position grows over time. There is no separate unclaimed-rewards counter. |
+| **Pending** | Amount currently in the 7-day unbonding window — no longer earning rewards, not yet spendable |
+| **Claimable** | Unbonding complete — BNB held in the `StakeCredit` contract, ready to claim to your wallet |
+
 ```typescript
 type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
-// Available  — Wallet balance, immediately spendable
-// Staked     — Currently delegated and earning rewards
-// Pending    — In the 7-day unbonding window
-// Claimable  — Unbonding complete, ready to claim
 ```
 
 Example:

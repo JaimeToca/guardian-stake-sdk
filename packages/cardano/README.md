@@ -487,13 +487,16 @@ const balances = await sdk.getBalances(
 
 **Returns:** `Promise<Balance[]>`
 
+All amounts are in lovelaces (1 ADA = 1,000,000 lovelaces).
+
+| Type | What it represents on Cardano |
+|---|---|
+| **Available** | `controlled_amount` from Blockfrost — all ADA controlled by the stake key, fully spendable at all times |
+| **Staked** | Same as `Available` — delegation on Cardano does not lock or move any funds. The pool earns rewards on whatever ADA you hold at each epoch snapshot. |
+| **Rewards** | `withdrawable_amount` from Blockfrost — rewards that have been distributed and are sitting in the reward account, ready to withdraw via a `ClaimRewards` transaction |
+
 ```typescript
-// All amounts in lovelaces (1 ADA = 1,000,000 lovelaces)
-[
-  { type: "Available", amount: bigint },  // Blockfrost controlled_amount — fully spendable
-  { type: "Staked",    amount: bigint },  // Same as Available — delegation does not lock ADA
-  { type: "Claimable", amount: bigint },  // Blockfrost withdrawable_amount — rewards to claim
-]
+type BalanceType = "Available" | "Staked" | "Pending" | "Rewards";
 ```
 
 ```typescript

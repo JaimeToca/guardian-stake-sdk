@@ -28,7 +28,7 @@ export class BalanceService implements BalanceServiceContract {
       // Staked = same as Available in Cardano (all ADA earns rewards passively)
       { type: "Staked", amount: controlledAmount },
       // Accumulated rewards ready to withdraw
-      { type: "Claimable", amount: claimableRewards },
+      { type: "Rewards", amount: claimableRewards },
     ];
   }
 }

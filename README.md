@@ -230,17 +230,24 @@ Returns the four balance categories for an address.
 
 **Returns:** `Promise<Balance[]>`
 
+Each `Balance` has a `type` and an `amount` in the chain's native unit. The meaning of each type varies by chain:
+
+| Type | BSC | Cardano |
+|---|---|---|
+| **Available** | Wallet BNB, free to spend or delegate | All ADA controlled by the stake key — nothing is ever locked |
+| **Staked** | Active + Inactive delegations — **rewards are folded in**: validators auto-compound rewards into the delegation amount, so `Staked` grows over time without any action | Same as Available — delegation does not move or lock funds |
+| **Pending** | Undelegating, in the 7-day unbonding window — not yet spendable | Not applicable — Cardano has no unbonding period |
+| **Claimable** | Unbonding complete — BNB held in the StakeCredit contract, ready to claim | Accumulated rewards in the reward account, withdrawable right now |
+
+> **BSC note on Staked:** `Staked` includes accrued rewards because BSC validators fold rewards back into the pooled BNB. There is no separate unclaimed-rewards counter — to realise rewards you undelegate and go through `Pending → Claimable`.
+
 ```typescript
 type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
 
 interface Balance {
   type: BalanceType;
-  amount: bigint;   // In wei
+  amount: bigint;   // In wei / lovelaces
 }
-// Available  — Wallet balance, immediately spendable
-// Staked     — Delegated and earning rewards
-// Pending    — In the unbonding window
-// Claimable  — Unbonding complete, ready to withdraw
 ```
 
 ```typescript
