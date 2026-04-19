@@ -18,7 +18,6 @@ import { checkIfPaymentAddressIsValid } from "../validations";
  */
 const PLACEHOLDER_STAKE_KEY_HASH = "00".repeat(28);
 
-
 /**
  * Safety buffer applied on top of the calculated fee (10%).
  * Covers minor UTXO count variations without requiring iteration.
@@ -87,7 +86,11 @@ export class FeeService implements FeeServiceContract {
     const baseFee = this.calculateFee(txSizeBytes, protocolParams);
     const fee = baseFee + (baseFee * FEE_BUFFER_PERCENT) / 100n;
 
-    this.logger.debug("FeeService: fee estimated", { txSizeBytes, baseFee: baseFee.toString(), fee: fee.toString() });
+    this.logger.debug("FeeService: fee estimated", {
+      txSizeBytes,
+      baseFee: baseFee.toString(),
+      fee: fee.toString(),
+    });
 
     return { type: "UtxoFee", txSizeBytes, total: fee } satisfies Fee;
   }
