@@ -37,6 +37,7 @@ Abstracts Blockfrost API calls and CBOR transaction construction behind a clean,
 - [Logging](#logging)
 - [Error Handling](#error-handling)
 - [Supported Chains](#supported-chains)
+- [Roadmap](#roadmap)
 
 ---
 
@@ -972,5 +973,14 @@ import { chains } from "@guardian-sdk/cardano";
 import { SUPPORTED_CHAINS } from "@guardian-sdk/cardano";
 // [{ id: "cardano-mainnet", symbol: "ADA", decimals: 6, ... }]
 ```
+
+## Roadmap
+
+| Feature | Status | Issue |
+|---|---|---|
+| **`getValidators()` pagination** — Currently returns only the top 20 pools by live stake. Full pagination across all ~3,000 registered pools will be added, along with filtering and sorting options. | Planned | [#42](https://github.com/JaimeToca/guardian-stake-sdk/issues/42) |
+| **UTXO pagination beyond 100** — `getUtxos()` fetches a single page of 100 UTXOs. Wallets with more than 100 UTXOs may get an incomplete input set, breaking fee estimation and signing. A lazy strategy will fetch additional pages only when the current set is insufficient. | Planned | [#43](https://github.com/JaimeToca/guardian-stake-sdk/issues/43) |
+
+---
 
 ← Back to [Guardian SDK](../../README.md)

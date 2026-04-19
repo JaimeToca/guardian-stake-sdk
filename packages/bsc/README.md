@@ -712,10 +712,10 @@ const chains = getSupportedChains();
 
 ## Roadmap
 
-| Feature | Description |
-|---|---|
-| **Batch claim** | The `StakeHub` contract exposes `claimBatch(address[], uint256[])` to withdraw multiple unbond requests in a single transaction. The SDK currently only supports `claim(address, uint256)` — one request per transaction. Batch claim will remove the need to submit one transaction per `delegationIndex`. |
-| **Multi-validator delegation** | Delegating to multiple validators requires one transaction per validator. A future batch delegate helper will allow splitting an amount across multiple validators in a single SDK call, each producing and broadcasting its own transaction in sequence. |
+| Feature | Status | Issue |
+|---|---|---|
+| **Batch claim** — `StakeHub` exposes `claimBatch(address[], uint256[])` to withdraw multiple unbond requests in a single transaction. Currently one `ClaimTransaction` per `delegationIndex` is required. | Planned | [#40](https://github.com/JaimeToca/guardian-stake-sdk/issues/40) |
+| **Multi-validator delegation** — Delegating to multiple validators requires one transaction per validator. A batch delegate helper will allow splitting an amount across multiple validators in a single SDK call. | Planned | [#41](https://github.com/JaimeToca/guardian-stake-sdk/issues/41) |
 
 ---
 
