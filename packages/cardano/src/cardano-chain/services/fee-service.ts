@@ -18,6 +18,13 @@ import { checkIfPaymentAddressIsValid } from "../validations";
  */
 const PLACEHOLDER_STAKE_KEY_HASH = "00".repeat(28);
 
+
+/**
+ * Safety buffer applied on top of the calculated fee (10%).
+ * Covers minor UTXO count variations without requiring iteration.
+ */
+const FEE_BUFFER_PERCENT = 10n;
+
 /**
  * Cardano fee service.
  *
@@ -27,9 +34,19 @@ const PLACEHOLDER_STAKE_KEY_HASH = "00".repeat(28);
  *   fee = minFeeA × txSizeInBytes + minFeeB
  *
  * Where `minFeeA` and `minFeeB` are protocol parameters (currently ~44 and ~155381).
- * The fee depends on the size of the serialised transaction, which in turn depends
- * on the fee itself (it's included in the tx body). We resolve this with a mock
- * transaction (zero-filled witnesses) that gives an accurate byte count.
+ * Staking transactions have a predictable, near-fixed structure (same certificate
+ * count and output count for every user), so a single-pass estimate with a small
+ * buffer is accurate and simpler than iterating.
+ *
+ * ## Fee placeholder
+ *
+ * The fee field is part of the CBOR-encoded tx body, so its byte width affects
+ * the tx size and therefore the fee itself. Using 0n as a placeholder would
+ * encode as 1 CBOR byte while real fees encode as 5 bytes — causing a slight
+ * underestimate. Instead we use `minFeeB` (the protocol's base fee constant,
+ * currently ~155,381 lovelaces) which is always close to the real fee and
+ * encodes with the same CBOR width. This is derived from protocol params so it
+ * stays correct if the Cardano protocol ever adjusts `minFeeB`.
  */
 export class FeeService implements FeeServiceContract {
   /** Number of witnesses for a typical staking tx (payment key + staking key). */
@@ -64,11 +81,13 @@ export class FeeService implements FeeServiceContract {
       transaction,
       transaction.account,
       utxos,
-      protocolParams
+      protocolParams,
+      BigInt(protocolParams.min_fee_b)
     );
-    const fee = this.calculateFee(txSizeBytes, protocolParams);
+    const baseFee = this.calculateFee(txSizeBytes, protocolParams);
+    const fee = baseFee + (baseFee * FEE_BUFFER_PERCENT) / 100n;
 
-    this.logger.debug("FeeService: fee estimated", { txSizeBytes, fee: fee.toString() });
+    this.logger.debug("FeeService: fee estimated", { txSizeBytes, baseFee: baseFee.toString(), fee: fee.toString() });
 
     return { type: "UtxoFee", txSizeBytes, total: fee } satisfies Fee;
   }
@@ -77,16 +96,17 @@ export class FeeService implements FeeServiceContract {
     transaction: Transaction,
     paymentAddress: string,
     utxos: BlockfrostUtxo[],
-    params: BlockfrostProtocolParams
+    params: BlockfrostProtocolParams,
+    feePlaceholder: bigint
   ): number {
     const keyDeposit = BigInt(params.key_deposit);
     const coinsPerUtxoByte = BigInt(params.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE);
     const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
 
-    // Fee estimation uses worst-case: stake key always assumed unregistered.
+    // Worst-case assumptions: stake key unregistered (registration cert included).
     const certificates = buildCertificates(transaction, PLACEHOLDER_STAKE_KEY_HASH, false);
     const withdrawals = buildWithdrawals(transaction, PLACEHOLDER_STAKE_KEY_HASH);
-    const required = computeRequiredLovelaces(transaction, 0n, keyDeposit, false);
+    const required = computeRequiredLovelaces(transaction, feePlaceholder, keyDeposit, false);
 
     const { inputs, totalLovelaces, inputAssets } = selectUtxos(utxos, required + minUtxo);
 
@@ -98,7 +118,7 @@ export class FeeService implements FeeServiceContract {
       outputAddress: paymentAddress,
       outputLovelaces: rawChange < minUtxo ? minUtxo : rawChange,
       outputAssets: inputAssets,
-      fee: 0n,
+      fee: feePlaceholder,
       certificates: certificates.length > 0 ? certificates : undefined,
       withdrawals: withdrawals.size > 0 ? withdrawals : undefined,
     };
