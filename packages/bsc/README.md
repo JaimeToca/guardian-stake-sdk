@@ -22,6 +22,7 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
 - [Logging](#logging)
 - [Error Handling](#error-handling)
 - [Supported Chains](#supported-chains)
+- [Roadmap](#roadmap)
 
 ---
 
@@ -706,6 +707,15 @@ import { getSupportedChains } from "@guardian-sdk/bsc";
 const chains = getSupportedChains();
 // [{ id: "bsc-mainnet", symbol: "BNB", chainId: "56", ... }]
 ```
+
+---
+
+## Roadmap
+
+| Feature | Description |
+|---|---|
+| **Batch claim** | The `StakeHub` contract exposes `claimBatch(address[], uint256[])` to withdraw multiple unbond requests in a single transaction. The SDK currently only supports `claim(address, uint256)` — one request per transaction. Batch claim will remove the need to submit one transaction per `delegationIndex`. |
+| **Multi-validator delegation** | Delegating to multiple validators requires one transaction per validator. A future batch delegate helper will allow splitting an amount across multiple validators in a single SDK call, each producing and broadcasting its own transaction in sequence. |
 
 ---
 
