@@ -5,7 +5,7 @@ import type {
   DelegateTransaction,
   RedelegateTransaction,
   UndelegateTransaction,
-  ClaimTransaction,
+  ClaimRewardsTransaction,
 } from "@guardian-sdk/sdk";
 
 const { cardanoMainnet } = chains;
@@ -233,8 +233,8 @@ async function sample_claim_rewards() {
   const validators = await sdk.getValidators(cardanoMainnet);
   const validator = validators[0]; // any validator object — not used for Claim routing
 
-  const transaction: ClaimTransaction = {
-    type: "Claim",
+  const transaction: ClaimRewardsTransaction = {
+    type: "ClaimRewards",
     chain: cardanoMainnet,
     amount: claimable.amount,
     account: PAYMENT_ADDRESS,

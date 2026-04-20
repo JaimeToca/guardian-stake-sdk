@@ -1,6 +1,6 @@
 import { Cardano, Serialization } from "@cardano-sdk/core";
 import type { Transaction } from "@guardian-sdk/sdk";
-import { ValidationError } from "@guardian-sdk/sdk";
+import { ValidationError, SigningError } from "@guardian-sdk/sdk";
 import { buildRewardAccount, parsePoolId } from "../validations";
 import type { CardanoCertificate } from "./tx-builder";
 
@@ -113,7 +113,7 @@ export function rewardAccountWithdrawal(
   transaction: Transaction,
   rewardsAvailableToSweep: bigint
 ): bigint {
-  if (transaction.type === "Claim") return transaction.amount;
+  if (transaction.type === "ClaimRewards") return transaction.amount;
   if (transaction.type === "Undelegate") return rewardsAvailableToSweep;
   return 0n;
 }
@@ -131,7 +131,7 @@ export function buildWithdrawals(
   stakeKeyHashHex: string,
   rewardsAvailableToSweep = 0n
 ): Map<string, bigint> {
-  if (transaction.type === "Claim" && transaction.amount <= 0n) {
+  if (transaction.type === "ClaimRewards" && transaction.amount <= 0n) {
     throw new ValidationError("INVALID_AMOUNT", "Claim amount must be greater than zero.");
   }
 
@@ -158,7 +158,12 @@ export function computeRequiredLovelaces(
       return fee + (isStakeKeyRegistered ? 0n : keyDeposit);
     case "Redelegate":
     case "Undelegate":
-    case "Claim":
+    case "ClaimRewards":
       return fee;
+    default:
+      throw new SigningError(
+        "UNSUPPORTED_TRANSACTION_TYPE",
+        `computeRequiredLovelaces: unsupported transaction type "${(transaction as { type: string }).type}" on Cardano.`
+      );
   }
 }

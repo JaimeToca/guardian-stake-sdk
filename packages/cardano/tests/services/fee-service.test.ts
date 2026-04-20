@@ -58,9 +58,8 @@ describe("FeeService", () => {
       account: PAYMENT_ADDRESS,
     })) as any;
 
-    expect(fee.total).toBe(
-      BigInt(PARAMS.min_fee_a) * BigInt(fee.txSizeBytes) + BigInt(PARAMS.min_fee_b)
-    );
+    const baseFee = BigInt(PARAMS.min_fee_a) * BigInt(fee.txSizeBytes) + BigInt(PARAMS.min_fee_b);
+    expect(fee.total).toBe(baseFee + (baseFee * 10n) / 100n);
   });
 
   it("estimates a positive tx size in bytes", async () => {
@@ -116,7 +115,7 @@ describe("FeeService", () => {
     {
       name: "Claim",
       tx: {
-        type: "Claim" as const,
+        type: "ClaimRewards" as const,
         chain: cardanoMainnet,
         amount: 500_000n,
         validator: POOL_ID,

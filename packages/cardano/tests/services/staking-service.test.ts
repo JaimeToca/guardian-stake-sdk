@@ -218,14 +218,13 @@ describe("StakingService", () => {
       expect(stakingSummary.redelegateFeeRate).toBe(0);
     });
 
-    it("counts only active validators in activeValidators", async () => {
+    it("returns undefined for activeValidators and totalValidators (not available from getDelegations — use getValidators())", async () => {
       const service = new StakingService(new InMemoryCache(), makeRpcClient() as any);
 
       const { stakingSummary } = await service.getDelegations(accountFixture.stake_address);
 
-      // 1 active pool (pool 1), 1 retiring pool (pool 2)
-      expect(stakingSummary.activeValidators).toBe(1);
-      expect(stakingSummary.totalValidators).toBe(2);
+      expect(stakingSummary.activeValidators).toBeUndefined();
+      expect(stakingSummary.totalValidators).toBeUndefined();
     });
   });
 });

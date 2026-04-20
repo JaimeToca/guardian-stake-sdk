@@ -196,7 +196,7 @@ interface Delegation {
   validator: Validator;
   amount: bigint;               // Current value in wei
   status: DelegationStatus;    // Active | Pending | Claimable | Inactive
-  delegationIndex: bigint;     // Required for Claim transactions
+  delegationIndex: bigint;     // Required for ClaimDelegate transactions
   pendingUntil: number;        // Unix timestamp (ms) when unbonding completes
 }
 
@@ -300,7 +300,7 @@ const fee = await sdk.estimateFee({
 console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
-Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `Claim`. See the [BSC README](./packages/bsc/README.md#estimatefee) for the full shape of each.
+Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `ClaimDelegate` (BSC), `ClaimRewards` (Cardano). See the [BSC README](./packages/bsc/README.md#estimatefee) or [Cardano README](./packages/cardano/README.md#estimatefee) for the full shape of each.
 
 ---
 
@@ -532,7 +532,8 @@ All fixtures accept an optional `overrides` object — set only what matters for
 | `mockDelegateTransaction(overrides?)` | `DelegateTransaction` | Fee estimation, signing tests |
 | `mockUndelegateTransaction(overrides?)` | `UndelegateTransaction` | Undelegate flow tests |
 | `mockRedelegateTransaction(overrides?)` | `RedelegateTransaction` | Redelegate flow tests |
-| `mockClaimTransaction(overrides?)` | `ClaimTransaction` | Claim flow tests |
+| `mockClaimDelegateTransaction(overrides?)` | `ClaimDelegateTransaction` | BSC claim flow tests |
+| `mockClaimRewardsTransaction(overrides?)` | `ClaimRewardsTransaction` | Cardano rewards claim tests |
 | `MOCK_CHAIN` | `GuardianChain` | Neutral chain constant for tests that don't target a specific chain |
 
 ```typescript

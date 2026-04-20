@@ -12,7 +12,8 @@ export type {
   DelegateTransaction,
   UndelegateTransaction,
   RedelegateTransaction,
-  ClaimTransaction,
+  ClaimDelegateTransaction,
+  ClaimRewardsTransaction,
   OperatorAddress,
   TransactionType,
 } from "../entity/transaction-types";

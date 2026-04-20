@@ -11,7 +11,7 @@
 - `getDelegations()` fetches the delegated pool directly — pools outside the top 20 are always indexed
 - `getBalances()` reports `Available` (controlled ADA), `Staked` (same as Available — nothing is locked), and `Rewards` (withdrawable rewards) balances
 - `estimateFee()` uses iterative fee estimation — feeds the fee back into tx construction up to 3 passes until convergence, ensuring accuracy when a larger fee forces an extra UTXO or changes the CBOR size
-- `sign()` builds and signs `Delegate` / `Redelegate` / `Undelegate` / `Claim` transactions using `paymentPrivateKey` + `stakingPrivateKey`
+- `sign()` builds and signs `Delegate` / `Redelegate` / `Undelegate` / `ClaimRewards` transactions using `paymentPrivateKey` + `stakingPrivateKey`
 - `broadcast()` submits signed CBOR hex to Blockfrost `/tx/submit`
 - `Undelegate` transactions include an automatic reward sweep — the stake deregistration certificate requires all pending rewards to be withdrawn in the same transaction; the SDK fetches `withdrawable_amount` and adds the withdrawal field automatically
 - Blockfrost error handling maps only genuine `404`s to `null`; pools with no registered metadata are detected via an empty object response (`200 {}`) rather than a `404`; all other errors are rethrown

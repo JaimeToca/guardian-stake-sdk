@@ -176,7 +176,7 @@ export class SignService implements BscSignServiceContract {
         const shares = await this.bnbToShares(transaction);
         return { data: encodeUndelegate(operatorAddress, shares), amount: 0n };
       }
-      case "Claim": {
+      case "ClaimDelegate": {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
         return {
           data: encodeClaim(operatorAddress, transaction.index),

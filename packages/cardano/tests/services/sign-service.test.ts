@@ -173,7 +173,7 @@ describe("SignService", () => {
       {
         name: "claim",
         tx: {
-          type: "Claim" as const,
+          type: "ClaimRewards" as const,
           chain: cardanoMainnet,
           amount: 500_000n,
           validator: POOL_ID,
@@ -302,7 +302,8 @@ describe("SignService", () => {
       // serializedTransaction is the 32-byte (64 hex-char) Blake2b-256 hash of the tx body
       expect(typeof result.serializedTransaction).toBe("string");
       expect(result.serializedTransaction).toMatch(/^[0-9a-f]{64}$/);
-      expect(result.signArgs).toEqual(signArgs);
+      // result.signArgs contains _txBodyCbor in addition to the caller-provided fields
+      expect(result.signArgs).toMatchObject(signArgs);
     });
   });
 
@@ -332,9 +333,11 @@ describe("SignService", () => {
       });
     });
 
-    it("throws ValidationError when transaction.account is missing in compile", async () => {
+    it("throws SigningError when signArgs were not produced by prehash()", async () => {
       const service = new SignService(makeRpcClient() as any);
 
+      // compile() requires _txBodyCbor which is only present in signArgs returned by prehash().
+      // Passing manually-constructed signArgs must throw INVALID_SIGNING_ARGS.
       await expect(
         service.compile({
           signArgs: {
@@ -350,13 +353,17 @@ describe("SignService", () => {
           } as any,
           signature: `${"aa".repeat(64)}:${"cc".repeat(32)}:${"dd".repeat(64)}:${"cc".repeat(32)}`,
         })
-      ).rejects.toBeInstanceOf(ValidationError);
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("INVALID_SIGNING_ARGS");
+        return true;
+      });
     });
 
     it("returns a signed CBOR hex string from external signatures", async () => {
       const service = new SignService(makeRpcClient() as any);
 
-      const signArgs = {
+      const prehashArgs = {
         transaction: {
           type: "Delegate" as const,
           chain: cardanoMainnet,
@@ -367,16 +374,21 @@ describe("SignService", () => {
         },
         fee: CARDANO_FEE,
         nonce: 0,
+        stakingPublicKey: STAKING_PUBLIC_KEY,
       };
 
+      // compile() requires signArgs produced by prehash() — _txBodyCbor must be present
+      const { signArgs } = await service.prehash(prehashArgs as any);
+
       // format: paymentSigHex:stakingVKeyHex:stakingSigHex:paymentVKeyHex
+      // stakingVKey must match the STAKING_PUBLIC_KEY used in prehash() — compile() verifies this
       const paymentSig = "aa".repeat(64); // 64-byte signature
-      const stakingVKey = "cc".repeat(32); // 32-byte public key
+      const stakingVKey = STAKING_PUBLIC_KEY; // must match prehash stakingPublicKey
       const stakingSig = "dd".repeat(64); // 64-byte signature
       const paymentVKey = "ee".repeat(32); // 32-byte public key
       const signature = `${paymentSig}:${stakingVKey}:${stakingSig}:${paymentVKey}`;
 
-      const result = await service.compile({ signArgs: signArgs as any, signature });
+      const result = await service.compile({ signArgs, signature });
 
       expect(typeof result).toBe("string");
       expect(result).toMatch(/^[0-9a-f]+$/);

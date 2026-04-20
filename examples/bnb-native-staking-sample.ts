@@ -3,7 +3,7 @@ import { HDKey } from "@scure/bip32";
 import { mnemonicToSeedSync } from "@scure/bip39";
 import { GuardianSDK, chains, bsc, ConsoleLogger } from "@guardian-sdk/bsc";
 import type {
-  ClaimTransaction,
+  ClaimDelegateTransaction,
   DelegateTransaction,
   RedelegateTransaction,
   UndelegateTransaction,
@@ -230,8 +230,8 @@ async function sample_claim_transaction() {
       `Claiming ${delegation.amount} wei from ${delegation.validator.name} (index ${delegation.delegationIndex})`
     );
 
-    const transaction: ClaimTransaction = {
-      type: "Claim",
+    const transaction: ClaimDelegateTransaction = {
+      type: "ClaimDelegate",
       chain: bscMainnet,
       amount: delegation.amount,
       account: ADDRESS,

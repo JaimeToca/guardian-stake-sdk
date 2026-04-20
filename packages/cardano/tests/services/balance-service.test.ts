@@ -12,7 +12,7 @@ function makeRpcClient(account: Partial<BlockfrostAccount> = {}) {
 describe("BalanceService", () => {
   const STAKE_ADDRESS = accountFixture.stake_address;
 
-  it("returns Available, Staked, and Claimable balance types (no Pending — Cardano has no unbonding)", async () => {
+  it("returns Available, Staked, and Rewards balance types (no Pending — Cardano has no unbonding)", async () => {
     const service = new BalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
@@ -20,7 +20,7 @@ describe("BalanceService", () => {
 
     expect(types).toContain("Available");
     expect(types).toContain("Staked");
-    expect(types).toContain("Claimable");
+    expect(types).toContain("Rewards");
     expect(types).not.toContain("Pending");
   });
 
@@ -50,20 +50,20 @@ describe("BalanceService", () => {
     expect(staked?.amount).toBe(BigInt(accountFixture.controlled_amount));
   });
 
-  it("maps Claimable balance from withdrawable_amount", async () => {
+  it("maps Rewards balance from withdrawable_amount", async () => {
     const service = new BalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
-    const claimable = balances.find((b) => b.type === "Claimable");
+    const claimable = balances.find((b) => b.type === "Rewards");
 
     expect(claimable?.amount).toBe(BigInt(accountFixture.withdrawable_amount));
   });
 
-  it("returns zero claimable when withdrawable_amount is 0", async () => {
+  it("returns zero rewards when withdrawable_amount is 0", async () => {
     const service = new BalanceService(makeRpcClient({ withdrawable_amount: "0" }) as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
-    const claimable = balances.find((b) => b.type === "Claimable");
+    const claimable = balances.find((b) => b.type === "Rewards");
 
     expect(claimable?.amount).toBe(0n);
   });

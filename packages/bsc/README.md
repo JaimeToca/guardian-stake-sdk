@@ -117,9 +117,9 @@ Both `delegate` and `redelegate` accept a `bool delegateVotePower` parameter. Wh
 | **Pending** | Unbonding initiated — a 7-day lock is enforced before funds are accessible |
 | **Claimable** | Unbonding complete, BNB is held in the StakeCredit contract and ready to withdraw |
 
-Each `undelegate` call creates a numbered **unbond request** on the `StakeCredit` contract, indexed from 0. The index is what `Delegation.delegationIndex` tracks, and it is the value you pass as `index` when building a `ClaimTransaction`. A single address can have multiple concurrent unbond requests against the same validator, each with its own index and unlock time.
+Each `undelegate` call creates a numbered **unbond request** on the `StakeCredit` contract, indexed from 0. The index is what `Delegation.delegationIndex` tracks, and it is the value you pass as `index` when building a `ClaimDelegateTransaction`. A single address can have multiple concurrent unbond requests against the same validator, each with its own index and unlock time.
 
-> **Single claim only:** The SDK currently supports `claim(address, uint256)` — one unbond request per transaction. The contract also exposes `claimBatch(address[], uint256[])` for claiming multiple requests in one transaction, but this is not yet supported. To claim multiple positions, submit one `ClaimTransaction` per `delegationIndex`.
+> **Single claim only:** The SDK currently supports `claim(address, uint256)` — one unbond request per transaction. The contract also exposes `claimBatch(address[], uint256[])` for claiming multiple requests in one transaction, but this is not yet supported. To claim multiple positions, submit one `ClaimDelegateTransaction` per `delegationIndex`.
 
 ### Fee Model
 
@@ -321,7 +321,7 @@ interface Delegation {
   validator: Validator;
   amount: bigint;              // Current BNB value of the position, in wei (from getPooledBNB)
   status: DelegationStatus;   // Active | Pending | Claimable | Inactive
-  delegationIndex: bigint;    // Unbond request index — pass as `index` in ClaimTransaction
+  delegationIndex: bigint;    // Unbond request index — pass as `index` in ClaimDelegateTransaction
                                // Active delegations have delegationIndex: -1n
   pendingUntil: number;       // Unix timestamp (ms) when unbonding completes; 0 if claimable
 }
@@ -452,11 +452,11 @@ const fee = await sdk.estimateFee({
   toValidator: validators[1],
 });
 
-// Claim — withdraw BNB for a single unbond request after the unbonding period completes.
+// ClaimDelegate — withdraw BNB for a single unbond request after the unbonding period completes.
 // `index` is the unbond request number from delegation.delegationIndex.
-// To claim multiple positions, submit one ClaimTransaction per delegationIndex.
+// To claim multiple positions, submit one ClaimDelegateTransaction per delegationIndex.
 const fee = await sdk.estimateFee({
-  type: "Claim",
+  type: "ClaimDelegate",
   chain: chains.bscMainnet,
   amount: 0n,
   account: "0xYourAddress",
@@ -714,7 +714,7 @@ const chains = getSupportedChains();
 
 | Feature | Status | Issue |
 |---|---|---|
-| **Batch claim** — `StakeHub` exposes `claimBatch(address[], uint256[])` to withdraw multiple unbond requests in a single transaction. Currently one `ClaimTransaction` per `delegationIndex` is required. | Planned | [#40](https://github.com/JaimeToca/guardian-stake-sdk/issues/40) |
+| **Batch claim** — `StakeHub` exposes `claimBatch(address[], uint256[])` to withdraw multiple unbond requests in a single transaction. Currently one `ClaimDelegateTransaction` per `delegationIndex` is required. | Planned | [#40](https://github.com/JaimeToca/guardian-stake-sdk/issues/40) |
 | **Multi-validator delegation** — Delegating to multiple validators requires one transaction per validator. A batch delegate helper will allow splitting an amount across multiple validators in a single SDK call. | Planned | [#41](https://github.com/JaimeToca/guardian-stake-sdk/issues/41) |
 
 ---

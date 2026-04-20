@@ -32,7 +32,7 @@ Abstracts Blockfrost API calls and CBOR transaction construction behind a clean,
   - [Delegate — register and start staking](#delegate--register-and-start-staking)
   - [Redelegate — switch pool](#redelegate--switch-pool)
   - [Undelegate — stop staking and recover deposit](#undelegate--stop-staking-and-recover-deposit)
-  - [Claim — withdraw accumulated rewards](#claim--withdraw-accumulated-rewards)
+  - [ClaimRewards — withdraw accumulated rewards](#claimrewards--withdraw-accumulated-rewards)
 - [Signing Flows](#signing-flows)
 - [Logging](#logging)
 - [Error Handling](#error-handling)
@@ -101,7 +101,7 @@ This has two important consequences:
 
 ### Rewards
 
-Rewards do **not** auto-compound into your staked balance. They accumulate separately in your reward account and must be explicitly withdrawn using a `Claim` transaction.
+Rewards do **not** auto-compound into your staked balance. They accumulate separately in your reward account and must be explicitly withdrawn using a `ClaimRewards` transaction.
 
 Rewards become spendable two epochs after they are earned (see [Epochs and Reward Timing](#epochs-and-reward-timing)). The `Claimable` balance in `getBalances()` is the amount available to withdraw right now.
 
@@ -579,9 +579,9 @@ const fee = await sdk.estimateFee({
   validator: currentDelegation.validator,
 });
 
-// Claim — withdraw rewards
+// ClaimRewards — withdraw rewards
 const fee = await sdk.estimateFee({
-  type: "Claim",
+  type: "ClaimRewards",
   chain: chains.cardanoMainnet,
   amount: claimableAmount,     // exact lovelace amount to withdraw
   account: PAYMENT_ADDRESS,
@@ -826,13 +826,13 @@ console.log(`Deregistered! https://cardanoscan.io/transaction/${txHash}`);
 
 ---
 
-### Claim — withdraw accumulated rewards
+### ClaimRewards — withdraw accumulated rewards
 
 Withdraws accumulated rewards from the reward account to your payment address. Delegation continues uninterrupted.
 
 ```typescript
 const balances = await sdk.getBalances(chains.cardanoMainnet, STAKE_ADDRESS);
-const claimable = balances.find((b) => b.type === "Claimable")!;
+const claimable = balances.find((b) => b.type === "Rewards")!;
 
 if (claimable.amount === 0n) {
   console.log("No rewards available yet. Check back after the next epoch.");
@@ -840,7 +840,7 @@ if (claimable.amount === 0n) {
   const { delegations } = await sdk.getDelegations(chains.cardanoMainnet, STAKE_ADDRESS);
 
   const transaction = {
-    type: "Claim" as const,
+    type: "ClaimRewards" as const,
     chain: chains.cardanoMainnet,
     amount: claimable.amount,          // exact lovelace amount to withdraw
     account: PAYMENT_ADDRESS,

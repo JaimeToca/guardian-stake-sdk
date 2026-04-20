@@ -531,7 +531,7 @@ Every chain package needs its own README. Required sections:
 | **Protocol knowledge** | How staking works on this chain — delegation, unbonding, rewards, slashing. Link to official docs. This is the "encyclopedia" section — explain it thoroughly so developers don't need to look elsewhere. |
 | **Installation** | `npm install @guardian-sdk/<chain> viem` |
 | **Quick start** | Minimal code snippet to get validators + delegations using `chains.<chainName>Mainnet` |
-| **Transaction examples** | Table of real mainnet transactions on the explorer (Delegate, Undelegate, Redelegate, Claim) so developers can inspect the raw call data |
+| **Transaction examples** | Table of real mainnet transactions on the explorer (Delegate, Undelegate, Redelegate, and chain-specific claim type) so developers can inspect the raw call data |
 | **Chain constants** | Table: chainId, symbol, decimals, RPC endpoints, explorer, staking contract address |
 | **Protocol parameters** | Min delegation amount, unbonding period, redelegation fee (if any), slashing conditions |
 | **Error codes** | Tables for `ConfigError`, `ValidationError`, `SigningError` — one row per code with trigger condition |
@@ -546,7 +546,7 @@ Every chain package needs its own README. Required sections:
 | Delegate     | [0xabc…](https://<explorer>/tx/0xabc) |
 | Undelegate   | [0xdef…](https://<explorer>/tx/0xdef) |
 | Redelegate   | [0xghi…](https://<explorer>/tx/0xghi) |
-| Claim        | [0xjkl…](https://<explorer>/tx/0xjkl) |
+| ClaimDelegate / ClaimRewards | [0xjkl…](https://<explorer>/tx/0xjkl) |
 ```
 
 Find real examples by searching the explorer for calls to the staking contract.
