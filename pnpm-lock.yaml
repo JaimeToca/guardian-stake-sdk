@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@cardano-sdk/crypto':
+        specifier: ^0.4.5
+        version: 0.4.5
       '@changesets/cli':
         specifier: ^2.30.0
         version: 2.30.0(@types/node@25.6.0)

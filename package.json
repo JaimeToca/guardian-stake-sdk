@@ -29,6 +29,7 @@
   "author": "JaimeToca",
   "license": "MIT",
   "devDependencies": {
+    "@cardano-sdk/crypto": "^0.4.5",
     "@changesets/cli": "^2.30.0",
     "@guardian-sdk/sdk": "workspace:*",
     "@scure/bip32": "^2.0.1",
