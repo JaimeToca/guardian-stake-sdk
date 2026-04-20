@@ -19,6 +19,8 @@ const sdk = new GuardianSDK([
   }),
 ]);
 
+const MNEMONIC = process.env.BSC_MNEMONIC ?? "";
+
 async function sample_check_delegations() {
   const balances = await sdk.getBalances(bscMainnet, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
   console.log("Balances:", balances);
@@ -33,7 +35,6 @@ async function sample_check_delegations() {
 }
 
 async function sample_delegate_transaction() {
-  const MNEMONIC = "<your mnemonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18);
@@ -60,7 +61,6 @@ async function sample_delegate_transaction() {
 }
 
 async function sample_redelegate_transaction() {
-  const MNEMONIC = "<your mnemonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18);
@@ -89,7 +89,6 @@ async function sample_redelegate_transaction() {
 }
 
 async function sample_undelegate_transaction() {
-  const MNEMONIC = "<your mnemonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18);
@@ -118,7 +117,6 @@ async function sample_undelegate_transaction() {
 // Claims BNB for all positions that have completed the 7-day unbonding period.
 // Each undelegation has its own index — one claim transaction per position.
 async function sample_claim_transaction() {
-  const MNEMONIC = "<your mnemonic>";
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
 

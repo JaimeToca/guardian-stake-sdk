@@ -16,7 +16,7 @@ const { cardanoMainnet } = chains;
 // Blockfrost API key — get one free at https://blockfrost.io
 const sdk = new GuardianSDK([
   cardano({
-    apiKey: "",
+    apiKey: process.env.BLOCKFROST_API_KEY ?? "",
     logger: new ConsoleLogger("debug"),
   }),
 ]);
@@ -24,13 +24,13 @@ const sdk = new GuardianSDK([
 // In Cardano, balances and delegations are queried via the stake address (stake1...).
 // Transactions spend UTXOs from a payment address (addr1...).
 // Both are derived from the same root key — see deriveKeysFromMnemonic() below.
-const STAKE_ADDRESS = "stake1ux2f79kupeyy0n7cl8ddzewcgdamhh7xahz5y6uzv3u8lksa3dwn3";
-const PAYMENT_ADDRESS = "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x";
+const STAKE_ADDRESS = process.env.CARDANO_STAKE_ADDRESS ?? "stake1ux2f79kupeyy0n7cl8ddzewcgdamhh7xahz5y6uzv3u8lksa3dwn3";
+const PAYMENT_ADDRESS = process.env.CARDANO_PAYMENT_ADDRESS ?? "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x";
 
-// Raw Ed25519 private keys (32-byte hex). Derive these from your mnemonic
-// using deriveKeysFromMnemonic() below. NEVER commit real keys.
-const PAYMENT_PRIVATE_KEY = "<64-char hex payment private key>";
-const STAKING_PRIVATE_KEY = "<64-char hex staking private key>";
+// Raw Ed25519 private keys (32-byte hex). Set via environment variables — NEVER hardcode or commit.
+// Derive from your mnemonic using deriveKeysFromMnemonic() below.
+const PAYMENT_PRIVATE_KEY = process.env.CARDANO_PAYMENT_PRIVATE_KEY ?? "";
+const STAKING_PRIVATE_KEY = process.env.CARDANO_STAKING_PRIVATE_KEY ?? "";
 
 async function sample_check_delegations() {
   const balances = await sdk.getBalances(cardanoMainnet, STAKE_ADDRESS);

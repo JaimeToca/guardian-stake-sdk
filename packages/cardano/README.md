@@ -27,7 +27,6 @@ Abstracts Blockfrost API calls and CBOR transaction construction behind a clean,
   - [estimateFee](#estimatefee)
   - [sign](#sign)
   - [preHash and compile](#prehash-and-compile)
-  - [broadcast](#broadcast)
 - [Transaction Flows](#transaction-flows)
   - [Delegate — register and start staking](#delegate--register-and-start-staking)
   - [Redelegate — switch pool](#redelegate--switch-pool)
@@ -535,11 +534,11 @@ Estimates the transaction fee by fetching protocol parameters and UTXOs from Blo
 const fee = await sdk.estimateFee(transaction);
 ```
 
-**Returns:** `Promise<CardanoFee>`
+**Returns:** `Promise<UtxoFee>`
 
 ```typescript
-interface CardanoFee {
-  type: "CardanoFee";
+interface UtxoFee {
+  type: "UtxoFee";
   txSizeBytes: number;   // Estimated serialised transaction size in bytes
   total: bigint;         // Total fee in lovelaces
 }
