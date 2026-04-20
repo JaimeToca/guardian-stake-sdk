@@ -40,6 +40,6 @@
     "typedoc": "^0.28.18",
     "typedoc-plugin-merge-modules": "^7.0.0",
     "typescript": "^6.0.2",
-    "viem": "^2.47.10"
+    "viem": "^2.48.1"
   }
 }
