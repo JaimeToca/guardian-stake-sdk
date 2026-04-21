@@ -22,6 +22,13 @@ export function validateSignArgs(args: BaseSignArgs): void {
     );
   }
 
+  if (args.fee.type !== "GasFee") {
+    throw new ValidationError(
+      "INVALID_FEE",
+      `BSC transactions require a GasFee, got "${args.fee.type}".`
+    );
+  }
+
   if (args.fee.gasLimit <= 0n) {
     throw new ValidationError(
       "INVALID_FEE",

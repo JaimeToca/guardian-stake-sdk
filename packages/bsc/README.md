@@ -8,6 +8,7 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
 
 - [How BNB Native Staking Works](#how-bnb-native-staking-works)
 - [Installation](#installation)
+  - [Dependencies](#dependencies)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
   - [getValidators](#getvalidators)
@@ -22,6 +23,7 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
 - [Logging](#logging)
 - [Error Handling](#error-handling)
 - [Supported Chains](#supported-chains)
+- [Roadmap](#roadmap)
 
 ---
 
@@ -116,9 +118,9 @@ Both `delegate` and `redelegate` accept a `bool delegateVotePower` parameter. Wh
 | **Pending** | Unbonding initiated — a 7-day lock is enforced before funds are accessible |
 | **Claimable** | Unbonding complete, BNB is held in the StakeCredit contract and ready to withdraw |
 
-Each `undelegate` call creates a numbered **unbond request** on the `StakeCredit` contract, indexed from 0. The index is what `Delegation.delegationIndex` tracks, and it is the value you pass as `index` when building a `ClaimTransaction`. A single address can have multiple concurrent unbond requests against the same validator, each with its own index and unlock time.
+Each `undelegate` call creates a numbered **unbond request** on the `StakeCredit` contract, indexed from 0. The index is what `Delegation.delegationIndex` tracks, and it is the value you pass as `index` when building a `ClaimDelegateTransaction`. A single address can have multiple concurrent unbond requests against the same validator, each with its own index and unlock time.
 
-> **Single claim only:** The SDK currently supports `claim(address, uint256)` — one unbond request per transaction. The contract also exposes `claimBatch(address[], uint256[])` for claiming multiple requests in one transaction, but this is not yet supported. To claim multiple positions, submit one `ClaimTransaction` per `delegationIndex`.
+> **Single claim only:** The SDK currently supports `claim(address, uint256)` — one unbond request per transaction. The contract also exposes `claimBatch(address[], uint256[])` for claiming multiple requests in one transaction, but this is not yet supported. To claim multiple positions, submit one `ClaimDelegateTransaction` per `delegationIndex`.
 
 ### Fee Model
 
@@ -183,10 +185,17 @@ Jailed validators cannot receive new delegations. Existing delegations remain ac
 ## Installation
 
 ```bash
-npm install @guardian-sdk/bsc viem
+npm install @guardian-sdk/bsc @guardian-sdk/sdk viem
 ```
 
-`@guardian-sdk/sdk` is included automatically as a dependency of `@guardian-sdk/bsc`. `viem` is a peer dependency — if your project already uses it, the same instance will be shared.
+### Dependencies
+
+| Package | Role |
+|---|---|
+| [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | Peer dependency — chain-agnostic core, shared types and interfaces |
+| [`viem`](https://www.npmjs.com/package/viem) | Peer dependency — EVM client library for encoding, signing, and RPC |
+
+If your project already uses `@guardian-sdk/sdk` or `viem`, the same instances will be shared — no duplicate copies.
 
 ---
 
@@ -320,7 +329,7 @@ interface Delegation {
   validator: Validator;
   amount: bigint;              // Current BNB value of the position, in wei (from getPooledBNB)
   status: DelegationStatus;   // Active | Pending | Claimable | Inactive
-  delegationIndex: bigint;    // Unbond request index — pass as `index` in ClaimTransaction
+  delegationIndex: bigint;    // Unbond request index — pass as `index` in ClaimDelegateTransaction
                                // Active delegations have delegationIndex: -1n
   pendingUntil: number;       // Unix timestamp (ms) when unbonding completes; 0 if claimable
 }
@@ -356,12 +365,15 @@ const balances = await sdk.getBalances(chains.bscMainnet, "0xYourAddress");
 
 **Returns:** `Promise<Balance[]>`
 
+| Type | What it represents on BSC |
+|---|---|
+| **Available** | Wallet BNB, free to spend, delegate, or transfer |
+| **Staked** | Sum of all Active + Inactive delegations — **rewards are included**: BSC validators fold accrued rewards back into the pooled BNB in `StakeCredit`, so your position grows over time. There is no separate unclaimed-rewards counter. |
+| **Pending** | Amount currently in the 7-day unbonding window — no longer earning rewards, not yet spendable |
+| **Claimable** | Unbonding complete — BNB held in the `StakeCredit` contract, ready to claim to your wallet |
+
 ```typescript
 type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
-// Available  — Wallet balance, immediately spendable
-// Staked     — Currently delegated and earning rewards
-// Pending    — In the 7-day unbonding window
-// Claimable  — Unbonding complete, ready to claim
 ```
 
 Example:
@@ -448,11 +460,11 @@ const fee = await sdk.estimateFee({
   toValidator: validators[1],
 });
 
-// Claim — withdraw BNB for a single unbond request after the unbonding period completes.
+// ClaimDelegate — withdraw BNB for a single unbond request after the unbonding period completes.
 // `index` is the unbond request number from delegation.delegationIndex.
-// To claim multiple positions, submit one ClaimTransaction per delegationIndex.
+// To claim multiple positions, submit one ClaimDelegateTransaction per delegationIndex.
 const fee = await sdk.estimateFee({
-  type: "Claim",
+  type: "ClaimDelegate",
   chain: chains.bscMainnet,
   amount: 0n,
   account: "0xYourAddress",
@@ -703,6 +715,15 @@ import { getSupportedChains } from "@guardian-sdk/bsc";
 const chains = getSupportedChains();
 // [{ id: "bsc-mainnet", symbol: "BNB", chainId: "56", ... }]
 ```
+
+---
+
+## Roadmap
+
+| Feature | Status | Issue |
+|---|---|---|
+| **Batch claim** — `StakeHub` exposes `claimBatch(address[], uint256[])` to withdraw multiple unbond requests in a single transaction. Currently one `ClaimDelegateTransaction` per `delegationIndex` is required. | Planned | [#40](https://github.com/JaimeToca/guardian-stake-sdk/issues/40) |
+| **Multi-validator delegation** — Delegating to multiple validators requires one transaction per validator. A batch delegate helper will allow splitting an amount across multiple validators in a single SDK call. | Planned | [#41](https://github.com/JaimeToca/guardian-stake-sdk/issues/41) |
 
 ---
 

@@ -10,6 +10,7 @@ export {
   mockDelegateTransaction,
   mockUndelegateTransaction,
   mockRedelegateTransaction,
-  mockClaimTransaction,
+  mockClaimDelegateTransaction,
+  mockClaimRewardsTransaction,
 } from "./mock-service";
 export type { Transaction } from "./mock-service";

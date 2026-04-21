@@ -21,6 +21,8 @@ export default [
         "./packages/sdk/tsconfig.json",
         "./packages/bsc/tsconfig.json",
         "./packages/bsc/tsconfig.test.json",
+        "./packages/cardano/tsconfig.json",
+        "./packages/cardano/tsconfig.test.json",
       ],
         tsconfigRootDir: import.meta.dirname,
       },

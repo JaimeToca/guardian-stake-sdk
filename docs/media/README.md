@@ -66,7 +66,7 @@ Delegate ──► Active (earning rewards)
              Time passes
                 │
                 ▼
-            Claimable ──► Claim ──► BNB returned to wallet
+            Claimable ──► ClaimDelegate ──► BNB returned to wallet
 ```
 
 | Stage | Description |
@@ -356,9 +356,9 @@ const fee = await sdk.estimateFee({
   toValidator: validators[1],
 });
 
-// Claim — withdraw BNB after the unbonding period completes
+// ClaimDelegate — withdraw BNB after the unbonding period completes
 const fee = await sdk.estimateFee({
-  type: "Claim",
+  type: "ClaimDelegate",
   chain: chains.bscMainnet,
   amount: 0n,
   account: "0xYourAddress",
@@ -511,7 +511,7 @@ import { ValidationError } from "@guardian-sdk/bsc";
 | Code | Thrown when |
 |---|---|
 | `INVALID_ADDRESS` | An address string fails the chain's address format check — e.g. `getDelegations`, `getBalances`, `getNonce`, or a validator/account address inside a transaction |
-| `INVALID_AMOUNT` | A transaction `amount` is zero or negative (Claim transactions are exempt) |
+| `INVALID_AMOUNT` | A transaction `amount` is zero or negative (`ClaimDelegate` and `ClaimRewards` transactions are exempt) |
 | `INVALID_NONCE` | The `nonce` passed to `sign`, `preHash`, or `compile` is negative or not an integer |
 | `INVALID_FEE` | The `fee.gasLimit` or `fee.gasPrice` passed to `sign`, `preHash`, or `compile` is zero or negative |
 

@@ -134,6 +134,13 @@ export class SignService implements BscSignServiceContract {
     const fee = signArgs.fee;
     const nonce = signArgs.nonce;
 
+    if (fee.type !== "GasFee") {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        `BSC sign service requires a GasFee, got "${fee.type}".`
+      );
+    }
+
     return {
       to: STAKING_CONTRACT,
       value: amount,
@@ -169,7 +176,7 @@ export class SignService implements BscSignServiceContract {
         const shares = await this.bnbToShares(transaction);
         return { data: encodeUndelegate(operatorAddress, shares), amount: 0n };
       }
-      case "Claim": {
+      case "ClaimDelegate": {
         const operatorAddress = this.getValidatorAddress(transaction.validator);
         return {
           data: encodeClaim(operatorAddress, transaction.index),

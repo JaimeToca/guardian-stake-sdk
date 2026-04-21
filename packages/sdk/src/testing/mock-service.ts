@@ -8,7 +8,8 @@ import type {
   DelegateTransaction,
   UndelegateTransaction,
   RedelegateTransaction,
-  ClaimTransaction,
+  ClaimDelegateTransaction,
+  ClaimRewardsTransaction,
 } from "../entity/transaction-types";
 
 // ─── Chain ───────────────────────────────────────────────────────────────────
@@ -238,18 +239,34 @@ export function mockRedelegateTransaction(
 }
 
 /**
- * Builds a `ClaimTransaction` fixture.
+ * Builds a `ClaimDelegateTransaction` fixture (BSC — claim unbonded funds).
  */
-export function mockClaimTransaction(
-  overrides: Partial<ClaimTransaction> = {},
+export function mockClaimDelegateTransaction(
+  overrides: Partial<ClaimDelegateTransaction> = {},
   chain: GuardianChain = MOCK_CHAIN
-): ClaimTransaction {
+): ClaimDelegateTransaction {
   return {
-    type: "Claim",
+    type: "ClaimDelegate",
     chain,
     amount: 0n,
     validator: mockValidator(),
     index: 0n,
+    ...overrides,
+  };
+}
+
+/**
+ * Builds a `ClaimRewardsTransaction` fixture (Cardano — withdraw accumulated rewards).
+ */
+export function mockClaimRewardsTransaction(
+  overrides: Partial<ClaimRewardsTransaction> = {},
+  chain: GuardianChain = MOCK_CHAIN
+): ClaimRewardsTransaction {
+  return {
+    type: "ClaimRewards",
+    chain,
+    amount: 1_000_000n,
+    validator: mockValidator(),
     ...overrides,
   };
 }

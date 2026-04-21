@@ -2,12 +2,7 @@ import type { GuardianChain } from "@guardian-sdk/sdk";
 import type { Balance } from "@guardian-sdk/sdk";
 import type { Fee } from "@guardian-sdk/sdk";
 import type { GuardianServiceContract } from "@guardian-sdk/sdk";
-import type {
-  SigningWithPrivateKey,
-  BaseSignArgs,
-  PrehashResult,
-  CompileArgs,
-} from "@guardian-sdk/sdk";
+import type { BaseSignArgs, PrehashResult, CompileArgs } from "@guardian-sdk/sdk";
 import type { Transaction } from "@guardian-sdk/sdk";
 import type {
   BalanceServiceContract,
@@ -62,8 +57,8 @@ export class GuardianService implements GuardianServiceContract {
     return this.feeService.estimateFee(transaction);
   }
 
-  sign(signingArgs: SigningWithPrivateKey | SigningWithAccount): Promise<string> {
-    return this.signService.sign(signingArgs);
+  sign(signingArgs: BaseSignArgs): Promise<string> {
+    return this.signService.sign(signingArgs as SigningWithAccount);
   }
 
   prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult> {

@@ -5,7 +5,7 @@ export interface Validator {
   description: string;
   image: string | undefined;
   apy: number;
-  delegators: number;
+  delegators: number | undefined;
   operatorAddress: string;
   creditAddress: string;
 }
@@ -43,6 +43,6 @@ export interface StakingSummary {
   minAmountToStake: bigint;
   unboundPeriodInMillis: number;
   redelegateFeeRate: number;
-  activeValidators: number;
-  totalValidators: number;
+  activeValidators: number | undefined;
+  totalValidators: number | undefined;
 }

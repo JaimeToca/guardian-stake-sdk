@@ -196,7 +196,7 @@ interface Delegation {
   validator: Validator;
   amount: bigint;               // Current value in wei
   status: DelegationStatus;    // Active | Pending | Claimable | Inactive
-  delegationIndex: bigint;     // Required for Claim transactions
+  delegationIndex: bigint;     // Required for ClaimDelegate transactions
   pendingUntil: number;        // Unix timestamp (ms) when unbonding completes
 }
 
@@ -226,21 +226,20 @@ for (const d of delegations) {
 
 ### `getBalances(chain, address)`
 
-Returns the four balance categories for an address.
+Returns the balance categories for an address. Each `Balance` has a `type` and an `amount` in the chain's native unit. The exact types returned and their meaning vary by chain — see the chain-specific docs for details:
+
+- [BNB Smart Chain — getBalances](./packages/bsc/README.md#getbalances)
+- [Cardano — getBalances](./packages/cardano/README.md#getbalances)
 
 **Returns:** `Promise<Balance[]>`
 
 ```typescript
-type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
+type BalanceType = "Available" | "Staked" | "Pending" | "Claimable" | "Rewards";
 
 interface Balance {
   type: BalanceType;
-  amount: bigint;   // In wei
+  amount: bigint; // in the chain's native unit (wei, lovelaces, …)
 }
-// Available  — Wallet balance, immediately spendable
-// Staked     — Delegated and earning rewards
-// Pending    — In the unbonding window
-// Claimable  — Unbonding complete, ready to withdraw
 ```
 
 ```typescript
@@ -252,7 +251,7 @@ for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount));
 }
 // Available  1.5
-// Staked     10.0
+// Staked     10.0   ← includes accrued rewards on BSC
 // Pending    2.0
 // Claimable  0.5
 ```
@@ -301,7 +300,7 @@ const fee = await sdk.estimateFee({
 console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
-Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `Claim`. See the [BSC README](./packages/bsc/README.md#estimatefee) for the full shape of each.
+Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `ClaimDelegate` (BSC), `ClaimRewards` (Cardano). See the [BSC README](./packages/bsc/README.md#estimatefee) or [Cardano README](./packages/cardano/README.md#estimatefee) for the full shape of each.
 
 ---
 
@@ -533,7 +532,8 @@ All fixtures accept an optional `overrides` object — set only what matters for
 | `mockDelegateTransaction(overrides?)` | `DelegateTransaction` | Fee estimation, signing tests |
 | `mockUndelegateTransaction(overrides?)` | `UndelegateTransaction` | Undelegate flow tests |
 | `mockRedelegateTransaction(overrides?)` | `RedelegateTransaction` | Redelegate flow tests |
-| `mockClaimTransaction(overrides?)` | `ClaimTransaction` | Claim flow tests |
+| `mockClaimDelegateTransaction(overrides?)` | `ClaimDelegateTransaction` | BSC claim flow tests |
+| `mockClaimRewardsTransaction(overrides?)` | `ClaimRewardsTransaction` | Cardano rewards claim tests |
 | `MOCK_CHAIN` | `GuardianChain` | Neutral chain constant for tests that don't target a specific chain |
 
 ```typescript
