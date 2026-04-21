@@ -29,8 +29,10 @@ export function isCardanoSigningWithPrivateKey(
  * the stake key hash) is built correctly before it is hashed and sent for signing.
  *
  * `serializedTransaction` in the returned `PrehashResult` is the Blake2b-256 hash of
- * the transaction body — the exact 32-byte (64 hex-char) preimage the external signer
- * must sign with Ed25519.
+ * the serialized transaction body (not the CBOR body itself) — the exact 32-byte
+ * (64 hex-char) preimage the external signer must sign with Ed25519. The serialized
+ * CBOR body is carried separately in `PrehashResult.signArgs._txBodyCbor` and is used
+ * by `compile()` to reconstruct the transaction without re-fetching chain state.
  */
 export interface CardanoPrehashArgs extends BaseSignArgs {
   stakingPublicKey: string; // 32-byte Ed25519 public key as 64-char hex
