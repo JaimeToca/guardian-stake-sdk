@@ -8,6 +8,7 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
 
 - [How BNB Native Staking Works](#how-bnb-native-staking-works)
 - [Installation](#installation)
+  - [Dependencies](#dependencies)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
   - [getValidators](#getvalidators)
@@ -187,7 +188,14 @@ Jailed validators cannot receive new delegations. Existing delegations remain ac
 npm install @guardian-sdk/bsc @guardian-sdk/sdk viem
 ```
 
-`@guardian-sdk/sdk` and `viem` are peer dependencies — if your project already uses them, the same instances will be shared with no duplicate copies.
+### Dependencies
+
+| Package | Role |
+|---|---|
+| [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | Peer dependency — chain-agnostic core, shared types and interfaces |
+| [`viem`](https://www.npmjs.com/package/viem) | Peer dependency — EVM client library for encoding, signing, and RPC |
+
+If your project already uses `@guardian-sdk/sdk` or `viem`, the same instances will be shared — no duplicate copies.
 
 ---
 

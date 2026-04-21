@@ -17,6 +17,7 @@ Abstracts Blockfrost API calls and CBOR transaction construction behind a clean,
   - [Key Protocol Parameters](#key-protocol-parameters)
 - [Blockfrost Setup](#blockfrost-setup)
 - [Installation](#installation)
+  - [Dependencies](#dependencies)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
   - [cardano()](#cardano)
@@ -303,7 +304,16 @@ The SDK caches validator lists for 10 minutes to reduce API calls. Stake account
 npm install @guardian-sdk/cardano @guardian-sdk/sdk @cardano-sdk/core @cardano-sdk/crypto @cardano-sdk/util
 ```
 
-All peer dependencies must be installed alongside this package. If your project already has any of them, the same instances will be shared — no duplicate copies. The signing and hashing libraries (`@noble/ed25519`, `@noble/hashes`, `@scure/base`) are bundled as regular dependencies.
+### Dependencies
+
+| Package | Role |
+|---|---|
+| [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | Peer dependency — chain-agnostic core, shared types and interfaces |
+| [`@cardano-sdk/core`](https://www.npmjs.com/package/@cardano-sdk/core) | Peer dependency — Cardano primitives: addresses, transactions, certificates |
+| [`@cardano-sdk/crypto`](https://www.npmjs.com/package/@cardano-sdk/crypto) | Peer dependency — Ed25519 key operations and Blake2b hashing |
+| [`@cardano-sdk/util`](https://www.npmjs.com/package/@cardano-sdk/util) | Peer dependency — shared utilities for the Cardano SDK family |
+
+If your project already uses any of these, the same instances will be shared — no duplicate copies. The signing and hashing libraries (`@noble/ed25519`, `@noble/hashes`, `@scure/base`) are bundled as regular dependencies and do not need to be installed separately.
 
 ---
 
