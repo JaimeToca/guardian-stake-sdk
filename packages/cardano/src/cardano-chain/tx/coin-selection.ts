@@ -74,7 +74,7 @@ export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint):
 
   const inputs: TxInput[] = selected.map(({ utxo }) => ({
     txHashHex: utxo.tx_hash,
-    index: utxo.tx_index,
+    index: utxo.output_index,
   }));
 
   // Collect native tokens from any selected multi-asset UTXOs.

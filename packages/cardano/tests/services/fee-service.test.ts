@@ -119,7 +119,6 @@ describe("FeeService", () => {
         chain: cardanoMainnet,
         amount: 500_000n,
         validator: POOL_ID,
-        index: 0n,
         account: PAYMENT_ADDRESS,
       },
     },

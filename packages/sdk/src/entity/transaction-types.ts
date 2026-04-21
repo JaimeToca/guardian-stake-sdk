@@ -67,5 +67,4 @@ export interface ClaimDelegateTransaction extends BaseTransaction {
 export interface ClaimRewardsTransaction extends BaseTransaction {
   type: "ClaimRewards";
   validator: Validator | OperatorAddress;
-  index: bigint;
 }

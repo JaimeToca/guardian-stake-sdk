@@ -163,7 +163,6 @@ async function sample_claim_rewards() {
     amount: rewards.amount,
     account: PAYMENT_ADDRESS,
     validator: validators[0],
-    index: 0n,
   };
 
   const fee = await sdk.estimateFee(transaction);

@@ -267,7 +267,6 @@ export function mockClaimRewardsTransaction(
     chain,
     amount: 1_000_000n,
     validator: mockValidator(),
-    index: 0n,
     ...overrides,
   };
 }
