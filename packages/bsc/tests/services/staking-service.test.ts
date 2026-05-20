@@ -49,6 +49,7 @@ describe("StakingService", () => {
       const stakingRpcClient = makeStakingRpcClient();
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -62,6 +63,7 @@ describe("StakingService", () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
@@ -77,6 +79,7 @@ describe("StakingService", () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
@@ -104,6 +107,7 @@ describe("StakingService", () => {
       const stakingRpcClient = makeStakingRpcClient();
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -118,6 +122,7 @@ describe("StakingService", () => {
       const stakingRpcClient = makeStakingRpcClient();
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -130,6 +135,7 @@ describe("StakingService", () => {
     it("filters by a single status", async () => {
       const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         makeStakingRpcClient() as any,
         bnbRpcClient as any
@@ -147,6 +153,7 @@ describe("StakingService", () => {
       const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         makeStakingRpcClient() as any,
         bnbRpcClient as any
       );
@@ -157,6 +164,7 @@ describe("StakingService", () => {
 
     it("returns all validators when no params are provided", async () => {
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         makeStakingRpcClient() as any,
         makeBNBRpcClient() as any
@@ -169,6 +177,7 @@ describe("StakingService", () => {
     it("passes page and pageSize to the RPC client", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         makeStakingRpcClient() as any,
         bnbRpcClient as any
@@ -183,6 +192,7 @@ describe("StakingService", () => {
       const bnbRpcClient = makeBNBRpcClient();
       // Mock returns total: 3 for our 3-validator fixture
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         makeStakingRpcClient() as any,
         bnbRpcClient as any
@@ -200,6 +210,7 @@ describe("StakingService", () => {
     it("throws ValidationError for page 0", async () => {
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         makeStakingRpcClient() as any,
         makeBNBRpcClient() as any
       );
@@ -214,6 +225,7 @@ describe("StakingService", () => {
     it("throws ValidationError for negative page", async () => {
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         makeStakingRpcClient() as any,
         makeBNBRpcClient() as any
       );
@@ -227,6 +239,7 @@ describe("StakingService", () => {
 
     it("throws ValidationError for pageSize 0", async () => {
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         makeStakingRpcClient() as any,
         makeBNBRpcClient() as any
@@ -250,6 +263,7 @@ describe("StakingService", () => {
       ]);
       const stakingRpcClient = makeStakingRpcClient(partialMap as any);
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
@@ -275,6 +289,7 @@ describe("StakingService", () => {
         VALIDATORS.map(() => ({ status: "success", result: 0n }))
       );
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
@@ -306,6 +321,7 @@ describe("StakingService", () => {
       });
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -335,6 +351,7 @@ describe("StakingService", () => {
       });
       const service = createStakingService(
         createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -351,6 +368,7 @@ describe("StakingService", () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
       const service = createStakingService(
+        createInMemoryCache(),
         createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any

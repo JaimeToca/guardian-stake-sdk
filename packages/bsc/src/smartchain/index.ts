@@ -1,5 +1,5 @@
 import { createPublicClient, http } from "viem";
-import type { GuardianServiceContract, Logger } from "@guardian-sdk/sdk";
+import type { GuardianServiceContract, Logger, Validator, ValidatorsPage } from "@guardian-sdk/sdk";
 import { createInMemoryCache, NoopLogger, validateRpcUrl } from "@guardian-sdk/sdk";
 import { bscMainnet, getViemChain } from "../chain";
 import { createStakingRpcClient } from "./rpc/staking-rpc-client";
@@ -38,7 +38,8 @@ export function bsc(config: { rpcUrl: string; logger?: Logger }): GuardianServic
   const stakingRpc = createStakingRpcClient(client, logger);
   const bnbRpc = createBnbRpcClient(logger);
   const staking = createStakingService(
-    createInMemoryCache<string, unknown>(),
+    createInMemoryCache<string, Validator[]>(),
+    createInMemoryCache<string, ValidatorsPage>(),
     stakingRpc,
     bnbRpc,
     logger

@@ -70,14 +70,15 @@ function mapValidators(
 }
 
 export function createStakingService(
-  cache: CacheContract<string, unknown>,
+  allValidatorsCache: CacheContract<string, Validator[]>,
+  pageCache: CacheContract<string, ValidatorsPage>,
   stakingRpcClient: StakingRpcClientContract,
   bnbRpcClient: BNBRpcClientContract,
   logger: Logger = new NoopLogger()
 ): StakingServiceContract {
   // BSC has ~50–60 validators — fetching all in one shot is intentional and cheap.
   async function fetchAllValidators(): Promise<Validator[]> {
-    const cached = cache.get(VALIDATOR_ALL_CACHE_KEY) as Validator[] | undefined;
+    const cached = allValidatorsCache.get(VALIDATOR_ALL_CACHE_KEY);
     if (cached) {
       logger.debug("StakingService: all-validators cache hit", { count: cached.length });
       return cached;
@@ -90,7 +91,7 @@ export function createStakingService(
     ]);
 
     const validators = mapValidators(bnbValidators, contractValidators, logger);
-    cache.set(VALIDATOR_ALL_CACHE_KEY, validators);
+    allValidatorsCache.set(VALIDATOR_ALL_CACHE_KEY, validators);
     logger.debug("StakingService: all-validators cached", { count: validators.length });
     return validators;
   }
@@ -185,7 +186,7 @@ export function createStakingService(
 
       const cacheKey = validatorPageCacheKey(page, pageSize);
 
-      const cached = cache.get(cacheKey) as ValidatorsPage | undefined;
+      const cached = pageCache.get(cacheKey);
       if (cached) {
         logger.debug("StakingService: validator page cache hit", { page, pageSize });
         return {
@@ -215,7 +216,7 @@ export function createStakingService(
         },
       };
 
-      cache.set(cacheKey, result);
+      pageCache.set(cacheKey, result);
       logger.debug("StakingService: validator page cached", { page, pageSize, total });
       return {
         ...result,
