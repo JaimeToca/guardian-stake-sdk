@@ -1,17 +1,15 @@
 import { createPublicClient, http } from "viem";
 import type { GuardianServiceContract, Validator, Logger } from "@guardian-sdk/sdk";
-import { InMemoryCache, NoopLogger, validateRpcUrl } from "@guardian-sdk/sdk";
-import type { GuardianChain } from "@guardian-sdk/sdk";
-import { GuardianService } from "./services/guardian-service";
+import { createInMemoryCache, NoopLogger, validateRpcUrl } from "@guardian-sdk/sdk";
 import { bscMainnet, getViemChain } from "../chain";
-import { BalanceService } from "./services/balance-service";
-import { StakingService } from "./services/staking-service";
-import { BNBRpcClient } from "./rpc/bnb-rpc-client";
-import { StakingRpcClient } from "./rpc/staking-rpc-client";
-import { NonceService } from "./services/nonce-service";
-import { FeeService } from "./services/fee-service";
-import { SignService } from "./services/sign-service";
-import { BroadcastService } from "./services/broadcast-service";
+import { createStakingRpcClient } from "./rpc/staking-rpc-client";
+import { createBnbRpcClient } from "./rpc/bnb-rpc-client";
+import { createStakingService } from "./services/staking-service";
+import { createSignService } from "./services/sign-service";
+import { createFeeService } from "./services/fee-service";
+import { createBalanceService } from "./services/balance-service";
+import { getNonce } from "./services/nonce-service";
+import { broadcast } from "./services/broadcast-service";
 
 /**
  * Creates a GuardianServiceContract for BNB Smart Chain.
@@ -20,7 +18,7 @@ import { BroadcastService } from "./services/broadcast-service";
  * @example
  * ```typescript
  * import { GuardianSDK } from "@guardian-sdk/sdk";
- * import { bsc, chains } from "@guardian-sdk/bsc";
+ * import { bsc } from "@guardian-sdk/bsc";
  *
  * const sdk = new GuardianSDK([
  *   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
@@ -29,39 +27,36 @@ import { BroadcastService } from "./services/broadcast-service";
  */
 export function bsc(config: { rpcUrl: string; logger?: Logger }): GuardianServiceContract {
   validateRpcUrl(config.rpcUrl);
-  return provideGuarService(bscMainnet, config.rpcUrl, config.logger ?? new NoopLogger());
-}
+  const logger = config.logger ?? new NoopLogger();
 
-function provideGuarService(
-  chain: GuardianChain,
-  rpcUrl: string,
-  logger: Logger
-): GuardianServiceContract {
   const client = createPublicClient({
-    chain: getViemChain(chain),
-    transport: http(rpcUrl),
-    batch: {
-      multicall: true,
-    },
+    chain: getViemChain(bscMainnet),
+    transport: http(config.rpcUrl),
+    batch: { multicall: true },
   });
-  const cache = new InMemoryCache<string, Validator[]>();
-  const stakingRpcClient = new StakingRpcClient(client, logger);
-  const bnbRpcClient = new BNBRpcClient(logger);
-  const stakingService = new StakingService(cache, stakingRpcClient, bnbRpcClient, logger);
 
-  const balanceService = new BalanceService(client, stakingService);
-  const nonceService = new NonceService(client);
-  const signService = new SignService(stakingRpcClient, logger);
-  const feeService = new FeeService(client, signService, logger);
-  const broadcastService = new BroadcastService(client, logger);
-
-  return new GuardianService(
-    chain,
-    balanceService,
-    nonceService,
-    feeService,
-    signService,
-    stakingService,
-    broadcastService
+  const stakingRpc = createStakingRpcClient(client, logger);
+  const bnbRpc = createBnbRpcClient(logger);
+  const staking = createStakingService(
+    createInMemoryCache<string, Validator[]>(),
+    stakingRpc,
+    bnbRpc,
+    logger
   );
+  const sign = createSignService(stakingRpc, logger);
+  const fee = createFeeService(client, sign, logger);
+  const balance = createBalanceService(client, staking);
+
+  return {
+    getChainInfo: () => bscMainnet,
+    getValidators: (status) => staking.getValidators(status),
+    getDelegations: (address) => staking.getDelegations(address),
+    getBalances: (address) => balance.getBalances(address),
+    getNonce: (address) => getNonce(client, address),
+    estimateFee: (tx) => fee.estimateFee(tx),
+    sign: (args) => sign.sign(args),
+    prehash: (args) => sign.prehash(args),
+    compile: (args) => sign.compile(args),
+    broadcast: (rawTx) => broadcast(client, logger, rawTx),
+  };
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getAddress } from "viem";
-import { BalanceService } from "../../src/smartchain/services/balance-service";
+import { createBalanceService } from "../../src/smartchain/services/balance-service";
 import getBalanceFixture from "../fixtures/eth_getBalance.json";
 
 const REAL_BALANCE = BigInt(getBalanceFixture.result);
@@ -35,7 +35,7 @@ function makePublicClient(balance: bigint) {
 
 describe("BalanceService", () => {
   it("returns all four balance types", async () => {
-    const service = new BalanceService(
+    const service = createBalanceService(
       makePublicClient(REAL_BALANCE) as any,
       makeStakingService([]) as any
     );
@@ -50,7 +50,7 @@ describe("BalanceService", () => {
   });
 
   it("maps the available balance from the rpc response", async () => {
-    const service = new BalanceService(
+    const service = createBalanceService(
       makePublicClient(REAL_BALANCE) as any,
       makeStakingService([]) as any
     );
@@ -67,7 +67,7 @@ describe("BalanceService", () => {
       { status: "Active", amount: 200n },
     ];
 
-    const service = new BalanceService(
+    const service = createBalanceService(
       makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
@@ -84,7 +84,7 @@ describe("BalanceService", () => {
       { status: "Pending", amount: 75n },
     ];
 
-    const service = new BalanceService(
+    const service = createBalanceService(
       makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
@@ -98,7 +98,7 @@ describe("BalanceService", () => {
   it("aggregates claimable balance from claimable delegations", async () => {
     const delegations = [{ status: "Claimable", amount: 300n }];
 
-    const service = new BalanceService(
+    const service = createBalanceService(
       makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
@@ -117,7 +117,7 @@ describe("BalanceService", () => {
       { status: "Inactive", amount: 10n },
     ];
 
-    const service = new BalanceService(
+    const service = createBalanceService(
       makePublicClient(REAL_BALANCE) as any,
       makeStakingService(delegations) as any
     );
@@ -131,7 +131,7 @@ describe("BalanceService", () => {
   });
 
   it("returns zero for all staking balances when there are no delegations", async () => {
-    const service = new BalanceService(
+    const service = createBalanceService(
       makePublicClient(REAL_BALANCE) as any,
       makeStakingService([]) as any
     );

@@ -6,8 +6,6 @@ import { ValidationError, NoopLogger } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
 /**
- * Service class responsible for estimating transaction fees on the BNB chain.
- *
  * ## How BSC fees work
  *
  * BSC uses a legacy (pre-EIP-1559) gas model. The total fee paid is simply:
@@ -35,51 +33,49 @@ import { parseEvmAddress } from "../validations";
  * cannot accelerate it by rebroadcasting with a higher `gasPrice`. The only option if a
  * transaction is stuck is to wait for it to expire from the mempool.
  */
-export class FeeService implements FeeServiceContract {
-  constructor(
-    private readonly client: PublicClient,
-    private readonly signService: BscSignServiceContract,
-    private readonly logger: Logger = new NoopLogger()
-  ) {}
+export function createFeeService(
+  client: PublicClient,
+  signService: BscSignServiceContract,
+  logger: Logger = new NoopLogger()
+): FeeServiceContract {
+  return {
+    async estimateFee(transaction: Transaction): Promise<Fee> {
+      logger.debug("FeeService: estimating fee", {
+        type: transaction.type,
+        chain: transaction.chain.id,
+      });
 
-  async estimateFee(transaction: Transaction): Promise<Fee> {
-    this.logger.debug("FeeService: estimating fee", {
-      type: transaction.type,
-      chain: transaction.chain.id,
-    });
+      if (transaction.account === undefined) {
+        throw new ValidationError("INVALID_ADDRESS", "Account address is required to estimate fee");
+      }
 
-    const account =
-      transaction.account !== undefined ? parseEvmAddress(transaction.account) : undefined;
+      const account = parseEvmAddress(transaction.account);
+      const callData = await signService.buildCallData(transaction);
 
-    if (account === undefined) {
-      throw new ValidationError("INVALID_ADDRESS", "Account address is required to estimate fee");
-    }
+      const [gasPrice, gasLimit] = await Promise.all([
+        client.getGasPrice(),
+        client.estimateGas({
+          account,
+          to: STAKING_CONTRACT,
+          value: callData.amount,
+          data: callData.data,
+        }),
+      ]);
 
-    const callDataResult = await this.signService.buildCallData(transaction);
+      const increasedLimit = (gasLimit * 115n) / 100n;
 
-    const gasPricePromise = this.client.getGasPrice();
-    const gasLimitPromise = this.client.estimateGas({
-      account: account,
-      to: STAKING_CONTRACT,
-      value: callDataResult.amount,
-      data: callDataResult.data,
-    });
+      logger.debug("FeeService: fee estimated", {
+        gasPrice: gasPrice.toString(),
+        gasLimit: increasedLimit.toString(),
+        total: (gasPrice * increasedLimit).toString(),
+      });
 
-    const [gasPrice, gasLimit] = await Promise.all([gasPricePromise, gasLimitPromise]);
-
-    const increasedLimit = (gasLimit * BigInt(100 + 15)) / 100n;
-
-    this.logger.debug("FeeService: fee estimated", {
-      gasPrice: gasPrice.toString(),
-      gasLimit: increasedLimit.toString(),
-      total: (gasPrice * increasedLimit).toString(),
-    });
-
-    return {
-      type: "GasFee",
-      gasPrice: gasPrice,
-      gasLimit: increasedLimit,
-      total: gasPrice * increasedLimit,
-    } as Fee;
-  }
+      return {
+        type: "GasFee",
+        gasPrice,
+        gasLimit: increasedLimit,
+        total: gasPrice * increasedLimit,
+      } as Fee;
+    },
+  };
 }
