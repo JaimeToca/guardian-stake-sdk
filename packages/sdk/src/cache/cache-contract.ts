@@ -4,4 +4,5 @@ export interface CacheContract<K, V> {
   delete(key: K): boolean;
   has(key: K): boolean;
   clear(): void;
+  size(): number;
 }

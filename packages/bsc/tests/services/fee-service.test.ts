@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { getAddress } from "viem";
-import { FeeService } from "../../src/smartchain/services/fee-service";
+import { createFeeService } from "../../src/smartchain/services/fee-service";
 import { ValidationError } from "@guardian-sdk/sdk";
 import { bscMainnet } from "../../src/chain";
 import gasPriceFixture from "../fixtures/eth_gasPrice.json";
@@ -29,7 +29,7 @@ function makeSignService(callData = { data: "0x" as `0x${string}`, amount: 0n })
 
 describe("FeeService", () => {
   it("estimates fee with 15% buffer and correct total", async () => {
-    const service = new FeeService(makePublicClient() as any, makeSignService() as any);
+    const service = createFeeService(makePublicClient() as any, makeSignService() as any);
 
     const fee = await service.estimateFee({
       type: "Undelegate",
@@ -50,7 +50,7 @@ describe("FeeService", () => {
   it("passes calldata to estimateGas", async () => {
     const callData = { data: "0xdeadbeef" as `0x${string}`, amount: 500n };
     const client = makePublicClient();
-    const service = new FeeService(client as any, makeSignService(callData) as any);
+    const service = createFeeService(client as any, makeSignService(callData) as any);
 
     await service.estimateFee({
       type: "Delegate",
@@ -67,7 +67,7 @@ describe("FeeService", () => {
   });
 
   it("throws when account address is missing", async () => {
-    const service = new FeeService(makePublicClient() as any, makeSignService() as any);
+    const service = createFeeService(makePublicClient() as any, makeSignService() as any);
 
     await expect(
       service.estimateFee({

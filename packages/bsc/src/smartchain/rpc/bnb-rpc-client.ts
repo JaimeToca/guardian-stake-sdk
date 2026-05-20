@@ -8,52 +8,41 @@ import type {
   StakingResponse,
 } from "./bnb-rpc-types";
 
-/**
- * A client class responsible for interacting with BNB Chain indexing API.
- */
-export class BNBRpcClient implements BNBRpcClientContract {
-  private static readonly BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
-  private static readonly VALIDATORS_LIMIT = "100";
-  private static readonly VALIDATORS_OFFSET = "0";
+const BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
 
-  constructor(private readonly logger: Logger = new NoopLogger()) {}
+export function createBnbRpcClient(logger: Logger = new NoopLogger()): BNBRpcClientContract {
+  return {
+    async getValidators(): Promise<BNBChainValidator[]> {
+      const url = `${BASE_MAINNET_URL}/validator/all`;
+      logger.debug("BNBRpcClient: fetching validators", { url });
+      const start = Date.now();
 
-  async getValidators(): Promise<BNBChainValidator[]> {
-    const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/validator/all`;
-    this.logger.debug("BNBRpcClient: fetching validators", { url: requestUrl });
-    const start = Date.now();
+      const response = await fetchOrError<BNBValidatorsResponse>({
+        url,
+        method: "GET",
+        params: { limit: "100", offset: "0" },
+      });
 
-    const response = await fetchOrError<BNBValidatorsResponse>({
-      url: requestUrl,
-      method: "GET",
-      params: {
-        limit: BNBRpcClient.VALIDATORS_LIMIT,
-        offset: BNBRpcClient.VALIDATORS_OFFSET,
-      },
-    });
+      logger.debug("BNBRpcClient: validators fetched", {
+        count: response.data.validators.length,
+        ms: Date.now() - start,
+        response: response.data,
+      });
+      return response.data.validators;
+    },
 
-    this.logger.debug("BNBRpcClient: validators fetched", {
-      count: response.data.validators.length,
-      ms: Date.now() - start,
-      response: response.data,
-    });
-    return response.data.validators;
-  }
+    async getStakingSummary(): Promise<BNBStakingSummary> {
+      const url = `${BASE_MAINNET_URL}/summary`;
+      logger.debug("BNBRpcClient: fetching staking summary", { url });
+      const start = Date.now();
 
-  async getStakingSummary(): Promise<BNBStakingSummary> {
-    const requestUrl = `${BNBRpcClient.BASE_MAINNET_URL}/summary`;
-    this.logger.debug("BNBRpcClient: fetching staking summary", { url: requestUrl });
-    const start = Date.now();
+      const response = await fetchOrError<StakingResponse>({ url, method: "GET" });
 
-    const response = await fetchOrError<StakingResponse>({
-      url: requestUrl,
-      method: "GET",
-    });
-
-    this.logger.debug("BNBRpcClient: staking summary fetched", {
-      ms: Date.now() - start,
-      response: response.data,
-    });
-    return response.data.summary;
-  }
+      logger.debug("BNBRpcClient: staking summary fetched", {
+        ms: Date.now() - start,
+        response: response.data,
+      });
+      return response.data.summary;
+    },
+  };
 }

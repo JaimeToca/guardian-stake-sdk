@@ -1,2 +1,2 @@
-export { InMemoryCache } from "./in-memory-cache";
+export { createInMemoryCache } from "./in-memory-cache";
 export type { CacheContract } from "./cache-contract";

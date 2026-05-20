@@ -91,8 +91,8 @@ packages/<newchain>/
         fee-service.ts
         sign-service.ts
         nonce-service.ts
-        guardian-service.ts
-      index.ts              ← DI factory (the `<chain>()` config function)
+        broadcast-service.ts
+      index.ts              ← factory (the `<chain>()` function)
     index.ts                ← public re-exports
   tests/
     <chain>-config.test.ts  ← config validation tests
@@ -188,7 +188,7 @@ interface StakingServiceContract {
 }
 ```
 
-- `getValidators()` — return ALL validators (active, inactive, jailed). Cache results in `InMemoryCache` from `@guardian-sdk/sdk`.
+- `getValidators()` — return ALL validators (active, inactive, jailed). Cache results using `createInMemoryCache` from `@guardian-sdk/sdk`.
 - `getDelegations(address)` — return active delegations + pending/claimable unbonds + a `StakingSummary` (protocol-level stats: total staked, max APY, min stake amount, unbond period, etc.).
 - Validator shape: `{ id, name, status, description, image, apy, delegators, operatorAddress, creditAddress }`.
 - Use `"Active" | "Inactive" | "Jailed"` for `ValidatorStatus` and `"Active" | "Pending" | "Claimable"` for `DelegationStatus`.
@@ -240,50 +240,49 @@ Return the next transaction sequence number for the address.
 
 ---
 
-## Step 4 — DI factory (`src/mainnet/index.ts`)
+## Step 4 — Factory (`src/mainnet/index.ts`)
 
 This is the file consumers import to configure the chain. Pattern from `bsc`:
 
 ```typescript
-import { validateRpcUrl, NoopLogger, InMemoryCache } from "@guardian-sdk/sdk";
+import { validateRpcUrl, createInMemoryCache, NoopLogger } from "@guardian-sdk/sdk";
 import type { GuardianServiceContract, Logger } from "@guardian-sdk/sdk";
 import { <chainName>Mainnet } from "../chain";
-import { GuardianService } from "./services/guardian-service";
-// ... other service imports
+import { createStakingService } from "./services/staking-service";
+import { createBalanceService } from "./services/balance-service";
+import { createFeeService } from "./services/fee-service";
+import { createSignService } from "./services/sign-service";
+import { getNonce } from "./services/nonce-service";
+import { broadcast } from "./services/broadcast-service";
 
 export function <chain>(config: { rpcUrl: string; logger?: Logger }): GuardianServiceContract {
   validateRpcUrl(config.rpcUrl);   // always validate — throws ConfigError on bad URL
   const logger = config.logger ?? new NoopLogger();
+
   // wire up your client and services
-  return new GuardianService(<chainName>Mainnet, /* services */);
+  const staking = createStakingService(createInMemoryCache(), /* rpc clients */, logger);
+  const sign = createSignService(/* deps */, logger);
+  const fee = createFeeService(/* deps */, sign, logger);
+  const balance = createBalanceService(/* deps */, staking);
+
+  return {
+    getChainInfo: () => <chainName>Mainnet,
+    getValidators: (status) => staking.getValidators(status),
+    getDelegations: (address) => staking.getDelegations(address),
+    getBalances: (address) => balance.getBalances(address),
+    getNonce: (address) => getNonce(/* client */, address),
+    estimateFee: (tx) => fee.estimateFee(tx),
+    sign: (args) => sign.sign(args),
+    prehash: (args) => sign.prehash(args),
+    compile: (args) => sign.compile(args),
+    broadcast: (rawTx) => broadcast(/* client */, logger, rawTx),
+  };
 }
 ```
 
 `validateRpcUrl` is already implemented in `@guardian-sdk/sdk` — no need to re-implement it. It accepts `http`, `https`, `ws`, and `wss` URLs and throws `ConfigError` with code `"INVALID_RPC_URL"` for anything else.
 
----
-
-## Step 5 — `GuardianService` facade
-
-Implement `GuardianServiceContract` by delegating to the individual services:
-
-```typescript
-import type { GuardianServiceContract, GuardianChain } from "@guardian-sdk/sdk";
-// implement all 9 methods from GuardianServiceContract by delegating to injected services
-```
-
-The interface requires:
-```
-getValidators()    → StakingService
-getDelegations()   → StakingService
-getBalances()      → BalanceService
-getNonce()         → NonceService
-estimateFee()      → FeeService
-sign()             → SignService
-prehash()          → SignService
-compile()          → SignService
-getChainInfo()     → return the GuardianChain constant
-```
+Each service is a factory function (`createXxxService`) that closes over its dependencies and returns a plain object implementing the relevant contract. Single-method helpers (`getNonce`, `broadcast`) are plain functions with explicit dependency arguments rather than service objects.
 
 ---
 
@@ -567,8 +566,8 @@ Add the new chain to:
 ```
 [ ] packages/<chain>/src/chain/index.ts          — chain constants + chains registry
 [ ] packages/<chain>/src/mainnet/rpc/             — low-level RPC clients
-[ ] packages/<chain>/src/mainnet/services/        — 5 service implementations
-[ ] packages/<chain>/src/mainnet/index.ts         — DI factory function with validateRpcUrl
+[ ] packages/<chain>/src/mainnet/services/        — service factory functions + plain helpers
+[ ] packages/<chain>/src/mainnet/index.ts         — factory function with validateRpcUrl, returns plain GuardianServiceContract object
 [ ] packages/<chain>/src/index.ts                 — public re-exports (re-exports @guardian-sdk/sdk, exports chains)
 [ ] packages/<chain>/package.json                 — scripts, deps, exports map, publishConfig
 [ ] packages/<chain>/tsconfig.json                — CJS build

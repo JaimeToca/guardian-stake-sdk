@@ -15,108 +15,70 @@ import {
 import type { Logger } from "@guardian-sdk/sdk";
 import { NoopLogger } from "@guardian-sdk/sdk";
 
-export class StakingRpcClient implements StakingRpcClientContract {
-  constructor(
-    private readonly client: PublicClient,
-    private readonly logger: Logger = new NoopLogger()
-  ) {}
+export function createStakingRpcClient(
+  client: PublicClient,
+  logger: Logger = new NoopLogger()
+): StakingRpcClientContract {
+  return {
+    async getCreditContractValidators(): Promise<DecodedValidators> {
+      logger.debug("StakingRpcClient: getCreditContractValidators");
+      const res = await client.call({ data: encodeGetValidatorsData(), to: STAKING_CONTRACT });
+      const decoded = decodeGetValidators(res.data!);
+      const operatorAddresses = decoded[0] as Address[];
+      const creditAddresses = decoded[1] as Address[];
+      return new Map(operatorAddresses.map((addr, i) => [addr, creditAddresses[i]]));
+    },
 
-  async getCreditContractValidators(): Promise<DecodedValidators> {
-    this.logger.debug("StakingRpcClient: getCreditContractValidators");
-    const validatorsResponse = await this.client.call({
-      data: encodeGetValidatorsData(),
-      to: STAKING_CONTRACT,
-    });
+    async getPooledBNBData(creditContracts, delegator): Promise<MulticallResult[]> {
+      logger.debug("StakingRpcClient: multicall getPooledBNB", {
+        contracts: creditContracts.length,
+      });
+      return client.multicall({
+        contracts: creditContracts.map((address) => ({
+          address,
+          abi: multicallStakeAbi,
+          functionName: "getPooledBNB",
+          args: [delegator],
+        })),
+        allowFailure: true,
+      });
+    },
 
-    const decodedValidatorResponse = decodeGetValidators(validatorsResponse.data!);
-    const operatorAddresses = decodedValidatorResponse[0] as Address[];
-    const creditAddresses = decodedValidatorResponse[1] as Address[];
+    async getPendingUnbondDelegation(creditContracts, delegator): Promise<MulticallResult[]> {
+      logger.debug("StakingRpcClient: multicall pendingUnbondRequest", {
+        contracts: creditContracts.length,
+      });
+      return client.multicall({
+        contracts: creditContracts.map((address) => ({
+          address,
+          abi: multicallStakeAbi,
+          functionName: "pendingUnbondRequest",
+          args: [delegator],
+        })),
+        allowFailure: true,
+      });
+    },
 
-    return new Map(
-      operatorAddresses.map((operatorAddress, index) => {
-        return [operatorAddress, creditAddresses[index]];
-      })
-    );
-  }
+    async getUnbondRequestData(creditContract, delegator, index): Promise<DecodedUnbondRequest> {
+      const res = await client.call({
+        data: encodeUnbondRequestData(delegator, index),
+        to: creditContract,
+      });
+      const decoded = decodeUnbond(res.data!);
+      return { shares: decoded[0], amount: decoded[1], unlockTime: decoded[2] };
+    },
 
-  async getPooledBNBData(
-    creditContracts: Address[],
-    delegator: Address
-  ): Promise<MulticallResult[]> {
-    this.logger.debug("StakingRpcClient: multicall getPooledBNB", {
-      contracts: creditContracts.length,
-    });
-    const multicallContracts = creditContracts.map((creditContract) => {
-      return {
-        address: creditContract,
-        abi: multicallStakeAbi,
-        functionName: "getPooledBNB",
-        args: [delegator],
-      };
-    });
+    async getShareBalance(creditContract, delegator): Promise<bigint> {
+      const res = await client.call({ to: creditContract, data: encodeBalanceOf(delegator) });
+      return decodeAbiParameters([{ name: "shares", type: "uint256" }], res.data!)[0];
+    },
 
-    return this.client.multicall({
-      contracts: multicallContracts,
-      allowFailure: true,
-    });
-  }
-
-  async getPendingUnbondDelegation(
-    creditContracts: Address[],
-    delegator: Address
-  ): Promise<MulticallResult[]> {
-    this.logger.debug("StakingRpcClient: multicall pendingUnbondRequest", {
-      contracts: creditContracts.length,
-    });
-    const multicallContracts = creditContracts.map((creditContract) => {
-      return {
-        address: creditContract,
-        abi: multicallStakeAbi,
-        functionName: "pendingUnbondRequest",
-        args: [delegator],
-      };
-    });
-
-    return this.client.multicall({
-      contracts: multicallContracts,
-      allowFailure: true,
-    });
-  }
-
-  async getUnbondRequestData(
-    creditContract: Address,
-    delegator: Address,
-    index: bigint
-  ): Promise<DecodedUnbondRequest> {
-    const unbondRequestDataResponse = await this.client.call({
-      data: encodeUnbondRequestData(delegator, index),
-      to: creditContract,
-    });
-
-    const decodedUnbondResponse = decodeUnbond(unbondRequestDataResponse.data!);
-
-    return {
-      shares: decodedUnbondResponse[0],
-      amount: decodedUnbondResponse[1],
-      unlockTime: decodedUnbondResponse[2],
-    };
-  }
-
-  async getShareBalance(creditContract: Address, delegator: Address): Promise<bigint> {
-    const response = await this.client.call({
-      to: creditContract,
-      data: encodeBalanceOf(delegator),
-    });
-    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data!);
-    return decoded[0];
-  }
-
-  async getSharesByPooledBNBData(creditContract: Address, amount: bigint): Promise<bigint> {
-    const response = await this.client.call({
-      to: creditContract,
-      data: encodeGetSharesByPooledBNBData(amount),
-    });
-    const decoded = decodeAbiParameters([{ name: "shares", type: "uint256" }], response.data!);
-    return decoded[0];
-  }
+    async getSharesByPooledBNBData(creditContract, amount): Promise<bigint> {
+      const res = await client.call({
+        to: creditContract,
+        data: encodeGetSharesByPooledBNBData(amount),
+      });
+      return decodeAbiParameters([{ name: "shares", type: "uint256" }], res.data!)[0];
+    },
+  };
 }

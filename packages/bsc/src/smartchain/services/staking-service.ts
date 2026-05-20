@@ -3,7 +3,6 @@ import { parseEther } from "viem";
 import type { CacheContract, Logger } from "@guardian-sdk/sdk";
 import { NoopLogger } from "@guardian-sdk/sdk";
 import type { BNBChainValidator, BNBRpcClientContract, StakingRpcClientContract } from "../rpc";
-import type { MulticallResult } from "../abi";
 import { processSingleMulticallResult } from "../abi";
 import type {
   Delegation,
@@ -15,44 +14,49 @@ import type {
 import { filterByStatus } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
-export class StakingService implements StakingServiceContract {
-  private static readonly UNBOUND_PERIOD = 604800000; // 7 days in millis
-  private static readonly REDELEGATION_FEE = 0.002; // percentage
-  private static readonly MIN_AMOUNT_TO_STAKE = parseEther("1.0");
-  private static readonly VALIDATOR_CACHE_KEY = "bsc-validators";
+const UNBOUND_PERIOD = 604800000; // 7 days in millis
+const REDELEGATION_FEE = 0.002;
+const MIN_AMOUNT_TO_STAKE = parseEther("1.0");
+const VALIDATOR_CACHE_KEY = "bsc-validators";
+const BASE_VALIDATOR_IMAGE_URL =
+  "https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/";
 
-  constructor(
-    private readonly cache: CacheContract<string, Validator[]>,
-    private readonly stakingRpcClient: StakingRpcClientContract,
-    private readonly bnbRpcClient: BNBRpcClientContract,
-    private readonly logger: Logger = new NoopLogger()
-  ) {}
+function getValidatorStatus(v: BNBChainValidator): ValidatorStatus {
+  if (v.status === "INACTIVE") return "Inactive";
+  if (v.status === "JAILED") return "Jailed";
+  return "Active";
+}
 
-  async getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
-    return filterByStatus(await this.fetchAllValidators(), status);
-  }
+function getValidatorImage(address: Address): string {
+  return `${BASE_VALIDATOR_IMAGE_URL}${address}/logo.png`;
+}
 
-  // BSC does not have more than 60 validators, they can be fetched in a single call, so pagination is not needed
-  // pagination support to be done in the future
-  private async fetchAllValidators(): Promise<Validator[]> {
-    const cached = this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
+// BSC does not have more than 60 validators — no pagination needed
+export function createStakingService(
+  cache: CacheContract<string, Validator[]>,
+  stakingRpcClient: StakingRpcClientContract,
+  bnbRpcClient: BNBRpcClientContract,
+  logger: Logger = new NoopLogger()
+): StakingServiceContract {
+  async function fetchAllValidators(): Promise<Validator[]> {
+    const cached = cache.get(VALIDATOR_CACHE_KEY);
     if (cached) {
-      this.logger.debug("StakingService: validators cache hit", { count: cached.length });
+      logger.debug("StakingService: validators cache hit", { count: cached.length });
       return cached;
     }
 
-    this.logger.debug("StakingService: validators cache miss — fetching from RPC");
-    const [bnbValidators, contractCallValidators] = await Promise.all([
-      this.bnbRpcClient.getValidators(),
-      this.stakingRpcClient.getCreditContractValidators(),
+    logger.debug("StakingService: validators cache miss — fetching from RPC");
+    const [bnbValidators, contractValidators] = await Promise.all([
+      bnbRpcClient.getValidators(),
+      stakingRpcClient.getCreditContractValidators(),
     ]);
 
     const validators = bnbValidators
       .map((bnbValidator, index) => {
         const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
-        const creditAddress = contractCallValidators.get(operatorAddress);
+        const creditAddress = contractValidators.get(operatorAddress);
         if (!creditAddress) {
-          this.logger.warn("StakingService: validator has no credit address — skipping", {
+          logger.warn("StakingService: validator has no credit address — skipping", {
             moniker: bnbValidator.moniker,
             operatorAddress,
           });
@@ -60,90 +64,34 @@ export class StakingService implements StakingServiceContract {
         }
         return {
           id: `${bnbValidator.moniker}_${index}`,
-          status: this.getValidatorStatus(bnbValidator),
+          status: getValidatorStatus(bnbValidator),
           name: bnbValidator.moniker,
           description: bnbValidator.miningStatus,
-          image: this.getValidatorImage(operatorAddress),
+          image: getValidatorImage(operatorAddress),
           apy: (bnbValidator.apy ?? 0) * 100,
           delegators: bnbValidator.delegatorCount,
-          operatorAddress: operatorAddress,
+          operatorAddress,
           creditAddress: parseEvmAddress(creditAddress),
         };
       })
       .filter((v): v is NonNullable<typeof v> => v !== undefined);
 
-    this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
-    this.logger.debug("StakingService: validators cached", { count: validators.length });
-
+    cache.set(VALIDATOR_CACHE_KEY, validators);
+    logger.debug("StakingService: validators cached", { count: validators.length });
     return validators;
   }
 
-  private getValidatorStatus(bnbValidator: BNBChainValidator): ValidatorStatus {
-    switch (bnbValidator.status) {
-      case "INACTIVE":
-        return "Inactive";
-      case "JAILED":
-        return "Jailed";
-      default:
-        return "Active";
-    }
-  }
-
-  private getValidatorImage(address: Address): string {
-    const BASE_VALIDATOR_IMAGE_URL =
-      "https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/";
-    const LOGO_FILE = "/logo.png";
-
-    return `${BASE_VALIDATOR_IMAGE_URL}${address}${LOGO_FILE}`;
-  }
-
-  async getDelegations(address: string): Promise<Delegations> {
-    const evmAddress = parseEvmAddress(address);
-    const stakingSummaryPromise = this.bnbRpcClient.getStakingSummary();
-    const validators = await this.fetchAllValidators();
-    const activeDelegationsPromise = this.getActiveDelegations(evmAddress, validators);
-    const pendingDelegationsPromise = this.getPendingOrClaimableDelegations(evmAddress, validators);
-
-    const [stakingSummary, activeDelegations, pendingDelegations] = await Promise.all([
-      stakingSummaryPromise,
-      activeDelegationsPromise,
-      pendingDelegationsPromise,
-    ]);
-
-    return {
-      delegations: activeDelegations.concat(pendingDelegations),
-      stakingSummary: {
-        totalProtocolStake: Number(stakingSummary.totalStaked),
-        maxApy: stakingSummary.maxApy * 100,
-        minAmountToStake: StakingService.MIN_AMOUNT_TO_STAKE,
-        unboundPeriodInMillis: StakingService.UNBOUND_PERIOD,
-        redelegateFeeRate: StakingService.REDELEGATION_FEE,
-        activeValidators: stakingSummary.activeValidators,
-        totalValidators: stakingSummary.totalValidators,
-      },
-    };
-  }
-
-  private async getActiveDelegations(
+  async function getActiveDelegations(
     address: Address,
     validators: Validator[]
   ): Promise<Delegation[]> {
-    const creditContractValidators = validators.map((validator) =>
-      parseEvmAddress(validator.creditAddress)
-    );
-
-    const pooledBNBData = await this.stakingRpcClient.getPooledBNBData(
-      creditContractValidators,
-      address
-    );
+    const creditContracts = validators.map((v) => parseEvmAddress(v.creditAddress));
+    const pooledBNBData = await stakingRpcClient.getPooledBNBData(creditContracts, address);
 
     return pooledBNBData
       .map((data, index) => {
         const stakedAmount = processSingleMulticallResult(data);
-        if (stakedAmount === undefined) {
-          return undefined;
-        }
-
+        if (stakedAmount === undefined) return undefined;
         return {
           id: `delegation_active_${index}`,
           validator: validators[index],
@@ -156,69 +104,86 @@ export class StakingService implements StakingServiceContract {
       .filter((item) => item !== undefined);
   }
 
-  private async getPendingOrClaimableDelegations(
-    address: Address,
-    validators: Validator[]
-  ): Promise<Delegation[]> {
-    const creditAddresses = validators.map((validator) => parseEvmAddress(validator.creditAddress));
-
-    const pendingDelegations = await this.stakingRpcClient.getPendingUnbondDelegation(
-      creditAddresses,
-      address
-    );
-
-    const delegationsPerValidator = await Promise.all(
-      pendingDelegations.map((result, index) =>
-        this.getDelegationsForValidator(result, validators[index], address)
-      )
-    );
-
-    return delegationsPerValidator
-      .filter((delegation): delegation is Delegation[] => delegation !== undefined)
-      .flat();
-  }
-
-  private async getDelegationsForValidator(
-    rawMulticallResult: MulticallResult,
-    validator: Validator,
-    address: Address
-  ): Promise<Delegation[] | undefined> {
-    const pendingCountRaw = processSingleMulticallResult(rawMulticallResult);
-    if (pendingCountRaw === undefined) return;
-
-    const pendingCount = Number(pendingCountRaw);
-    return await this.getUnbondDelegations(
-      parseEvmAddress(validator.creditAddress),
-      address,
-      pendingCount,
-      validator
-    );
-  }
-
-  private async getUnbondDelegations(
+  async function getUnbondDelegations(
     creditAddress: Address,
     address: Address,
     count: number,
     validator: Validator
   ): Promise<Delegation[]> {
-    const unbondRequestPromises = Array.from({ length: count }, (_, index) =>
-      this.stakingRpcClient.getUnbondRequestData(creditAddress, address, BigInt(index))
+    const unbondRequests = await Promise.all(
+      Array.from({ length: count }, (_, i) =>
+        stakingRpcClient.getUnbondRequestData(creditAddress, address, BigInt(i))
+      )
     );
-
-    const unbondRequests = await Promise.all(unbondRequestPromises);
     const now = Date.now();
 
     return unbondRequests.map((req, index) => {
       const unlockTimeInMillis = req.unlockTime * 1000n;
-
       return {
         id: `delegation_pending__${validator.creditAddress}_${index}`,
         validator,
         amount: req.amount,
-        status: now > unlockTimeInMillis ? "Claimable" : "Pending",
+        status: now > unlockTimeInMillis ? ("Claimable" as const) : ("Pending" as const),
         delegationIndex: BigInt(index),
         pendingUntil: now > unlockTimeInMillis ? 0 : Number(unlockTimeInMillis),
       };
     });
   }
+
+  async function getPendingOrClaimableDelegations(
+    address: Address,
+    validators: Validator[]
+  ): Promise<Delegation[]> {
+    const creditAddresses = validators.map((v) => parseEvmAddress(v.creditAddress));
+    const pendingUnbond = await stakingRpcClient.getPendingUnbondDelegation(
+      creditAddresses,
+      address
+    );
+
+    const delegationsPerValidator = await Promise.all(
+      pendingUnbond.map(async (result, index) => {
+        const pendingCountRaw = processSingleMulticallResult(result);
+        if (pendingCountRaw === undefined) return undefined;
+        return getUnbondDelegations(
+          parseEvmAddress(validators[index].creditAddress),
+          address,
+          Number(pendingCountRaw),
+          validators[index]
+        );
+      })
+    );
+
+    return delegationsPerValidator.filter((d): d is Delegation[] => d !== undefined).flat();
+  }
+
+  return {
+    async getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
+      return filterByStatus(await fetchAllValidators(), status);
+    },
+
+    async getDelegations(address: string): Promise<Delegations> {
+      const evmAddress = parseEvmAddress(address);
+      const stakingSummaryPromise = bnbRpcClient.getStakingSummary();
+      const validators = await fetchAllValidators();
+
+      const [stakingSummary, activeDelegations, pendingDelegations] = await Promise.all([
+        stakingSummaryPromise,
+        getActiveDelegations(evmAddress, validators),
+        getPendingOrClaimableDelegations(evmAddress, validators),
+      ]);
+
+      return {
+        delegations: activeDelegations.concat(pendingDelegations),
+        stakingSummary: {
+          totalProtocolStake: Number(stakingSummary.totalStaked),
+          maxApy: stakingSummary.maxApy * 100,
+          minAmountToStake: MIN_AMOUNT_TO_STAKE,
+          unboundPeriodInMillis: UNBOUND_PERIOD,
+          redelegateFeeRate: REDELEGATION_FEE,
+          activeValidators: stakingSummary.activeValidators,
+          totalValidators: stakingSummary.totalValidators,
+        },
+      };
+    },
+  };
 }
