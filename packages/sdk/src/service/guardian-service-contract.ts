@@ -8,10 +8,10 @@ import type {
   PrehashResult,
   SigningWithPrivateKey,
 } from "../entity/sign-types";
-import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
+import type { Delegations, GetValidatorsParams, ValidatorsPage } from "../entity/staking-types";
 /** Chain-agnostic contract for the Guardian Service facade. Implemented by each chain package. */
 export interface GuardianServiceContract {
-  getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]>;
+  getValidators(params?: GetValidatorsParams): Promise<ValidatorsPage>;
   getDelegations(address: string): Promise<Delegations>;
   getBalances(address: string): Promise<Balance[]>;
   getNonce(address: string): Promise<number>;

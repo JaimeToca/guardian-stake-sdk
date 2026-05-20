@@ -1,3 +1,22 @@
+export interface GetValidatorsParams {
+  status?: ValidatorStatus | ValidatorStatus[];
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ValidatorsPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+}
+
+export interface ValidatorsPage {
+  data: Validator[];
+  pagination: ValidatorsPagination;
+}
+
 export interface Validator {
   id: string;
   status: ValidatorStatus;

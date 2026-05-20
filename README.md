@@ -130,7 +130,7 @@ The same API surface will be available on every supported chain. Pass the chain 
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| [`getValidators(chain, status?)`](#getvalidatorschain) | `Validator[]` | All validators, optionally filtered by status |
+| [`getValidators(chain, params?)`](#getvalidatorschain) | `ValidatorsPage` | Paginated validators, optionally filtered by status |
 | [`getDelegations(chain, address)`](#getdelegationschain-address) | `Delegations` | All delegations for an address plus a protocol-level summary if available |
 | [`getBalances(chain, address)`](#getbalanceschain-address) | `Balance[]` | Available, staked, pending, and claimable balances |
 | [`getNonce(chain, address)`](#getnoncechain-address) | `number` | Current transaction nonce, required before signing |
@@ -146,11 +146,22 @@ The same API surface will be available on every supported chain. Pass the chain 
 
 ### `getValidators(chain)`
 
-Returns all validators on the network. Pass an optional status filter to narrow the result.
+Returns a paginated page of validators. Use `params.page` / `params.pageSize` to navigate pages (1-based, default 20 per page). Use `params.status` to filter by validator status.
 
-**Returns:** `Promise<Validator[]>`
+**Returns:** `Promise<ValidatorsPage>`
 
 ```typescript
+interface ValidatorsPage {
+  data: Validator[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;       // total validators on the network (unfiltered)
+    totalPages: number;
+    hasNextPage: boolean;
+  };
+}
+
 interface Validator {
   id: string;
   name: string;
@@ -167,14 +178,18 @@ type ValidatorStatus = "Active" | "Inactive" | "Jailed";
 ```
 
 ```typescript
-// All validators
-const validators = await sdk.getValidators(chains.bscMainnet);
+// First page (default: 20 per page)
+const { data: validators, pagination } = await sdk.getValidators(chains.bscMainnet);
+console.log(pagination.total, pagination.hasNextPage);
 
-// Only active validators
-const active = await sdk.getValidators(chains.bscMainnet, "Active");
+// Explicit page + size
+const page2 = await sdk.getValidators(chains.bscMainnet, { page: 2, pageSize: 10 });
+
+// Only active validators on page 1
+const active = await sdk.getValidators(chains.bscMainnet, { status: "Active" });
 
 // Active and jailed
-const subset = await sdk.getValidators(chains.bscMainnet, ["Active", "Jailed"]);
+const subset = await sdk.getValidators(chains.bscMainnet, { status: ["Active", "Jailed"] });
 ```
 
 ---
@@ -389,7 +404,7 @@ import { parseEther } from "viem";
 
 const sdk = new GuardianSDK([bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" })]);
 
-const validators = await sdk.getValidators(chains.bscMainnet);
+const { data: validators } = await sdk.getValidators(chains.bscMainnet);
 const fee = await sdk.estimateFee({
   type: "Delegate",
   chain: chains.bscMainnet,
@@ -503,14 +518,17 @@ describe("my staking feature", () => {
   it("renders the validator with the highest APY", async () => {
     const sdk = new GuardianSDK([
       createMockService({
-        getValidators: vi.fn().mockResolvedValue([
-          mockValidator({ name: "Alpha", apy: 8 }),
-          mockValidator({ name: "Beta",  apy: 12 }),
-        ]),
+        getValidators: vi.fn().mockResolvedValue({
+          data: [
+            mockValidator({ name: "Alpha", apy: 8 }),
+            mockValidator({ name: "Beta",  apy: 12 }),
+          ],
+          pagination: { page: 1, pageSize: 20, total: 2, totalPages: 1, hasNextPage: false },
+        }),
       }),
     ]);
 
-    const validators = await sdk.getValidators(chains.bscMainnet);
+    const { data: validators } = await sdk.getValidators(chains.bscMainnet);
     const best = validators.sort((a, b) => b.apy - a.apy)[0];
 
     expect(best.name).toBe("Beta");

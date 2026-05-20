@@ -22,7 +22,9 @@ export type ValidationErrorCode =
   | "INVALID_AMOUNT"
   | "INVALID_NONCE"
   | "INVALID_FEE"
-  | "INVALID_PRIVATE_KEY";
+  | "INVALID_PRIVATE_KEY"
+  | "INVALID_PAGE"
+  | "INVALID_PAGE_SIZE";
 
 export type ConfigErrorCode = "UNSUPPORTED_CHAIN" | "INVALID_RPC_URL";
 

@@ -9,7 +9,7 @@ import type {
   PrehashResult,
   SigningWithPrivateKey,
 } from "../entity/sign-types";
-import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
+import type { Delegations, GetValidatorsParams, ValidatorsPage } from "../entity/staking-types";
 import type { Transaction } from "../entity/transaction-types";
 
 /**
@@ -35,11 +35,8 @@ export class GuardianSDK {
     this.services = new Map(services.map((s) => [s.getChainInfo().id, s]));
   }
 
-  getValidators(
-    chain: GuardianChain,
-    status?: ValidatorStatus | ValidatorStatus[]
-  ): Promise<Validator[]> {
-    return this.getService(chain).getValidators(status);
+  getValidators(chain: GuardianChain, params?: GetValidatorsParams): Promise<ValidatorsPage> {
+    return this.getService(chain).getValidators(params);
   }
 
   getDelegations(chain: GuardianChain, address: string): Promise<Delegations> {

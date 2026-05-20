@@ -30,9 +30,26 @@ async function sample_check_delegations() {
   const balances = await sdk.getBalances(bscMainnet, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
   console.log("Balances:", balances);
 
-  // Fetch validators
-  const validators = await sdk.getValidators(bscMainnet);
-  console.log("Validators:", validators);
+  // Fetch validators — first page, 20 per page by default
+  const validatorsPage = await sdk.getValidators(bscMainnet);
+  console.log("Validators:", validatorsPage.data);
+  console.log("Pagination:", validatorsPage.pagination);
+
+  // Fetch a specific page with a custom page size
+  const page2 = await sdk.getValidators(bscMainnet, { page: 2, pageSize: 10 });
+  console.log("Page 2 validators:", page2.data);
+
+  // Filter by status
+  const activeValidators = await sdk.getValidators(bscMainnet, { status: "Active" });
+  console.log("Active validators:", activeValidators.data);
+
+  // Combine pagination and status filter
+  const activePage2 = await sdk.getValidators(bscMainnet, {
+    page: 2,
+    pageSize: 10,
+    status: ["Active", "Inactive"],
+  });
+  console.log("Active + Inactive validators (page 2):", activePage2.data);
 
   // Fetch delegations for an address
   const delegations = await sdk.getDelegations(
@@ -66,7 +83,7 @@ async function sample_delegate_transaction() {
   console.log("Balances:", balances);
 
   // Pick a validator — use getValidators() to browse the full set
-  const validators = await sdk.getValidators(bscMainnet);
+  const { data: validators } = await sdk.getValidators(bscMainnet);
   const validator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
   console.log(`Delegating to: ${validator.name} (${validator.operatorAddress})`);
 
@@ -113,7 +130,7 @@ async function sample_redelegate_transaction() {
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
   
   // Pick a validator — use getValidators() to browse the full set
-  const validators = await sdk.getValidators(bscMainnet);
+  const { data: validators } = await sdk.getValidators(bscMainnet);
 
   // From Validator A to Validator B
   const fromValidator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
@@ -165,7 +182,7 @@ async function sample_undelegate_transaction() {
   const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
 
   // Pick a validator — use getValidators() to browse the full set
-  const validators = await sdk.getValidators(bscMainnet);
+  const { data: validators } = await sdk.getValidators(bscMainnet);
 
   const validator = validators.find((v) => v.name === "Ankr Staking") ?? validators[0];
   console.log(`Undelegating from: ${validator.name} (${validator.operatorAddress})`);

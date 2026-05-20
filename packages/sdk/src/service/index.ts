@@ -24,6 +24,9 @@ export type {
   Delegation,
   DelegationStatus,
   StakingSummary,
+  GetValidatorsParams,
+  ValidatorsPagination,
+  ValidatorsPage,
 } from "../entity/staking-types";
 
 export {

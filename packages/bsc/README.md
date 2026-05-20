@@ -63,7 +63,7 @@ The validator set has grown beyond the original 45-slot design. As of early 2026
 - **Candidates** — occasional block producers, fill slots above position 21
 - **Inactive / Jailed** — registered on-chain but not producing blocks
 
-`getValidators()` returns all registered validators — active, inactive, and jailed. Pass an optional status (or array of statuses) to filter: `getValidators(bscMainnet, "Active")`.
+`getValidators()` returns a paginated page of validators — active, inactive, and jailed. Use `params.page` / `params.pageSize` to navigate pages (default: 20 per page). Pass `params.status` to filter by status.
 
 Elections run daily after 00:00 UTC. Each validator sets a **commission rate** — the percentage of block rewards they keep before distributing the rest to delegators. The full validator metadata available on-chain includes moniker, identity, website, details, consensus address, vote address, commission rate, and election info — the SDK surfaces the subset most relevant to delegation UIs.
 
@@ -203,9 +203,9 @@ const sdk = new GuardianSDK([
 
 const ADDRESS = "0xYourAddress";
 
-// 1. Fetch all validators
-const validators = await sdk.getValidators(chains.bscMainnet);
-console.log(`${validators.length} validators found`);
+// 1. Fetch validators (page 1, 20 per page by default)
+const { data: validators, pagination } = await sdk.getValidators(chains.bscMainnet);
+console.log(`${validators.length} validators on this page, ${pagination.total} total`);
 
 // 2. Fetch delegations for an address
 const { delegations, stakingSummary } = await sdk.getDelegations(chains.bscMainnet, ADDRESS);
@@ -259,22 +259,37 @@ console.log(`Transaction hash: ${txHash}`);
 
 ### `getValidators`
 
-Returns all validators registered on the protocol — active, inactive, and jailed. Pass an optional status filter to narrow the result.
+Returns a paginated page of validators registered on the protocol — active, inactive, and jailed. Pass optional `params` to navigate pages or filter by status.
 
 ```typescript
-// All validators
-const validators = await sdk.getValidators(chains.bscMainnet);
+// First page (default: 20 per page)
+const { data: validators, pagination } = await sdk.getValidators(chains.bscMainnet);
+console.log(pagination.total, pagination.hasNextPage);
+
+// Explicit page + size
+const page2 = await sdk.getValidators(chains.bscMainnet, { page: 2, pageSize: 10 });
 
 // Only active validators
-const active = await sdk.getValidators(chains.bscMainnet, "Active");
+const active = await sdk.getValidators(chains.bscMainnet, { status: "Active" });
 
 // Active and jailed
-const subset = await sdk.getValidators(chains.bscMainnet, ["Active", "Jailed"]);
+const subset = await sdk.getValidators(chains.bscMainnet, { status: ["Active", "Jailed"] });
 ```
 
-**Returns:** `Promise<Validator[]>`
+**Returns:** `Promise<ValidatorsPage>`
 
 ```typescript
+interface ValidatorsPage {
+  data: Validator[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;       // total validators on the network (unfiltered)
+    totalPages: number;
+    hasNextPage: boolean;
+  };
+}
+
 interface Validator {
   id: string;                  // Unique identifier
   status: ValidatorStatus;     // Active | Inactive | Jailed
@@ -290,7 +305,7 @@ interface Validator {
 type ValidatorStatus = "Active" | "Inactive" | "Jailed";
 ```
 
-> **Caching:** Validator data is cached in memory for the lifetime of the SDK instance. Validators are a slowly-changing set — elections run once per day at most — so cache invalidation is rarely needed in practice.
+> **Caching:** Each page is cached in memory separately. Validators are a slowly-changing set — elections run once per day at most — so cache invalidation is rarely needed in practice.
 
 > **On-chain data not surfaced here:** The `StakeHub` contract exposes additional per-validator data via `getValidatorCommission`, `getValidatorDescription`, `getValidatorRewardRecord`, `getValidatorElectionInfo`, and `getValidatorConsensusAddress`. These are available for direct RPC calls if your application needs them.
 

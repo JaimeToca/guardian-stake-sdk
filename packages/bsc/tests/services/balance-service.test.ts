@@ -19,7 +19,10 @@ const mockStakingSummary = {
 
 function makeStakingService(delegations: any[]) {
   return {
-    getValidators: async () => [],
+    getValidators: async () => ({
+      data: [],
+      pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNextPage: false },
+    }),
     getDelegations: async () => ({
       delegations,
       stakingSummary: mockStakingSummary,

@@ -1,6 +1,12 @@
 import type { GuardianChain } from "../chain";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
-import type { Validator, Delegation, Delegations, StakingSummary } from "../entity/staking-types";
+import type {
+  Validator,
+  Delegation,
+  Delegations,
+  StakingSummary,
+  ValidatorsPage,
+} from "../entity/staking-types";
 import type { Balance, BalanceType } from "../entity/balance-types";
 import type { Fee } from "../entity/fee-types";
 import type {
@@ -48,7 +54,11 @@ export function createMockService(
 ): GuardianServiceContract {
   return {
     getChainInfo: () => chain,
-    getValidators: () => Promise.resolve([]),
+    getValidators: () =>
+      Promise.resolve<ValidatorsPage>({
+        data: [],
+        pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0, hasNextPage: false },
+      }),
     getDelegations: () => Promise.resolve(mockDelegations()),
     getBalances: () => Promise.resolve([]),
     getNonce: () => Promise.resolve(0),

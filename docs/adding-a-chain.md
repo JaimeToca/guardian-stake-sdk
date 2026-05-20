@@ -183,12 +183,12 @@ Every chain package must implement **five service contracts** from `@guardian-sd
 
 ```typescript
 interface StakingServiceContract {
-  getValidators(): Promise<Validator[]>;
+  getValidators(params?: GetValidatorsParams): Promise<ValidatorsPage>;
   getDelegations(address: string): Promise<Delegations>;
 }
 ```
 
-- `getValidators()` — return ALL validators (active, inactive, jailed). Cache results using `createInMemoryCache` from `@guardian-sdk/sdk`.
+- `getValidators(params?)` — return a paginated page of validators. Fetch from the chain API using `params.page` / `params.pageSize` (converted to `limit` / `offset`). Cache each page separately. Apply `params.status` filtering client-side.
 - `getDelegations(address)` — return active delegations + pending/claimable unbonds + a `StakingSummary` (protocol-level stats: total staked, max APY, min stake amount, unbond period, etc.).
 - Validator shape: `{ id, name, status, description, image, apy, delegators, operatorAddress, creditAddress }`.
 - Use `"Active" | "Inactive" | "Jailed"` for `ValidatorStatus` and `"Active" | "Pending" | "Claimable"` for `DelegationStatus`.
@@ -267,7 +267,7 @@ export function <chain>(config: { rpcUrl: string; logger?: Logger }): GuardianSe
 
   return {
     getChainInfo: () => <chainName>Mainnet,
-    getValidators: (status) => staking.getValidators(status),
+    getValidators: (params) => staking.getValidators(params),
     getDelegations: (address) => staking.getDelegations(address),
     getBalances: (address) => balance.getBalances(address),
     getNonce: (address) => getNonce(/* client */, address),
@@ -500,8 +500,8 @@ const sdk = new GuardianSDK([
 ]);
 
 // Validators
-const validators = await sdk.getValidators(chains.<chainName>Mainnet);
-console.log("validators", validators.length);
+const { data: validators, pagination } = await sdk.getValidators(chains.<chainName>Mainnet);
+console.log("validators", validators.length, "total", pagination.total);
 
 // Delegations
 const ADDRESS = "<your-address>";

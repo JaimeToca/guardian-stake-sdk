@@ -12,23 +12,30 @@ const BASE_MAINNET_URL = "https://api.bnbchain.org/bnb-staking/v1";
 
 export function createBnbRpcClient(logger: Logger = new NoopLogger()): BNBRpcClientContract {
   return {
-    async getValidators(): Promise<BNBChainValidator[]> {
+    async getValidators({
+      page,
+      pageSize,
+    }: {
+      page: number;
+      pageSize: number;
+    }): Promise<{ validators: BNBChainValidator[]; total: number }> {
+      const offset = (page - 1) * pageSize;
       const url = `${BASE_MAINNET_URL}/validator/all`;
-      logger.debug("BNBRpcClient: fetching validators", { url });
+      logger.debug("BNBRpcClient: fetching validators", { url, page, pageSize, offset });
       const start = Date.now();
 
       const response = await fetchOrError<BNBValidatorsResponse>({
         url,
         method: "GET",
-        params: { limit: "100", offset: "0" },
+        params: { limit: String(pageSize), offset: String(offset) },
       });
 
       logger.debug("BNBRpcClient: validators fetched", {
         count: response.data.validators.length,
+        total: response.data.total,
         ms: Date.now() - start,
-        response: response.data,
       });
-      return response.data.validators;
+      return { validators: response.data.validators, total: response.data.total };
     },
 
     async getStakingSummary(): Promise<BNBStakingSummary> {

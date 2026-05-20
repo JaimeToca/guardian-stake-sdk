@@ -7,17 +7,20 @@ import { processSingleMulticallResult } from "../abi";
 import type {
   Delegation,
   Delegations,
+  GetValidatorsParams,
   StakingServiceContract,
   Validator,
   ValidatorStatus,
+  ValidatorsPage,
 } from "@guardian-sdk/sdk";
-import { filterByStatus } from "@guardian-sdk/sdk";
+import { filterByStatus, ValidationError } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
 const UNBOUND_PERIOD = 604800000; // 7 days in millis
 const REDELEGATION_FEE = 0.002;
 const MIN_AMOUNT_TO_STAKE = parseEther("1.0");
-const VALIDATOR_CACHE_KEY = "bsc-validators";
+const VALIDATOR_ALL_CACHE_KEY = "bsc-validators-all";
+const DEFAULT_PAGE_SIZE = 100;
 const BASE_VALIDATOR_IMAGE_URL =
   "https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/";
 
@@ -31,53 +34,64 @@ function getValidatorImage(address: Address): string {
   return `${BASE_VALIDATOR_IMAGE_URL}${address}/logo.png`;
 }
 
-// BSC does not have more than 60 validators — no pagination needed
+function validatorPageCacheKey(page: number, pageSize: number): string {
+  return `bsc-validators-${page}-${pageSize}`;
+}
+
+function mapValidators(
+  bnbValidators: BNBChainValidator[],
+  contractValidators: Map<Address, Address>,
+  logger: Logger
+): Validator[] {
+  return bnbValidators
+    .map((bnbValidator, index) => {
+      const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
+      const creditAddress = contractValidators.get(operatorAddress);
+      if (!creditAddress) {
+        logger.warn("StakingService: validator has no credit address — skipping", {
+          moniker: bnbValidator.moniker,
+          operatorAddress,
+        });
+        return undefined;
+      }
+      return {
+        id: `${bnbValidator.moniker}_${index}`,
+        status: getValidatorStatus(bnbValidator),
+        name: bnbValidator.moniker,
+        description: bnbValidator.miningStatus,
+        image: getValidatorImage(operatorAddress),
+        apy: (bnbValidator.apy ?? 0) * 100,
+        delegators: bnbValidator.delegatorCount,
+        operatorAddress,
+        creditAddress: parseEvmAddress(creditAddress),
+      };
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== undefined);
+}
+
 export function createStakingService(
-  cache: CacheContract<string, Validator[]>,
+  cache: CacheContract<string, unknown>,
   stakingRpcClient: StakingRpcClientContract,
   bnbRpcClient: BNBRpcClientContract,
   logger: Logger = new NoopLogger()
 ): StakingServiceContract {
+  // BSC has ~50–60 validators — fetching all in one shot is intentional and cheap.
   async function fetchAllValidators(): Promise<Validator[]> {
-    const cached = cache.get(VALIDATOR_CACHE_KEY);
+    const cached = cache.get(VALIDATOR_ALL_CACHE_KEY) as Validator[] | undefined;
     if (cached) {
-      logger.debug("StakingService: validators cache hit", { count: cached.length });
+      logger.debug("StakingService: all-validators cache hit", { count: cached.length });
       return cached;
     }
 
-    logger.debug("StakingService: validators cache miss — fetching from RPC");
-    const [bnbValidators, contractValidators] = await Promise.all([
-      bnbRpcClient.getValidators(),
+    logger.debug("StakingService: all-validators cache miss — fetching from RPC");
+    const [{ validators: bnbValidators }, contractValidators] = await Promise.all([
+      bnbRpcClient.getValidators({ page: 1, pageSize: 100 }), // intentionally large page size to get all validators in one request
       stakingRpcClient.getCreditContractValidators(),
     ]);
 
-    const validators = bnbValidators
-      .map((bnbValidator, index) => {
-        const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
-        const creditAddress = contractValidators.get(operatorAddress);
-        if (!creditAddress) {
-          logger.warn("StakingService: validator has no credit address — skipping", {
-            moniker: bnbValidator.moniker,
-            operatorAddress,
-          });
-          return undefined;
-        }
-        return {
-          id: `${bnbValidator.moniker}_${index}`,
-          status: getValidatorStatus(bnbValidator),
-          name: bnbValidator.moniker,
-          description: bnbValidator.miningStatus,
-          image: getValidatorImage(operatorAddress),
-          apy: (bnbValidator.apy ?? 0) * 100,
-          delegators: bnbValidator.delegatorCount,
-          operatorAddress,
-          creditAddress: parseEvmAddress(creditAddress),
-        };
-      })
-      .filter((v): v is NonNullable<typeof v> => v !== undefined);
-
-    cache.set(VALIDATOR_CACHE_KEY, validators);
-    logger.debug("StakingService: validators cached", { count: validators.length });
+    const validators = mapValidators(bnbValidators, contractValidators, logger);
+    cache.set(VALIDATOR_ALL_CACHE_KEY, validators);
+    logger.debug("StakingService: all-validators cached", { count: validators.length });
     return validators;
   }
 
@@ -157,8 +171,56 @@ export function createStakingService(
   }
 
   return {
-    async getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
-      return filterByStatus(await fetchAllValidators(), status);
+    async getValidators(params: GetValidatorsParams = {}): Promise<ValidatorsPage> {
+      const page = params.page ?? 1;
+      const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
+
+      if (!Number.isInteger(page) || page < 1)
+        throw new ValidationError("INVALID_PAGE", "page must be an integer of 1 or greater");
+      if (!Number.isInteger(pageSize) || pageSize < 1)
+        throw new ValidationError(
+          "INVALID_PAGE_SIZE",
+          "pageSize must be an integer of 1 or greater"
+        );
+
+      const cacheKey = validatorPageCacheKey(page, pageSize);
+
+      const cached = cache.get(cacheKey) as ValidatorsPage | undefined;
+      if (cached) {
+        logger.debug("StakingService: validator page cache hit", { page, pageSize });
+        return {
+          ...cached,
+          data: filterByStatus(cached.data, params.status),
+        };
+      }
+
+      logger.debug("StakingService: validator page cache miss — fetching from RPC", {
+        page,
+        pageSize,
+      });
+      const [{ validators: bnbValidators, total }, contractValidators] = await Promise.all([
+        bnbRpcClient.getValidators({ page, pageSize }),
+        stakingRpcClient.getCreditContractValidators(),
+      ]);
+
+      const data = mapValidators(bnbValidators, contractValidators, logger);
+      const result: ValidatorsPage = {
+        data,
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+          hasNextPage: page * pageSize < total,
+        },
+      };
+
+      cache.set(cacheKey, result);
+      logger.debug("StakingService: validator page cached", { page, pageSize, total });
+      return {
+        ...result,
+        data: filterByStatus(data, params.status),
+      };
     },
 
     async getDelegations(address: string): Promise<Delegations> {
