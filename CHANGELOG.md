@@ -5,6 +5,32 @@
 >
 > **Disclaimer:** Guardian SDK is unaudited, experimental software provided AS-IS. See [SECURITY.md](./SECURITY.md) and [README.md](./README.md) for full disclaimer.
 
+## [Unreleased] — next major (`2.0.0`)
+
+### Breaking Changes
+
+**`@guardian-sdk/bsc`**
+
+- `getValidators(chain, params?)` now returns `ValidatorsPage` instead of `Validator[]`. Destructure with `const { data, pagination } = await sdk.getValidators(chain)`.
+- `GetValidatorsParams.status` removed. Filter validators client-side with `filterByStatus(page.data, status)` exported from `@guardian-sdk/bsc`.
+- Validator `id` changed from a `"<moniker>_<index>"` string to the stable `operatorAddress`. Any code keying validators by `id` across pages must be updated.
+
+### Features
+
+**`@guardian-sdk/bsc`**
+
+- `getValidators` now accepts `{ page, pageSize }` params for server-side pagination against the BNB Chain API. Default page size is 100.
+- `getValidators` returns a `ValidatorsPage` with a `pagination` object (`page`, `pageSize`, `total`, `totalPages`, `hasNextPage`).
+- Input validation: `getValidators` throws `ValidationError` with code `INVALID_PAGE` or `INVALID_PAGE_SIZE` for out-of-range values.
+- Two typed caches replace the single untyped cache in `createStakingService`: one for the full validator list (used by `getDelegations`), one for paginated pages (used by `getValidators`).
+
+**`@guardian-sdk/sdk`**
+
+- `GetValidatorsParams`, `ValidatorsPage`, `ValidatorsPagination`, `validatePageParams`, and `filterByStatus` are now exported from the core SDK for reuse across chain implementations.
+- `ValidationErrorCode` extended with `"INVALID_PAGE"` and `"INVALID_PAGE_SIZE"`.
+
+---
+
 ## [1.0.2](https://github.com/JaimeToca/guardian-stake-sdk/compare/v1.0.1...v1.0.2) (2026-04-08)
 
 

@@ -55,7 +55,7 @@ export function createInMemoryCache<K, V>(defaultTtlMs = 180000): CacheContract<
 
     has(key) {
       const entry = store.get(key);
-      return !!entry && Date.now() < entry.expirationInMillis;
+      return entry !== undefined && Date.now() < entry.expirationInMillis;
     },
 
     clear() {

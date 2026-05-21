@@ -17,6 +17,7 @@ export type {
   TransactionType,
 } from "../entity/transaction-types";
 export { filterByStatus } from "../entity/staking-types";
+export { validatePageParams } from "../entity/staking-validation";
 export type {
   Validator,
   ValidatorStatus,
@@ -24,6 +25,9 @@ export type {
   Delegation,
   DelegationStatus,
   StakingSummary,
+  GetValidatorsParams,
+  ValidatorsPagination,
+  ValidatorsPage,
 } from "../entity/staking-types";
 
 export {
