@@ -1,12 +1,13 @@
-import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
+import type { Delegations, GetValidatorsParams, ValidatorsPage } from "../entity/staking-types";
 
 /** Contract for a service responsible for staking operations. */
 export interface StakingServiceContract {
   /**
-   * Returns validators on the network.
-   * Pass a status (or array of statuses) to filter; omit to return all.
+   * Returns a paginated page of validators.
+   * Use `params.page` / `params.pageSize` for pagination (1-based page, default 20 per page).
+   * Use `params.status` to filter by validator status.
    */
-  getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]>;
+  getValidators(params?: GetValidatorsParams): Promise<ValidatorsPage>;
 
   /**
    * Returns all delegations for the given address plus a protocol-level summary.

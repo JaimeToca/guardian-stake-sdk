@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { getAddress } from "viem";
-import { StakingService } from "../../src/smartchain/services/staking-service";
-import { InMemoryCache } from "@guardian-sdk/sdk";
+import { createStakingService } from "../../src/smartchain/services/staking-service";
+import { createInMemoryCache, ValidationError } from "@guardian-sdk/sdk";
 import validatorsFixture from "../fixtures/bnb_validators.json";
 import summaryFixture from "../fixtures/bnb_staking_summary.json";
 import creditContractsFixture from "../fixtures/staking_credit_contracts.json";
@@ -24,7 +24,7 @@ function makeBNBRpcClient(
     : validators;
 
   return {
-    getValidators: vi.fn().mockResolvedValue(mapped),
+    getValidators: vi.fn().mockResolvedValue({ validators: mapped, total: mapped.length }),
     getStakingSummary: vi.fn().mockResolvedValue(SUMMARY),
   };
 }
@@ -47,8 +47,9 @@ describe("StakingService", () => {
     it("fetches validators from RPC on first call", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -61,8 +62,9 @@ describe("StakingService", () => {
     it("returns cached validators on second call without hitting RPC", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -76,13 +78,14 @@ describe("StakingService", () => {
     it("maps real validator fields correctly", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
 
-      const validators = await service.getValidators();
+      const { data: validators, pagination } = await service.getValidators();
 
       expect(validators).toHaveLength(3);
       expect(validators[0].name).toBe("TWStaking");
@@ -94,18 +97,22 @@ describe("StakingService", () => {
         getAddress("0xc437593d9c296bf9a5002522a86dad8a4d4af808")
       );
       expect(validators[0].apy).toBeCloseTo(VALIDATORS[0].apy! * 100, 5);
+      expect(pagination.total).toBe(3);
+      expect(pagination.page).toBe(1);
+      expect(pagination.pageSize).toBe(100);
     });
 
     it('maps INACTIVE status to "Inactive"', async () => {
       const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
       const stakingRpcClient = makeStakingRpcClient();
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
 
-      const validators = await service.getValidators();
+      const { data: validators } = await service.getValidators();
 
       validators.forEach((v) => expect(v.status).toBe("Inactive"));
     });
@@ -113,54 +120,106 @@ describe("StakingService", () => {
     it('maps JAILED status to "Jailed"', async () => {
       const bnbRpcClient = makeBNBRpcClient({ status: "JAILED" });
       const stakingRpcClient = makeStakingRpcClient();
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
 
-      const validators = await service.getValidators();
+      const { data: validators } = await service.getValidators();
 
       validators.forEach((v) => expect(v.status).toBe("Jailed"));
     });
 
-    it("filters by a single status", async () => {
-      const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
-      const service = new StakingService(
-        new InMemoryCache(),
-        makeStakingRpcClient() as any,
-        bnbRpcClient as any
-      );
-
-      const active = await service.getValidators("Active");
-      expect(active).toHaveLength(0);
-
-      const inactive = await service.getValidators("Inactive");
-      expect(inactive).toHaveLength(3);
-      inactive.forEach((v) => expect(v.status).toBe("Inactive"));
-    });
-
-    it("filters by multiple statuses", async () => {
-      const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
-      const service = new StakingService(
-        new InMemoryCache(),
-        makeStakingRpcClient() as any,
-        bnbRpcClient as any
-      );
-
-      const result = await service.getValidators(["Active", "Inactive"]);
-      expect(result).toHaveLength(3);
-    });
-
-    it("returns all validators when no status filter is provided", async () => {
-      const service = new StakingService(
-        new InMemoryCache(),
+    it("returns all validators when no params are provided", async () => {
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         makeStakingRpcClient() as any,
         makeBNBRpcClient() as any
       );
 
-      const all = await service.getValidators();
-      expect(all).toHaveLength(3);
+      const { data } = await service.getValidators();
+      expect(data).toHaveLength(3);
+    });
+
+    it("passes page and pageSize to the RPC client", async () => {
+      const bnbRpcClient = makeBNBRpcClient();
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
+        makeStakingRpcClient() as any,
+        bnbRpcClient as any
+      );
+
+      await service.getValidators({ page: 2, pageSize: 10 });
+
+      expect(bnbRpcClient.getValidators).toHaveBeenCalledWith({ page: 2, pageSize: 10 });
+    });
+
+    it("returns correct pagination metadata", async () => {
+      const bnbRpcClient = makeBNBRpcClient();
+      // Mock returns total: 3 for our 3-validator fixture
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
+        makeStakingRpcClient() as any,
+        bnbRpcClient as any
+      );
+
+      const { pagination } = await service.getValidators({ page: 1, pageSize: 2 });
+
+      expect(pagination.page).toBe(1);
+      expect(pagination.pageSize).toBe(2);
+      expect(pagination.total).toBe(3);
+      expect(pagination.totalPages).toBe(2);
+      expect(pagination.hasNextPage).toBe(true);
+    });
+
+    it("throws ValidationError for page 0", async () => {
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
+        makeStakingRpcClient() as any,
+        makeBNBRpcClient() as any
+      );
+
+      await expect(service.getValidators({ page: 0 })).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_PAGE");
+        return true;
+      });
+    });
+
+    it("throws ValidationError for negative page", async () => {
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
+        makeStakingRpcClient() as any,
+        makeBNBRpcClient() as any
+      );
+
+      await expect(service.getValidators({ page: -1 })).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_PAGE");
+        return true;
+      });
+    });
+
+    it("throws ValidationError for pageSize 0", async () => {
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
+        makeStakingRpcClient() as any,
+        makeBNBRpcClient() as any
+      );
+
+      await expect(service.getValidators({ pageSize: 0 })).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_PAGE_SIZE");
+        return true;
+      });
     });
 
     it("skips validators with no matching credit address", async () => {
@@ -173,13 +232,14 @@ describe("StakingService", () => {
         ],
       ]);
       const stakingRpcClient = makeStakingRpcClient(partialMap as any);
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
 
-      const validators = await service.getValidators();
+      const { data: validators } = await service.getValidators();
 
       expect(validators).toHaveLength(1);
       expect(validators[0].name).toBe("TWStaking");
@@ -198,8 +258,9 @@ describe("StakingService", () => {
         ],
         VALIDATORS.map(() => ({ status: "success", result: 0n }))
       );
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -228,8 +289,9 @@ describe("StakingService", () => {
         amount: 2_000_000_000_000_000_000n, // 2 BNB
         unlockTime: futureUnlockTime,
       });
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -257,8 +319,9 @@ describe("StakingService", () => {
         amount: 1_500_000_000_000_000_000n, // 1.5 BNB
         unlockTime: pastUnlockTime,
       });
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );
@@ -274,8 +337,9 @@ describe("StakingService", () => {
     it("exposes real staking summary from the API fixture", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
-      const service = new StakingService(
-        new InMemoryCache(),
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
         stakingRpcClient as any,
         bnbRpcClient as any
       );

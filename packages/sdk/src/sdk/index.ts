@@ -3,8 +3,13 @@ import { ConfigError } from "../entity/errors";
 import type { Balance } from "../entity/balance-types";
 import type { Fee } from "../entity/fee-types";
 import type { GuardianServiceContract } from "../service/guardian-service-contract";
-import type { BaseSignArgs, CompileArgs, PrehashResult } from "../entity/sign-types";
-import type { Delegations, Validator, ValidatorStatus } from "../entity/staking-types";
+import type {
+  BaseSignArgs,
+  CompileArgs,
+  PrehashResult,
+  SigningWithPrivateKey,
+} from "../entity/sign-types";
+import type { Delegations, GetValidatorsParams, ValidatorsPage } from "../entity/staking-types";
 import type { Transaction } from "../entity/transaction-types";
 
 /**
@@ -30,11 +35,8 @@ export class GuardianSDK {
     this.services = new Map(services.map((s) => [s.getChainInfo().id, s]));
   }
 
-  getValidators(
-    chain: GuardianChain,
-    status?: ValidatorStatus | ValidatorStatus[]
-  ): Promise<Validator[]> {
-    return this.getService(chain).getValidators(status);
+  getValidators(chain: GuardianChain, params?: GetValidatorsParams): Promise<ValidatorsPage> {
+    return this.getService(chain).getValidators(params);
   }
 
   getDelegations(chain: GuardianChain, address: string): Promise<Delegations> {
@@ -53,7 +55,7 @@ export class GuardianSDK {
     return this.getService(transaction.chain).estimateFee(transaction);
   }
 
-  sign(signingArgs: BaseSignArgs): Promise<string> {
+  sign(signingArgs: SigningWithPrivateKey): Promise<string> {
     return this.getService(signingArgs.transaction.chain).sign(signingArgs);
   }
 

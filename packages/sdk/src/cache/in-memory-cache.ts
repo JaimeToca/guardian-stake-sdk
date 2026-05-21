@@ -31,46 +31,39 @@ import type { CacheContract } from "./cache-contract";
  *   key space is fixed (one entry per chain), but would be a problem if used with
  *   a large or dynamic key space.
  */
-export class InMemoryCache<K, V> implements CacheContract<K, V> {
-  private cache = new Map<K, CacheEntry<V>>();
-  private defaultTtlMs: number;
+export function createInMemoryCache<K, V>(defaultTtlMs = 180000): CacheContract<K, V> {
+  const store = new Map<K, CacheEntry<V>>();
 
-  constructor(defaultTtlMs: number = 180000) {
-    this.defaultTtlMs = defaultTtlMs;
-  }
+  return {
+    set(key, value, ttlMs) {
+      store.set(key, { value, expirationInMillis: Date.now() + (ttlMs ?? defaultTtlMs) });
+    },
 
-  public set(key: K, value: V, ttlMs?: number): void {
-    const expiration = Date.now() + (ttlMs ?? this.defaultTtlMs);
-    this.cache.set(key, { value, expirationInMillis: expiration });
-  }
+    get(key) {
+      const entry = store.get(key);
+      if (!entry) return undefined;
+      if (Date.now() >= entry.expirationInMillis) {
+        store.delete(key);
+        return undefined;
+      }
+      return entry.value;
+    },
 
-  public get(key: K): V | undefined {
-    const entry = this.cache.get(key);
+    delete(key) {
+      return store.delete(key);
+    },
 
-    if (!entry) return undefined;
+    has(key) {
+      const entry = store.get(key);
+      return entry !== undefined && Date.now() < entry.expirationInMillis;
+    },
 
-    if (Date.now() >= entry.expirationInMillis) {
-      this.delete(key);
-      return undefined;
-    }
+    clear() {
+      store.clear();
+    },
 
-    return entry.value;
-  }
-
-  public delete(key: K): boolean {
-    return this.cache.delete(key);
-  }
-
-  public has(key: K): boolean {
-    const entry = this.cache.get(key);
-    return !!entry && Date.now() < entry.expirationInMillis;
-  }
-
-  public clear(): void {
-    this.cache.clear();
-  }
-
-  public size(): number {
-    return this.cache.size;
-  }
+    size() {
+      return store.size;
+    },
+  };
 }

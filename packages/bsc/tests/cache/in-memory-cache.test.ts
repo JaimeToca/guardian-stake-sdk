@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { InMemoryCache } from "@guardian-sdk/sdk";
+import { createInMemoryCache, type CacheContract } from "@guardian-sdk/sdk";
 
 describe("InMemoryCache", () => {
-  let cache: InMemoryCache<string, string>;
+  let cache: CacheContract<string, string>;
 
   beforeEach(() => {
-    cache = new InMemoryCache<string, string>(1000);
+    cache = createInMemoryCache<string, string>(1000);
   });
 
   describe("set / get", () => {

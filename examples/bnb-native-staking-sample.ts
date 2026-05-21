@@ -25,8 +25,14 @@ async function sample_check_delegations() {
   const balances = await sdk.getBalances(bscMainnet, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
   console.log("Balances:", balances);
 
-  const validators = await sdk.getValidators(bscMainnet);
-  console.log(`Validators: ${validators.length}`);
+  // Fetch validators — first page, default page size
+  const validatorsPage = await sdk.getValidators(bscMainnet);
+  console.log("Validators:", validatorsPage.data);
+  console.log("Pagination:", validatorsPage.pagination);
+
+  // Fetch a specific page with a custom page size
+  const page2 = await sdk.getValidators(bscMainnet, { page: 2, pageSize: 10 });
+  console.log("Page 2 validators:", page2.data);
 
   const { delegations } = await sdk.getDelegations(bscMainnet, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
   for (const d of delegations) {
@@ -39,7 +45,12 @@ async function sample_delegate_transaction() {
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18);
 
-  const validators = await sdk.getValidators(bscMainnet);
+  // Fetch balances
+  const balances = await sdk.getBalances(bscMainnet, ADDRESS);
+  console.log("Balances:", balances);
+
+  // Pick a validator — use getValidators() to browse the full set
+  const { data: validators } = await sdk.getValidators(bscMainnet);
   const validator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
 
   const transaction: DelegateTransaction = {
@@ -63,9 +74,12 @@ async function sample_delegate_transaction() {
 async function sample_redelegate_transaction() {
   const PRIVATE_KEY = privateKeyFromMnemonic(MNEMONIC);
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
-  const AMOUNT = parseUnits("1.01", 18);
+  const AMOUNT = parseUnits("1.01", 18); // 1.01 BNB
 
-  const validators = await sdk.getValidators(bscMainnet);
+  // Pick a validator — use getValidators() to browse the full set
+  const { data: validators } = await sdk.getValidators(bscMainnet);
+
+  // From Validator A to Validator B
   const fromValidator = validators.find((v) => v.name === "Binance Staking") ?? validators[0];
   const toValidator = validators.find((v) => v.name === "Ankr Staking") ?? validators[1];
 
@@ -93,7 +107,9 @@ async function sample_undelegate_transaction() {
   const ADDRESS = "0x33CA16e244c86484c2637F290419af6808ac12B3";
   const AMOUNT = parseUnits("1.01", 18);
 
-  const validators = await sdk.getValidators(bscMainnet);
+  // Pick a validator — use getValidators() to browse the full set
+  const { data: validators } = await sdk.getValidators(bscMainnet);
+
   const validator = validators.find((v) => v.name === "Ankr Staking") ?? validators[0];
 
   const transaction: UndelegateTransaction = {
