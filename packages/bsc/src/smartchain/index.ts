@@ -1,6 +1,8 @@
 import { createPublicClient, http } from "viem";
 import type { GuardianServiceContract, Logger, Validator, ValidatorsPage } from "@guardian-sdk/sdk";
 import { createInMemoryCache, NoopLogger, validateRpcUrl } from "@guardian-sdk/sdk";
+import type { SigningWithAccount } from "./sign-types";
+import type { SigningWithPrivateKey } from "@guardian-sdk/sdk";
 import { bscMainnet, getViemChain } from "../chain";
 import { createStakingRpcClient } from "./rpc/staking-rpc-client";
 import { createBnbRpcClient } from "./rpc/bnb-rpc-client";
@@ -55,7 +57,7 @@ export function bsc(config: { rpcUrl: string; logger?: Logger }): GuardianServic
     getBalances: (address) => balance.getBalances(address),
     getNonce: (address) => getNonce(client, address),
     estimateFee: (tx) => fee.estimateFee(tx),
-    sign: (args) => sign.sign(args),
+    sign: (args) => sign.sign(args as SigningWithPrivateKey | SigningWithAccount),
     prehash: (args) => sign.prehash(args),
     compile: (args) => sign.compile(args),
     broadcast: (rawTx) => broadcast(client, logger, rawTx),

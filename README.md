@@ -689,6 +689,7 @@ import { SigningError } from "@guardian-sdk/bsc";
 | Code | Thrown when |
 |---|---|
 | `INVALID_SIGNING_ARGS` | The object passed to `sign()` contains neither a `privateKey` nor an `account` field |
+| `INVALID_FEE_TYPE` | The `fee` object type does not match the chain — e.g. a `UtxoFee` passed to a BSC `sign()` call instead of a `GasFee` |
 | `UNSUPPORTED_TRANSACTION_TYPE` | A `TransactionType` is used that has no ABI encoding defined |
 
 ---

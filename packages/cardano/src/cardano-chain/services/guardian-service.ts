@@ -9,10 +9,10 @@ import type {
   BroadcastServiceContract,
   Delegations,
   FeeServiceContract,
+  GetValidatorsParams,
   NonceServiceContract,
   StakingServiceContract,
-  Validator,
-  ValidatorStatus,
+  ValidatorsPage,
 } from "@guardian-sdk/sdk";
 import type { SignService } from "./sign-service";
 
@@ -41,8 +41,8 @@ export class GuardianService implements GuardianServiceContract {
     private readonly broadcastService: BroadcastServiceContract
   ) {}
 
-  getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
-    return this.stakingService.getValidators(status);
+  getValidators(params?: GetValidatorsParams): Promise<ValidatorsPage> {
+    return this.stakingService.getValidators(params);
   }
 
   getDelegations(address: string): Promise<Delegations> {

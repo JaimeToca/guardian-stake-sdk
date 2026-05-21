@@ -10,6 +10,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 import type {
   Fee,
+  GasFee,
   Validator,
   OperatorAddress,
   BaseSignArgs,
@@ -132,13 +133,22 @@ export function createSignService(
     amount: bigint,
     data: Hex
   ): TransactionSerializable {
+    if (signArgs.fee.type !== "GasFee") {
+      throw new SigningError(
+        "INVALID_FEE_TYPE",
+        `BSC requires a GasFee (gasPrice + gasLimit) but received "${signArgs.fee.type}". ` +
+          "Use sdk.estimateFee() on a BSC transaction to obtain the correct fee object."
+      );
+    }
+    const fee = signArgs.fee;
+    
     return {
       to: STAKING_CONTRACT,
       value: amount,
       data,
       chainId: Number(signArgs.transaction.chain.chainId),
-      gas: signArgs.fee.gasLimit,
-      gasPrice: signArgs.fee.gasPrice,
+      gas: fee.gasLimit,
+      gasPrice: fee.gasPrice,
       nonce: signArgs.nonce,
     };
   }
@@ -177,7 +187,7 @@ export function createSignService(
       } else {
         throw new SigningError(
           "INVALID_SIGNING_ARGS",
-          "signingArgs must contain either a privateKey (SigningWithPrivateKey) or an account (SigningWithAccount)."
+          "BSC sign() requires either a privateKey string (SigningWithPrivateKey) or a viem PrivateKeyAccount (SigningWithAccount)."
         );
       }
 

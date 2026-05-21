@@ -685,6 +685,7 @@ import { SigningError } from "@guardian-sdk/bsc";
 | Code | Thrown when |
 |---|---|
 | `INVALID_SIGNING_ARGS` | The object passed to `sign()` contains neither a `privateKey` nor an `account` field |
+| `INVALID_FEE_TYPE` | A `UtxoFee` (or other non-gas fee) was passed to `sign()` — BSC requires a `GasFee` with `gasPrice` and `gasLimit`; use `sdk.estimateFee()` on a BSC transaction to obtain the correct fee |
 | `UNSUPPORTED_TRANSACTION_TYPE` | `buildCallData` is called with a `TransactionType` that has no ABI encoding defined |
 
 ---

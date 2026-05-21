@@ -36,8 +36,8 @@ async function sample_check_delegations() {
   const balances = await sdk.getBalances(cardanoMainnet, STAKE_ADDRESS);
   console.log("Balances:", balances);
 
-  const validators = await sdk.getValidators(cardanoMainnet);
-  console.log(`Stake pools: ${validators.length}`);
+  const { data: validators, pagination } = await sdk.getValidators(cardanoMainnet);
+  console.log(`Stake pools: ${pagination.total}`);
   for (const v of validators) {
     console.log(`  ${v.name} — APY ≈ ${v.apy.toFixed(2)}% — delegators: ${v.delegators}`);
   }
@@ -53,7 +53,7 @@ async function sample_check_delegations() {
 // Combines two certificates: StakeKeyRegistration + StakeDelegation.
 // The 2 ADA deposit is returned when you later undelegate.
 async function sample_delegate_transaction() {
-  const validators = await sdk.getValidators(cardanoMainnet, "Active");
+  const { data: validators } = await sdk.getValidators(cardanoMainnet);
   const validator = validators.find((v) => v.name === "IOHK") ?? validators[0];
 
   const transaction: DelegateTransaction = {
@@ -84,7 +84,7 @@ async function sample_delegate_transaction() {
 // Switches delegation to a different pool without unbonding.
 // No waiting period — takes effect at the next epoch boundary (~5 days).
 async function sample_redelegate_transaction() {
-  const validators = await sdk.getValidators(cardanoMainnet, "Active");
+  const { data: validators } = await sdk.getValidators(cardanoMainnet);
   const fromValidator = validators.find((v) => v.name === "IOHK") ?? validators[0];
   const toValidator = validators.find((v) => v.name !== fromValidator.name) ?? validators[1];
 
@@ -116,7 +116,7 @@ async function sample_redelegate_transaction() {
 // Returns the 2 ADA registration deposit. Your ADA stays in your wallet.
 // Any pending rewards must be withdrawn first — they are lost on deregistration.
 async function sample_undelegate_transaction() {
-  const validators = await sdk.getValidators(cardanoMainnet);
+  const { data: validators } = await sdk.getValidators(cardanoMainnet);
   const validator = validators[0];
 
   const transaction: UndelegateTransaction = {
@@ -155,7 +155,7 @@ async function sample_claim_rewards() {
 
   console.log(`Claiming ${Number(rewards.amount) / 1_000_000} ADA`);
 
-  const validators = await sdk.getValidators(cardanoMainnet);
+  const { data: validators } = await sdk.getValidators(cardanoMainnet);
 
   const transaction: ClaimRewardsTransaction = {
     type: "ClaimRewards",
@@ -183,7 +183,7 @@ async function sample_claim_rewards() {
 // prehash() builds the unsigned tx body, compile() assembles the final tx from
 // external signatures. The signature string is: paymentSig:stakingVKey:stakingSig:paymentVKey
 async function sample_mpc_delegate() {
-  const validators = await sdk.getValidators(cardanoMainnet, "Active");
+  const { data: validators } = await sdk.getValidators(cardanoMainnet);
 
   const transaction: DelegateTransaction = {
     type: "Delegate",

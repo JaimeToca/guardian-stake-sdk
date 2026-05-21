@@ -28,7 +28,10 @@ export type ValidationErrorCode =
 
 export type ConfigErrorCode = "UNSUPPORTED_CHAIN" | "INVALID_RPC_URL";
 
-export type SigningErrorCode = "INVALID_SIGNING_ARGS" | "UNSUPPORTED_TRANSACTION_TYPE";
+export type SigningErrorCode =
+  | "INVALID_SIGNING_ARGS"
+  | "INVALID_FEE_TYPE"
+  | "UNSUPPORTED_TRANSACTION_TYPE";
 
 export type ErrorCode = ValidationErrorCode | ConfigErrorCode | SigningErrorCode;
 
@@ -77,7 +80,14 @@ export class ConfigError extends GuardianError {
 
 /**
  * Thrown when a signing operation fails due to invalid arguments, an
- * unsupported signer type, or an unsupported transaction type.
+ * unsupported signer type, an unsupported transaction type, or a fee object
+ * whose type does not match what the target chain expects.
+ *
+ * | Code | When |
+ * |---|---|
+ * | `INVALID_SIGNING_ARGS` | Missing or wrong key fields (no `privateKey`, no `account`, etc.) |
+ * | `INVALID_FEE_TYPE` | Fee type mismatch — e.g. passing a `UtxoFee` to a BSC sign call |
+ * | `UNSUPPORTED_TRANSACTION_TYPE` | Transaction `type` is not handled by this chain |
  */
 export class SigningError extends GuardianError {
   constructor(code: SigningErrorCode, message: string) {

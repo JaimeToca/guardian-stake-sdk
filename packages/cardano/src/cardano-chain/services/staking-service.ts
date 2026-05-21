@@ -1,11 +1,13 @@
 import type { CacheContract, Logger } from "@guardian-sdk/sdk";
-import { filterByStatus, NoopLogger } from "@guardian-sdk/sdk";
+import { NoopLogger, validatePageParams } from "@guardian-sdk/sdk";
 import type {
   Delegation,
   Delegations,
+  GetValidatorsParams,
   StakingServiceContract,
   Validator,
   ValidatorStatus,
+  ValidatorsPage,
 } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import { resolveStakeAddress } from "../validations";
@@ -47,8 +49,23 @@ export class StakingService implements StakingServiceContract {
     private readonly logger: Logger = new NoopLogger()
   ) {}
 
-  async getValidators(status?: ValidatorStatus | ValidatorStatus[]): Promise<Validator[]> {
-    return filterByStatus(await this.fetchAllValidators(), status);
+  async getValidators(params?: GetValidatorsParams): Promise<ValidatorsPage> {
+    validatePageParams(params ?? {});
+    const page = params?.page ?? 1;
+    const pageSize = params?.pageSize ?? 100;
+
+    const all = await this.fetchAllValidators();
+    const start = (page - 1) * pageSize;
+    return {
+      data: all.slice(start, start + pageSize),
+      pagination: {
+        page,
+        pageSize,
+        total: all.length,
+        totalPages: Math.ceil(all.length / pageSize),
+        hasNextPage: page * pageSize < all.length,
+      },
+    };
   }
 
   private async fetchAllValidators(): Promise<Validator[]> {
