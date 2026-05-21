@@ -2,13 +2,12 @@ import type { GuardianServiceContract, Logger } from "@guardian-sdk/sdk";
 import { createInMemoryCache, NoopLogger } from "@guardian-sdk/sdk";
 import type { Validator } from "@guardian-sdk/sdk";
 import { cardanoMainnet } from "../chain";
-import { BlockfrostRpcClient } from "./rpc/blockfrost-rpc-client";
-import { StakingService } from "./services/staking-service";
-import { BalanceService } from "./services/balance-service";
-import { FeeService } from "./services/fee-service";
-import { SignService } from "./services/sign-service";
-import { NonceService } from "./services/nonce-service";
-import { BroadcastService } from "./services/broadcast-service";
+import { createBlockfrostRpcClient } from "./rpc/blockfrost-rpc-client";
+import { createStakingService } from "./services/staking-service";
+import { createBalanceService } from "./services/balance-service";
+import { createFeeService } from "./services/fee-service";
+import { createSignService } from "./services/sign-service";
+import { createBroadcastService } from "./services/broadcast-service";
 
 export interface CardanoConfig {
   /**
@@ -52,22 +51,21 @@ export interface CardanoConfig {
  */
 export function cardano(config: CardanoConfig = {}): GuardianServiceContract {
   const logger = config.logger ?? new NoopLogger();
-  const rpcClient = new BlockfrostRpcClient(config.apiKey, logger, config.baseUrl);
+  const rpcClient = createBlockfrostRpcClient(config.apiKey, logger, config.baseUrl);
   const cache = createInMemoryCache<string, Validator[]>(600_000); // 10 min
 
-  const staking = new StakingService(cache, rpcClient, logger);
-  const balance = new BalanceService(rpcClient);
-  const nonce = new NonceService();
-  const sign = new SignService(rpcClient, logger);
-  const fee = new FeeService(rpcClient, logger);
-  const broadcast = new BroadcastService(rpcClient, logger);
+  const staking = createStakingService(cache, rpcClient, logger);
+  const balance = createBalanceService(rpcClient);
+  const sign = createSignService(rpcClient, logger);
+  const fee = createFeeService(rpcClient, logger);
+  const broadcast = createBroadcastService(rpcClient, logger);
 
   return {
     getChainInfo: () => cardanoMainnet,
     getValidators: (params) => staking.getValidators(params),
     getDelegations: (address) => staking.getDelegations(address),
     getBalances: (address) => balance.getBalances(address),
-    getNonce: (address) => nonce.getNonce(address),
+    getNonce: () => Promise.resolve(0), // Cardano uses UTXOs — no account nonce
     estimateFee: (tx) => fee.estimateFee(tx),
     sign: (args) => sign.sign(args),
     prehash: (args) => sign.prehash(args),

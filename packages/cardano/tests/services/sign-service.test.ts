@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
-import { SignService } from "../../src/cardano-chain/services/sign-service";
+import { createSignService } from "../../src/cardano-chain/services/sign-service";
 import { SigningError, ValidationError } from "@guardian-sdk/sdk";
 import { cardanoMainnet } from "../../src/chain";
 import protocolParamsFixture from "../fixtures/protocol_params.json";
@@ -62,7 +62,7 @@ beforeAll(async () => {
 describe("SignService", () => {
   describe("sign — error cases", () => {
     it("throws SigningError when signing args lack payment/staking keys", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       await expect(
         service.sign({
@@ -85,7 +85,7 @@ describe("SignService", () => {
     });
 
     it("throws ValidationError when transaction.account is missing", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       await expect(
         service.sign({
@@ -109,7 +109,7 @@ describe("SignService", () => {
     });
 
     it("throws SigningError when fee type is not UtxoFee", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       await expect(
         service.sign({
@@ -128,7 +128,7 @@ describe("SignService", () => {
         } as any)
       ).rejects.toSatisfy((err: unknown) => {
         expect(err).toBeInstanceOf(SigningError);
-        expect((err as SigningError).code).toBe("INVALID_SIGNING_ARGS");
+        expect((err as SigningError).code).toBe("INVALID_FEE_TYPE");
         return true;
       });
     });
@@ -181,7 +181,7 @@ describe("SignService", () => {
         },
       },
     ])("$name — returns a valid CBOR hex string", async ({ tx }) => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       const result = await service.sign({
         transaction: tx as any,
@@ -197,7 +197,7 @@ describe("SignService", () => {
     });
 
     it("produces deterministic output for identical inputs", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       const args = {
         transaction: {
@@ -223,7 +223,7 @@ describe("SignService", () => {
 
   describe("prehash", () => {
     it("throws ValidationError when transaction.account is missing", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       await expect(
         service.prehash({
@@ -241,7 +241,7 @@ describe("SignService", () => {
     });
 
     it("throws SigningError when fee type is not UtxoFee", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       await expect(
         service.prehash({
@@ -260,7 +260,7 @@ describe("SignService", () => {
     });
 
     it("throws SigningError when stakingPublicKey is missing", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       await expect(
         service.prehash({
@@ -280,7 +280,7 @@ describe("SignService", () => {
     });
 
     it("returns serializedTransaction (tx body hash) and signArgs", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       const signArgs = {
         transaction: {
@@ -308,7 +308,7 @@ describe("SignService", () => {
 
   describe("compile", () => {
     it("throws SigningError when signature does not have 4 colon-delimited parts", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       const signArgs = {
         transaction: {
@@ -333,7 +333,7 @@ describe("SignService", () => {
     });
 
     it("throws SigningError when signArgs were not produced by prehash()", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       // compile() requires _txBodyCbor which is only present in signArgs returned by prehash().
       // Passing manually-constructed signArgs must throw INVALID_SIGNING_ARGS.
@@ -360,7 +360,7 @@ describe("SignService", () => {
     });
 
     it("returns a signed CBOR hex string from external signatures", async () => {
-      const service = new SignService(makeRpcClient() as any);
+      const service = createSignService(makeRpcClient() as any);
 
       const prehashArgs = {
         transaction: {

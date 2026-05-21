@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { BalanceService } from "../../src/cardano-chain/services/balance-service";
+import { createBalanceService } from "../../src/cardano-chain/services/balance-service";
 import accountFixture from "../fixtures/account.json";
 import type { BlockfrostAccount } from "../../src/cardano-chain/rpc/blockfrost-rpc-types";
 
@@ -13,7 +13,7 @@ describe("BalanceService", () => {
   const STAKE_ADDRESS = accountFixture.stake_address;
 
   it("returns Available, Staked, and Rewards balance types (no Pending — Cardano has no unbonding)", async () => {
-    const service = new BalanceService(makeRpcClient() as any);
+    const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const types = balances.map((b) => b.type);
@@ -25,7 +25,7 @@ describe("BalanceService", () => {
   });
 
   it("returns exactly 3 balance entries", async () => {
-    const service = new BalanceService(makeRpcClient() as any);
+    const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
 
@@ -33,7 +33,7 @@ describe("BalanceService", () => {
   });
 
   it("maps Available balance from controlled_amount", async () => {
-    const service = new BalanceService(makeRpcClient() as any);
+    const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const available = balances.find((b) => b.type === "Available");
@@ -42,7 +42,7 @@ describe("BalanceService", () => {
   });
 
   it("maps Staked balance equal to controlled_amount (ADA is never locked by delegation)", async () => {
-    const service = new BalanceService(makeRpcClient() as any);
+    const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const staked = balances.find((b) => b.type === "Staked");
@@ -51,7 +51,7 @@ describe("BalanceService", () => {
   });
 
   it("maps Rewards balance from withdrawable_amount", async () => {
-    const service = new BalanceService(makeRpcClient() as any);
+    const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const claimable = balances.find((b) => b.type === "Rewards");
@@ -60,7 +60,7 @@ describe("BalanceService", () => {
   });
 
   it("returns zero rewards when withdrawable_amount is 0", async () => {
-    const service = new BalanceService(makeRpcClient({ withdrawable_amount: "0" }) as any);
+    const service = createBalanceService(makeRpcClient({ withdrawable_amount: "0" }) as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const claimable = balances.find((b) => b.type === "Rewards");
@@ -70,7 +70,7 @@ describe("BalanceService", () => {
 
   it("reflects large balances correctly (bigint precision)", async () => {
     const largeAmount = "45000000000000000"; // 45 billion ADA in lovelaces
-    const service = new BalanceService(
+    const service = createBalanceService(
       makeRpcClient({ controlled_amount: largeAmount, withdrawable_amount: "0" }) as any
     );
 

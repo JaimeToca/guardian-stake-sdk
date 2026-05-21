@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { StakingService } from "../../src/cardano-chain/services/staking-service";
+import { createStakingService } from "../../src/cardano-chain/services/staking-service";
 import { createInMemoryCache } from "@guardian-sdk/sdk";
 import poolsFixture from "../fixtures/pools.json";
 import poolMetadataFixture from "../fixtures/pool_metadata.json";
@@ -50,7 +50,7 @@ describe("StakingService", () => {
   describe("getValidators", () => {
     it("fetches pools from RPC on the first call", async () => {
       const rpcClient = makeRpcClient();
-      const service = new StakingService(createInMemoryCache(), rpcClient as any);
+      const service = createStakingService(createInMemoryCache(), rpcClient as any);
 
       await service.getValidators();
 
@@ -59,7 +59,7 @@ describe("StakingService", () => {
 
     it("returns cached validators on second call without hitting the RPC again", async () => {
       const rpcClient = makeRpcClient();
-      const service = new StakingService(createInMemoryCache(), rpcClient as any);
+      const service = createStakingService(createInMemoryCache(), rpcClient as any);
 
       await service.getValidators();
       await service.getValidators();
@@ -68,7 +68,7 @@ describe("StakingService", () => {
     });
 
     it("maps an active pool (no retirement) to status Active", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { data } = await service.getValidators();
       const active = data.find((v) => v.operatorAddress === POOL_1_ID);
@@ -78,7 +78,7 @@ describe("StakingService", () => {
     });
 
     it("maps a retiring pool to status Inactive", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { data } = await service.getValidators();
       const retiring = data.find((v) => v.operatorAddress === POOLS[1].pool_id);
@@ -88,7 +88,7 @@ describe("StakingService", () => {
     });
 
     it("uses metadata name when available", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { data } = await service.getValidators();
       const pool1 = data.find((v) => v.operatorAddress === POOL_1_ID);
@@ -99,7 +99,7 @@ describe("StakingService", () => {
 
     it("falls back to pool_id prefix when metadata is null", async () => {
       const rpcClient = makeRpcClient({ metadata: null });
-      const service = new StakingService(createInMemoryCache(), rpcClient as any);
+      const service = createStakingService(createInMemoryCache(), rpcClient as any);
 
       const { data } = await service.getValidators();
       const pool1 = data.find((v) => v.operatorAddress === POOL_1_ID);
@@ -108,7 +108,7 @@ describe("StakingService", () => {
     });
 
     it("returns two validators matching the fixture", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { data, pagination } = await service.getValidators();
 
@@ -117,7 +117,7 @@ describe("StakingService", () => {
     });
 
     it("sets operatorAddress and creditAddress to the pool bech32 ID", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { data } = await service.getValidators();
       const pool1 = data.find((v) => v.operatorAddress === POOL_1_ID);
@@ -127,7 +127,7 @@ describe("StakingService", () => {
     });
 
     it("reports a positive APY for a non-saturated pool with margin < 100%", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { data } = await service.getValidators();
       const pool1 = data.find((v) => v.operatorAddress === POOL_1_ID);
@@ -136,7 +136,7 @@ describe("StakingService", () => {
     });
 
     it("returns correct pagination metadata", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { pagination } = await service.getValidators({ page: 1, pageSize: 1 });
 
@@ -148,7 +148,7 @@ describe("StakingService", () => {
     });
 
     it("respects page and pageSize params", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const page1 = await service.getValidators({ page: 1, pageSize: 1 });
       const page2 = await service.getValidators({ page: 2, pageSize: 1 });
@@ -161,7 +161,7 @@ describe("StakingService", () => {
 
   describe("getDelegations", () => {
     it("returns an active delegation when account is delegating", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { delegations } = await service.getDelegations(accountFixture.stake_address);
       const active = delegations.filter((d) => d.status === "Active");
@@ -171,7 +171,7 @@ describe("StakingService", () => {
     });
 
     it("links the delegation to the correct validator", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { delegations } = await service.getDelegations(accountFixture.stake_address);
 
@@ -180,7 +180,7 @@ describe("StakingService", () => {
 
     it("returns no delegations when account is not delegating", async () => {
       const rpcClient = makeRpcClient({ account: { active: false, pool_id: null } });
-      const service = new StakingService(createInMemoryCache(), rpcClient as any);
+      const service = createStakingService(createInMemoryCache(), rpcClient as any);
 
       const { delegations } = await service.getDelegations(accountFixture.stake_address);
 
@@ -190,7 +190,7 @@ describe("StakingService", () => {
     it("creates an unknown validator placeholder for an unrecognised pool", async () => {
       const unknownPoolId = "pool1unknownpoolid0000000000000000000000000000000000000000";
       const rpcClient = makeRpcClient({ account: { pool_id: unknownPoolId } });
-      const service = new StakingService(createInMemoryCache(), rpcClient as any);
+      const service = createStakingService(createInMemoryCache(), rpcClient as any);
 
       const { delegations } = await service.getDelegations(accountFixture.stake_address);
       const delegation = delegations.find((d) => d.status === "Active");
@@ -200,7 +200,7 @@ describe("StakingService", () => {
     });
 
     it("includes staking summary with totalProtocolStake", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { stakingSummary } = await service.getDelegations(accountFixture.stake_address);
 
@@ -209,7 +209,7 @@ describe("StakingService", () => {
     });
 
     it("includes staking summary with unboundPeriodInMillis = 0", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { stakingSummary } = await service.getDelegations(accountFixture.stake_address);
 
@@ -217,7 +217,7 @@ describe("StakingService", () => {
     });
 
     it("includes staking summary with redelegateFeeRate = 0", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { stakingSummary } = await service.getDelegations(accountFixture.stake_address);
 
@@ -225,7 +225,7 @@ describe("StakingService", () => {
     });
 
     it("returns undefined for activeValidators and totalValidators (not available from getDelegations — use getValidators())", async () => {
-      const service = new StakingService(createInMemoryCache(), makeRpcClient() as any);
+      const service = createStakingService(createInMemoryCache(), makeRpcClient() as any);
 
       const { stakingSummary } = await service.getDelegations(accountFixture.stake_address);
 

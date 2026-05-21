@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { FeeService } from "../../src/cardano-chain/services/fee-service";
+import { createFeeService } from "../../src/cardano-chain/services/fee-service";
 import { ValidationError } from "@guardian-sdk/sdk";
 import { cardanoMainnet } from "../../src/chain";
 import protocolParamsFixture from "../fixtures/protocol_params.json";
@@ -32,7 +32,7 @@ function makeRpcClient(params = PARAMS, utxos = UTXOS) {
 
 describe("FeeService", () => {
   it("returns a UtxoFee for a Delegate transaction", async () => {
-    const service = new FeeService(makeRpcClient() as any);
+    const service = createFeeService(makeRpcClient() as any);
 
     const fee = await service.estimateFee({
       type: "Delegate",
@@ -47,7 +47,7 @@ describe("FeeService", () => {
   });
 
   it("applies the linear fee formula: total = min_fee_a * txSizeBytes + min_fee_b", async () => {
-    const service = new FeeService(makeRpcClient() as any);
+    const service = createFeeService(makeRpcClient() as any);
 
     const fee = (await service.estimateFee({
       type: "Delegate",
@@ -63,7 +63,7 @@ describe("FeeService", () => {
   });
 
   it("estimates a positive tx size in bytes", async () => {
-    const service = new FeeService(makeRpcClient() as any);
+    const service = createFeeService(makeRpcClient() as any);
 
     const fee = (await service.estimateFee({
       type: "Delegate",
@@ -123,7 +123,7 @@ describe("FeeService", () => {
       },
     },
   ])("estimates fee for $name transaction", async ({ tx }) => {
-    const service = new FeeService(makeRpcClient() as any);
+    const service = createFeeService(makeRpcClient() as any);
 
     const fee = await service.estimateFee(tx as any);
 
@@ -132,7 +132,7 @@ describe("FeeService", () => {
   });
 
   it("throws ValidationError when account is missing", async () => {
-    const service = new FeeService(makeRpcClient() as any);
+    const service = createFeeService(makeRpcClient() as any);
 
     await expect(
       service.estimateFee({
@@ -150,7 +150,7 @@ describe("FeeService", () => {
   });
 
   it("throws ValidationError when account is not a valid payment address", async () => {
-    const service = new FeeService(makeRpcClient() as any);
+    const service = createFeeService(makeRpcClient() as any);
 
     await expect(
       service.estimateFee({
@@ -169,7 +169,7 @@ describe("FeeService", () => {
   });
 
   it("Delegate tx has more CBOR bytes than Redelegate (registration cert adds size)", async () => {
-    const service = new FeeService(makeRpcClient() as any);
+    const service = createFeeService(makeRpcClient() as any);
 
     const delegateFee = (await service.estimateFee({
       type: "Delegate",

@@ -14,186 +14,165 @@ import type {
 
 /**
  * Client for the Blockfrost REST API (https://blockfrost.io).
- * All Cardano chain data queries go through this class.
+ * All Cardano chain data queries go through this factory.
  *
  * Blockfrost requires an API key (project_id) obtained from blockfrost.io.
  */
-export class BlockfrostRpcClient implements BlockfrostRpcClientContract {
-  private static readonly DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
-  private static readonly POOLS_PAGE_SIZE = 20;
 
-  private readonly baseUrl: string;
+const DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
+const POOLS_PAGE_SIZE = 20;
 
-  constructor(
-    private readonly apiKey: string | undefined,
-    private readonly logger: Logger = new NoopLogger(),
-    baseUrl?: string
-  ) {
-    this.baseUrl = baseUrl ?? BlockfrostRpcClient.DEFAULT_BASE_URL;
-  }
+export function createBlockfrostRpcClient(
+  apiKey: string | undefined,
+  logger: Logger = new NoopLogger(),
+  baseUrl: string = DEFAULT_BASE_URL
+): BlockfrostRpcClientContract {
+  const headers: Record<string, string> = apiKey ? { project_id: apiKey } : {};
 
-  private get headers(): Record<string, string> {
-    return this.apiKey ? { project_id: this.apiKey } : {};
-  }
-
-  async getPools(page = 1): Promise<BlockfrostPoolExtended[]> {
-    const url = `${this.baseUrl}/pools/extended`;
-    this.logger.debug("BlockfrostRpcClient: fetching pools", { url, page });
+  async function getPools(page = 1): Promise<BlockfrostPoolExtended[]> {
+    const url = `${baseUrl}/pools/extended`;
+    logger.debug("BlockfrostRpcClient: fetching pools", { url, page });
     const start = Date.now();
 
     const pools = await fetchOrError<BlockfrostPoolExtended[]>({
       url,
       method: "GET",
-      headers: this.headers,
-      params: {
-        count: BlockfrostRpcClient.POOLS_PAGE_SIZE,
-        page,
-      },
+      headers,
+      params: { count: POOLS_PAGE_SIZE, page },
     });
 
-    this.logger.debug("BlockfrostRpcClient: pools fetched", {
+    logger.debug("BlockfrostRpcClient: pools fetched", {
       count: pools.length,
       ms: Date.now() - start,
     });
     return pools;
   }
 
-  async getPool(poolId: string): Promise<BlockfrostPoolExtended> {
-    const url = `${this.baseUrl}/pools/${poolId}`;
-    this.logger.debug("BlockfrostRpcClient: fetching pool", { poolId });
+  return {
+    async getPools(page = 1): Promise<BlockfrostPoolExtended[]> {
+      return getPools(page);
+    },
 
-    return fetchOrError<BlockfrostPoolExtended>({
-      url,
-      method: "GET",
-      headers: this.headers,
-    });
-  }
+    async getPool(poolId: string): Promise<BlockfrostPoolExtended> {
+      const url = `${baseUrl}/pools/${poolId}`;
+      logger.debug("BlockfrostRpcClient: fetching pool", { poolId });
 
-  async getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null> {
-    const url = `${this.baseUrl}/pools/${poolId}/metadata`;
-    this.logger.debug("BlockfrostRpcClient: fetching pool metadata", { poolId });
+      return fetchOrError<BlockfrostPoolExtended>({ url, method: "GET", headers });
+    },
 
-    try {
-      const metadata = await fetchOrError<BlockfrostPoolMetadata>({
+    async getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null> {
+      const url = `${baseUrl}/pools/${poolId}/metadata`;
+      logger.debug("BlockfrostRpcClient: fetching pool metadata", { poolId });
+
+      try {
+        const metadata = await fetchOrError<BlockfrostPoolMetadata>({
+          url,
+          method: "GET",
+          headers,
+        });
+        // Blockfrost returns {} (no pool_id field) when a pool has never registered metadata.
+        return metadata.pool_id ? metadata : null;
+      } catch (err) {
+        // Blockfrost documents 404 for non-existent pools.
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
+    },
+
+    async getAccount(stakeAddress: string): Promise<BlockfrostAccount> {
+      const url = `${baseUrl}/accounts/${stakeAddress}`;
+      logger.debug("BlockfrostRpcClient: fetching account", { stakeAddress });
+      const start = Date.now();
+
+      const account = await fetchOrError<BlockfrostAccount>({ url, method: "GET", headers });
+
+      logger.debug("BlockfrostRpcClient: account fetched", {
+        ms: Date.now() - start,
+        poolId: account.pool_id,
+        withdrawable: account.withdrawable_amount,
+      });
+      return account;
+    },
+
+    async getAccountOrNull(stakeAddress: string): Promise<BlockfrostAccount | null> {
+      try {
+        const url = `${baseUrl}/accounts/${stakeAddress}`;
+        const account = await fetchOrError<BlockfrostAccount>({ url, method: "GET", headers });
+        return account;
+      } catch (err) {
+        // In practice Blockfrost always returns 200 for valid stake addresses
+        // (unregistered keys come back with active: false, registered: false).
+        // 404 is a safety net for any edge case not covered by that behaviour.
+        if (err instanceof ApiError && err.status === 404) return null;
+        throw err;
+      }
+    },
+
+    async getUtxos(paymentAddress: string): Promise<BlockfrostUtxo[]> {
+      const url = `${baseUrl}/addresses/${paymentAddress}/utxos`;
+      logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress });
+      const start = Date.now();
+
+      const utxos = await fetchOrError<BlockfrostUtxo[]>({
         url,
         method: "GET",
-        headers: this.headers,
+        headers,
+        params: { count: 100, order: "desc" }, // Iterate with pagination if more than 100 UTXOs (unlikely for a payment address, but good to be safe)
       });
-      // Blockfrost returns {} (no pool_id field) when a pool has never registered metadata.
-      return metadata.pool_id ? metadata : null;
-    } catch (err) {
-      // Safety net: Blockfrost documents 404 for non-existent pools.
-      if (err instanceof ApiError && err.status === 404) return null;
-      throw err;
-    }
-  }
 
-  async getAccount(stakeAddress: string): Promise<BlockfrostAccount> {
-    const url = `${this.baseUrl}/accounts/${stakeAddress}`;
-    this.logger.debug("BlockfrostRpcClient: fetching account", { stakeAddress });
-    const start = Date.now();
+      logger.debug("BlockfrostRpcClient: UTXOs fetched", {
+        count: utxos.length,
+        ms: Date.now() - start,
+      });
+      return utxos;
+    },
 
-    const account = await fetchOrError<BlockfrostAccount>({
-      url,
-      method: "GET",
-      headers: this.headers,
-    });
+    async getProtocolParams(): Promise<BlockfrostProtocolParams> {
+      const url = `${baseUrl}/epochs/latest/parameters`;
+      logger.debug("BlockfrostRpcClient: fetching protocol params");
 
-    this.logger.debug("BlockfrostRpcClient: account fetched", {
-      ms: Date.now() - start,
-      poolId: account.pool_id,
-      withdrawable: account.withdrawable_amount,
-    });
-    return account;
-  }
+      const params = await fetchOrError<BlockfrostProtocolParams>({
+        url,
+        method: "GET",
+        headers,
+      });
 
-  async getAccountOrNull(stakeAddress: string): Promise<BlockfrostAccount | null> {
-    try {
-      return await this.getAccount(stakeAddress);
-    } catch (err) {
-      // In practice Blockfrost always returns 200 for valid stake addresses
-      // (unregistered keys come back with active: false, registered: false).
-      // 404 is a safety net for any edge case not covered by that behaviour.
-      if (err instanceof ApiError && err.status === 404) return null;
-      throw err;
-    }
-  }
+      logger.debug("BlockfrostRpcClient: protocol params fetched", {
+        epoch: params.epoch,
+        minFeeA: params.min_fee_a,
+        minFeeB: params.min_fee_b,
+      });
+      return params;
+    },
 
-  async getUtxos(paymentAddress: string): Promise<BlockfrostUtxo[]> {
-    const url = `${this.baseUrl}/addresses/${paymentAddress}/utxos`;
-    this.logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress });
-    const start = Date.now();
+    async getLatestBlock(): Promise<BlockfrostBlock> {
+      const url = `${baseUrl}/blocks/latest`;
+      logger.debug("BlockfrostRpcClient: fetching latest block");
 
-    const utxos = await fetchOrError<BlockfrostUtxo[]>({
-      url,
-      method: "GET",
-      headers: this.headers,
-      params: { count: 100, order: "desc" },
-    });
+      return fetchOrError<BlockfrostBlock>({ url, method: "GET", headers });
+    },
 
-    this.logger.debug("BlockfrostRpcClient: UTXOs fetched", {
-      count: utxos.length,
-      ms: Date.now() - start,
-    });
-    return utxos;
-  }
+    async getNetwork(): Promise<BlockfrostNetwork> {
+      const url = `${baseUrl}/network`;
+      logger.debug("BlockfrostRpcClient: fetching network info");
 
-  async getProtocolParams(): Promise<BlockfrostProtocolParams> {
-    const url = `${this.baseUrl}/epochs/latest/parameters`;
-    this.logger.debug("BlockfrostRpcClient: fetching protocol params");
+      return fetchOrError<BlockfrostNetwork>({ url, method: "GET", headers });
+    },
 
-    const params = await fetchOrError<BlockfrostProtocolParams>({
-      url,
-      method: "GET",
-      headers: this.headers,
-    });
+    async submitTx(cborHex: string): Promise<string> {
+      const url = `${baseUrl}/tx/submit`;
+      logger.debug("BlockfrostRpcClient: submitting transaction");
 
-    this.logger.debug("BlockfrostRpcClient: protocol params fetched", {
-      epoch: params.epoch,
-      minFeeA: params.min_fee_a,
-      minFeeB: params.min_fee_b,
-    });
-    return params;
-  }
+      const txHash = await fetchOrError<string>({
+        url,
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/cbor" },
+        data: hexStringToBuffer(cborHex),
+        responseType: "text",
+      });
 
-  async getLatestBlock(): Promise<BlockfrostBlock> {
-    const url = `${this.baseUrl}/blocks/latest`;
-    this.logger.debug("BlockfrostRpcClient: fetching latest block");
-
-    return fetchOrError<BlockfrostBlock>({
-      url,
-      method: "GET",
-      headers: this.headers,
-    });
-  }
-
-  async getNetwork(): Promise<BlockfrostNetwork> {
-    const url = `${this.baseUrl}/network`;
-    this.logger.debug("BlockfrostRpcClient: fetching network info");
-
-    return fetchOrError<BlockfrostNetwork>({
-      url,
-      method: "GET",
-      headers: this.headers,
-    });
-  }
-
-  async submitTx(cborHex: string): Promise<string> {
-    const url = `${this.baseUrl}/tx/submit`;
-    this.logger.debug("BlockfrostRpcClient: submitting transaction");
-
-    const txHash = await fetchOrError<string>({
-      url,
-      method: "POST",
-      headers: {
-        ...this.headers,
-        "Content-Type": "application/cbor",
-      },
-      data: hexStringToBuffer(cborHex),
-      responseType: "text",
-    });
-
-    this.logger.debug("BlockfrostRpcClient: transaction submitted", { txHash });
-    return txHash;
-  }
+      logger.debug("BlockfrostRpcClient: transaction submitted", { txHash });
+      return txHash;
+    },
+  };
 }

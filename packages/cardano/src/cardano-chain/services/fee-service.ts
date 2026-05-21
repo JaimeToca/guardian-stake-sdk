@@ -24,6 +24,9 @@ const PLACEHOLDER_STAKE_KEY_HASH = "00".repeat(28);
  */
 const FEE_BUFFER_PERCENT = 10n;
 
+/** Number of witnesses for a typical staking tx (payment key + staking key). */
+const STAKING_WITNESS_COUNT = 2;
+
 /**
  * Cardano fee service.
  *
@@ -47,55 +50,11 @@ const FEE_BUFFER_PERCENT = 10n;
  * encodes with the same CBOR width. This is derived from protocol params so it
  * stays correct if the Cardano protocol ever adjusts `minFeeB`.
  */
-export class FeeService implements FeeServiceContract {
-  /** Number of witnesses for a typical staking tx (payment key + staking key). */
-  private static readonly STAKING_WITNESS_COUNT = 2;
-
-  constructor(
-    private readonly rpcClient: BlockfrostRpcClientContract,
-    private readonly logger: Logger = new NoopLogger()
-  ) {}
-
-  async estimateFee(transaction: Transaction): Promise<Fee> {
-    this.logger.debug("FeeService: estimating fee", {
-      type: transaction.type,
-      chain: transaction.chain.id,
-    });
-
-    if (!transaction.account) {
-      throw new ValidationError(
-        "INVALID_ADDRESS",
-        "transaction.account (payment address, addr1...) is required for Cardano fee estimation."
-      );
-    }
-
-    checkIfPaymentAddressIsValid(transaction.account);
-
-    const [protocolParams, utxos] = await Promise.all([
-      this.rpcClient.getProtocolParams(),
-      this.rpcClient.getUtxos(transaction.account),
-    ]);
-
-    const txSizeBytes = this.estimateTxSize(
-      transaction,
-      transaction.account,
-      utxos,
-      protocolParams,
-      BigInt(protocolParams.min_fee_b)
-    );
-    const baseFee = this.calculateFee(txSizeBytes, protocolParams);
-    const fee = baseFee + (baseFee * FEE_BUFFER_PERCENT) / 100n;
-
-    this.logger.debug("FeeService: fee estimated", {
-      txSizeBytes,
-      baseFee: baseFee.toString(),
-      fee: fee.toString(),
-    });
-
-    return { type: "UtxoFee", txSizeBytes, total: fee } satisfies Fee;
-  }
-
-  private estimateTxSize(
+export function createFeeService(
+  rpcClient: BlockfrostRpcClientContract,
+  logger: Logger = new NoopLogger()
+): FeeServiceContract {
+  function estimateTxSize(
     transaction: Transaction,
     paymentAddress: string,
     utxos: BlockfrostUtxo[],
@@ -126,11 +85,52 @@ export class FeeService implements FeeServiceContract {
       withdrawals: withdrawals.size > 0 ? withdrawals : undefined,
     };
 
-    const mockCborHex = buildMockTransaction(txParams, FeeService.STAKING_WITNESS_COUNT);
+    const mockCborHex = buildMockTransaction(txParams, STAKING_WITNESS_COUNT);
     return mockCborHex.length / 2;
   }
 
-  private calculateFee(txSizeBytes: number, params: BlockfrostProtocolParams): bigint {
+  function calculateFee(txSizeBytes: number, params: BlockfrostProtocolParams): bigint {
     return BigInt(params.min_fee_a) * BigInt(txSizeBytes) + BigInt(params.min_fee_b);
   }
+
+  return {
+    async estimateFee(transaction: Transaction): Promise<Fee> {
+      logger.debug("FeeService: estimating fee", {
+        type: transaction.type,
+        chain: transaction.chain.id,
+      });
+
+      if (!transaction.account) {
+        throw new ValidationError(
+          "INVALID_ADDRESS",
+          "transaction.account (payment address, addr1...) is required for Cardano fee estimation."
+        );
+      }
+
+      checkIfPaymentAddressIsValid(transaction.account);
+
+      const [protocolParams, utxos] = await Promise.all([
+        rpcClient.getProtocolParams(),
+        rpcClient.getUtxos(transaction.account),
+      ]);
+
+      const txSizeBytes = estimateTxSize(
+        transaction,
+        transaction.account,
+        utxos,
+        protocolParams,
+        BigInt(protocolParams.min_fee_b)
+      );
+      const baseFee = calculateFee(txSizeBytes, protocolParams);
+      const fee = baseFee + (baseFee * FEE_BUFFER_PERCENT) / 100n;
+
+      logger.debug("FeeService: fee estimated", {
+        txSizeBytes,
+        baseFee: baseFee.toString(),
+        fee: fee.toString(),
+      });
+
+      return { type: "UtxoFee", txSizeBytes, total: fee } satisfies Fee;
+    },
+  };
 }
