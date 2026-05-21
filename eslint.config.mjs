@@ -4,13 +4,7 @@ import prettierConfig from "eslint-config-prettier";
 
 export default [
   {
-    ignores: [
-      "**/dist/**",
-      "**/node_modules/**",
-      "**/docs/**",
-      "**/*.js",
-      "**/*.mjs",
-    ],
+    ignores: ["**/dist/**", "**/node_modules/**", "**/docs/**", "**/*.js", "**/*.mjs"],
   },
   {
     files: ["**/*.ts"],
@@ -18,12 +12,12 @@ export default [
       parser: tsParser,
       parserOptions: {
         project: [
-        "./packages/sdk/tsconfig.json",
-        "./packages/bsc/tsconfig.json",
-        "./packages/bsc/tsconfig.test.json",
-        "./packages/cardano/tsconfig.json",
-        "./packages/cardano/tsconfig.test.json",
-      ],
+          "./packages/sdk/tsconfig.json",
+          "./packages/bsc/tsconfig.json",
+          "./packages/bsc/tsconfig.test.json",
+          "./packages/cardano/tsconfig.json",
+          "./packages/cardano/tsconfig.test.json",
+        ],
         tsconfigRootDir: import.meta.dirname,
       },
     },

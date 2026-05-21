@@ -1,7 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "./packages/sdk" },
-    { "path": "./packages/bsc" }
-  ]
+  "references": [{ "path": "./packages/sdk" }, { "path": "./packages/bsc" }]
 }

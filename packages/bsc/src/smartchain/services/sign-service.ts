@@ -10,7 +10,6 @@ import { privateKeyToAccount } from "viem/accounts";
 import { STAKING_CONTRACT } from "../abi/multicall-stake-abi";
 import type {
   Fee,
-  GasFee,
   Validator,
   OperatorAddress,
   BaseSignArgs,
@@ -141,7 +140,7 @@ export function createSignService(
       );
     }
     const fee = signArgs.fee;
-    
+
     return {
       to: STAKING_CONTRACT,
       value: amount,

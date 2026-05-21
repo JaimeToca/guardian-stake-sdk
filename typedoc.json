@@ -1,15 +1,21 @@
 {
-  "entryPoints": [
-    "packages/sdk/src/index.ts",
-    "packages/bsc/src/index.ts"
-  ],
+  "entryPoints": ["packages/sdk/src/index.ts", "packages/bsc/src/index.ts"],
   "entryPointStrategy": "resolve",
   "out": "docs",
   "name": "Guardian SDK",
   "plugin": ["typedoc-plugin-merge-modules"],
   "mergeModulesMergeMode": "module",
   "tsconfig": "tsconfig.docs.json",
-  "blockTags": ["@example", "@param", "@returns", "@throws", "@deprecated", "@remarks", "@see", "@since"],
+  "blockTags": [
+    "@example",
+    "@param",
+    "@returns",
+    "@throws",
+    "@deprecated",
+    "@remarks",
+    "@see",
+    "@since"
+  ],
   "readme": "README.md",
   "includeVersion": true,
   "excludePrivate": true,

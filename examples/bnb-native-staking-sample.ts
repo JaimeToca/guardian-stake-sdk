@@ -34,7 +34,10 @@ async function sample_check_delegations() {
   const page2 = await sdk.getValidators(bscMainnet, { page: 2, pageSize: 10 });
   console.log("Page 2 validators:", page2.data);
 
-  const { delegations } = await sdk.getDelegations(bscMainnet, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
+  const { delegations } = await sdk.getDelegations(
+    bscMainnet,
+    "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b"
+  );
   for (const d of delegations) {
     console.log(`${d.validator.name} | ${d.status} | ${d.amount} wei`);
   }
