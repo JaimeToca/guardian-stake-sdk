@@ -11,26 +11,12 @@ export const DEFAULT_COINS_PER_UTXO_SIZE = "4310";
 export interface SelectedUtxos {
   inputs: TxInput[];
   totalLovelaces: bigint;
-  /**
-   * Native tokens from any multi-asset UTXOs that were selected.
-   * These MUST be preserved in the change output — Cardano transactions
-   * cannot drop native tokens. Undefined when only pure-ADA UTXOs were selected.
-   */
-  inputAssets?: Map<string, bigint>;
 }
 
 /**
- * Largest-first UTXO selection with ADA-only preference.
+ * Largest-first UTXO selection, restricted to pure-ADA UTXOs.
  *
- * Pure-ADA UTXOs are always preferred over multi-asset UTXOs to keep the
- * change output simple. Multi-asset UTXOs are only included when ADA-only
- * UTXOs cannot cover the required amount.
- *
- * When a multi-asset UTXO is selected, its native tokens are returned in
- * `inputAssets` so callers can include them in the change output. Dropping
- * them would produce an invalid transaction.
- *
- * @throws ValidationError if insufficient funds.
+ * @throws ValidationError if insufficient funds or if native-token UTXOs must be consumed.
  */
 export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint): SelectedUtxos {
   if (requiredLovelaces < 0n) {
@@ -48,8 +34,7 @@ export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint):
       return { utxo, lovelaces, isAdaOnly };
     })
     .filter(({ lovelaces }) => lovelaces > 0n)
-    // ADA-only UTXOs first (largest lovelace), then multi-asset (largest lovelace).
-    // This minimises the risk of pulling in native tokens unnecessarily.
+    // ADA-only UTXOs first so they are exhausted before touching any multi-asset UTXO.
     .sort((a, b) => {
       if (a.isAdaOnly !== b.isAdaOnly) return a.isAdaOnly ? -1 : 1;
       return b.lovelaces > a.lovelaces ? 1 : b.lovelaces < a.lovelaces ? -1 : 0;
@@ -60,6 +45,12 @@ export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint):
 
   for (const entry of withLovelaces) {
     if (total >= requiredLovelaces) break;
+    if (!entry.isAdaOnly) {
+      throw new ValidationError(
+        "UNSUPPORTED_OPERATION",
+        "Native token UTXOs are not yet supported. Move your tokens to a separate address before staking."
+      );
+    }
     selected.push(entry);
     total += entry.lovelaces;
   }
@@ -72,26 +63,8 @@ export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint):
     );
   }
 
-  const inputs: TxInput[] = selected.map(({ utxo }) => ({
-    txHashHex: utxo.tx_hash,
-    index: utxo.output_index,
-  }));
-
-  // Collect native tokens from any selected multi-asset UTXOs.
-  const inputAssets = new Map<string, bigint>();
-  for (const { utxo, isAdaOnly } of selected) {
-    if (!isAdaOnly) {
-      for (const { unit, quantity } of utxo.amount) {
-        if (unit !== "lovelace") {
-          inputAssets.set(unit, (inputAssets.get(unit) ?? 0n) + BigInt(quantity));
-        }
-      }
-    }
-  }
-
   return {
-    inputs,
+    inputs: selected.map(({ utxo }) => ({ txHashHex: utxo.tx_hash, index: utxo.output_index })),
     totalLovelaces: total,
-    inputAssets: inputAssets.size > 0 ? inputAssets : undefined,
   };
 }

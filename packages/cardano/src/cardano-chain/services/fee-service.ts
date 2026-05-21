@@ -70,7 +70,7 @@ export function createFeeService(
     const withdrawals = buildWithdrawals(transaction, PLACEHOLDER_STAKE_KEY_HASH);
     const required = computeRequiredLovelaces(transaction, feePlaceholder, keyDeposit, false);
 
-    const { inputs, totalLovelaces, inputAssets } = selectUtxos(utxos, required + minUtxo);
+    const { inputs, totalLovelaces } = selectUtxos(utxos, required + minUtxo);
 
     // Clamp to minUtxo: the mock change output must satisfy the minimum-ADA rule
     // so the serialised size (and therefore the fee estimate) is accurate.
@@ -79,7 +79,6 @@ export function createFeeService(
       inputs,
       outputAddress: paymentAddress,
       outputLovelaces: rawChange < minUtxo ? minUtxo : rawChange,
-      outputAssets: inputAssets,
       fee: feePlaceholder,
       certificates: certificates.length > 0 ? certificates : undefined,
       withdrawals: withdrawals.size > 0 ? withdrawals : undefined,

@@ -94,7 +94,7 @@ export function createSignService(
     );
 
     // Select enough inputs to cover required + minUtxo so the change output is always valid.
-    const { inputs, totalLovelaces, inputAssets } = selectUtxos(utxos, requiredLovelaces + minUtxo);
+    const { inputs, totalLovelaces } = selectUtxos(utxos, requiredLovelaces + minUtxo);
 
     // Rewards moving from the reward account into the wallet (0 for Delegate/Redelegate).
     const rewardsReceived = rewardAccountWithdrawal(transaction, rewardsAvailableToSweep);
@@ -122,7 +122,6 @@ export function createSignService(
       inputs,
       outputAddress: paymentAddress,
       outputLovelaces,
-      outputAssets: inputAssets,
       fee,
       ttl,
       certificates: certificates.length > 0 ? certificates : undefined,

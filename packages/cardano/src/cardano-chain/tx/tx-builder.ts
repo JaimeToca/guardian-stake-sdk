@@ -30,14 +30,7 @@ export function buildTransactionBody(params: TxBodyParams): Serialization.Transa
     outputs: [
       {
         address: Cardano.PaymentAddress(params.outputAddress),
-        value: {
-          coins: params.outputLovelaces,
-          ...(params.outputAssets?.size && {
-            assets: new Map(
-              [...params.outputAssets.entries()].map(([id, qty]) => [Cardano.AssetId(id), qty])
-            ),
-          }),
-        },
+        value: { coins: params.outputLovelaces },
       },
     ],
     fee: params.fee,

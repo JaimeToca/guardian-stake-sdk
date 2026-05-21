@@ -4,6 +4,9 @@ Native staking support for Cardano, part of the [Guardian SDK](../../README.md).
 
 Abstracts Blockfrost API calls and CBOR transaction construction behind a clean, type-safe API so you can build staking features without dealing with bech32 decoding, stake certificate encoding, UTXO coin selection, or Cardano-specifics.
 
+> **Limitation — pure-ADA wallets only (native token support coming in v1.1.0).**
+> This release only supports wallets whose UTXOs contain ADA exclusively. If your wallet holds native tokens (NFTs, fungible tokens) and there is not enough pure-ADA to cover the transaction, signing and fee estimation will throw `ValidationError("UNSUPPORTED_OPERATION")`. Move native tokens to a separate address before staking, or use a dedicated ADA-only wallet for staking operations.
+
 ## Table of Contents
 
 - [How Cardano Native Staking Works](#how-cardano-native-staking-works)
@@ -97,7 +100,7 @@ This has two important consequences:
 
 2. **No unbonding period.** Changing or stopping delegation takes effect in the next epoch with no waiting period. You pay only the regular transaction fee.
 
-`getDelegations()` reports `amount` as your total controlled ADA — the economic weight your delegation carries — rather than a locked amount. All four balance types return the same base amount: `Available` and `Staked` are always equal because nothing is locked.
+`getDelegations()` reports `amount` as your total controlled ADA — the economic weight your delegation carries — rather than a locked amount. `Available` always reflects the full controlled amount. `Staked` equals `Available` while actively delegating to a pool, and drops to zero when the stake key is not delegating — only delegated ADA earns rewards.
 
 ### Rewards
 
@@ -345,7 +348,7 @@ for (const b of balances) {
   console.log(b.type, Number(b.amount) / 1e6, "ADA");
 }
 // Available  9.95 ADA
-// Staked     9.95 ADA   ← same — nothing is locked
+// Staked     9.95 ADA   ← equals Available while delegating; 0 when not delegating
 // Pending    0 ADA      ← always 0
 // Claimable  2.1 ADA    ← accumulated rewards
 
@@ -506,7 +509,7 @@ All amounts are in lovelaces (1 ADA = 1,000,000 lovelaces).
 | Type | What it represents on Cardano |
 |---|---|
 | **Available** | `controlled_amount` from Blockfrost — all ADA controlled by the stake key, fully spendable at all times |
-| **Staked** | Same as `Available` — delegation on Cardano does not lock or move any funds. The pool earns rewards on whatever ADA you hold at each epoch snapshot. |
+| **Staked** | `controlled_amount` when the stake key is actively delegated to a pool; `0` otherwise. Only delegated ADA earns staking rewards — undelegated or unregistered accounts return `0` here. |
 | **Rewards** | `withdrawable_amount` from Blockfrost — rewards that have been distributed and are sitting in the reward account, ready to withdraw via a `ClaimRewards` transaction |
 
 ```typescript
@@ -519,7 +522,7 @@ for (const b of balances) {
   console.log(b.type, (Number(b.amount) / 1e6).toFixed(6), "ADA");
 }
 // Available  9.950000 ADA
-// Staked     9.950000 ADA
+// Staked     9.950000 ADA   ← 0 when not delegating
 // Pending    0.000000 ADA
 // Claimable  2.100000 ADA
 ```
@@ -931,6 +934,7 @@ import { ValidationError } from "@guardian-sdk/sdk";
 | `INVALID_ADDRESS` | An address string is not valid bech32 — e.g. a pool ID passed to `getDelegations`, or an enterprise/pointer address passed where a base address or stake address is required |
 | `INVALID_AMOUNT` | Insufficient UTXOs to cover the required fee and deposit |
 | `INVALID_PRIVATE_KEY` | A key is not 32 bytes (64 hex characters) |
+| `UNSUPPORTED_OPERATION` | The wallet contains UTXOs with native tokens and ADA-only UTXOs are insufficient — move tokens to a separate address before staking |
 
 ### `SigningError`
 
