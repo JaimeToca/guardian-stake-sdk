@@ -303,7 +303,7 @@ cardano({ apiKey: "mainnetXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" })
 ## Installation
 
 ```bash
-npm install @guardian-sdk/cardano @guardian-sdk/sdk @cardano-sdk/core @cardano-sdk/crypto @cardano-sdk/util
+npm install @guardian-sdk/cardano @guardian-sdk/sdk
 ```
 
 ### Dependencies
@@ -311,11 +311,9 @@ npm install @guardian-sdk/cardano @guardian-sdk/sdk @cardano-sdk/core @cardano-s
 | Package | Role |
 |---|---|
 | [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | Peer dependency — chain-agnostic core, shared types and interfaces |
-| [`@cardano-sdk/core`](https://www.npmjs.com/package/@cardano-sdk/core) | Peer dependency — Cardano primitives: addresses, transactions, certificates |
-| [`@cardano-sdk/crypto`](https://www.npmjs.com/package/@cardano-sdk/crypto) | Peer dependency — Ed25519 key operations and Blake2b hashing |
-| [`@cardano-sdk/util`](https://www.npmjs.com/package/@cardano-sdk/util) | Peer dependency — shared utilities for the Cardano SDK family |
-
-All four are peer dependencies. npm v7+ installs them automatically — you only need to list them explicitly if you want to pin a specific version or if you use them directly in your own code.
+| `@cardano-sdk/core` | Bundled dependency — Cardano primitives: addresses, transactions, certificates |
+| `@cardano-sdk/crypto` | Bundled dependency — Ed25519 key operations and Blake2b hashing |
+| `@cardano-sdk/util` | Bundled dependency — shared utilities for the Cardano SDK family |
 
 ---
 

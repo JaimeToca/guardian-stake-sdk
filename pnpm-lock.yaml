@@ -70,7 +70,7 @@ importers:
         version: 4.1.3(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(esbuild@0.27.7)(tsx@4.22.3)(yaml@2.8.3))
 
   packages/cardano:
-    devDependencies:
+    dependencies:
       '@cardano-sdk/core':
         specifier: ^0.46.12
         version: 0.46.12
@@ -80,6 +80,7 @@ importers:
       '@cardano-sdk/util':
         specifier: ^0.17.1
         version: 0.17.1
+    devDependencies:
       '@guardian-sdk/sdk':
         specifier: workspace:^
         version: link:../sdk
