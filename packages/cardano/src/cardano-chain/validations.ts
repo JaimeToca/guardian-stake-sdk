@@ -1,7 +1,7 @@
 import { Cardano } from "@cardano-sdk/core";
 import { Ed25519KeyHashHex } from "@cardano-sdk/crypto";
 import { assertIsHexString } from "@cardano-sdk/util";
-import { ValidationError } from "@guardian-sdk/sdk";
+import { ValidationError, SigningError } from "@guardian-sdk/sdk";
 
 /**
  * Validates a Cardano payment address (addr1...).
@@ -122,4 +122,19 @@ export function parseCardanoPublicKey(value: string): string {
     );
   }
   return value;
+}
+
+/**
+ * Asserts that `value` is a valid hex string of exactly `byteLength` bytes.
+ * Throws SigningError("INVALID_SIGNING_ARGS") naming the field and expected size.
+ */
+export function assertHexBytes(value: string, byteLength: number, fieldName: string): void {
+  try {
+    assertIsHexString(value, byteLength * 2);
+  } catch {
+    throw new SigningError(
+      "INVALID_SIGNING_ARGS",
+      `${fieldName} must be ${byteLength} bytes (${byteLength * 2} hex characters), got ${value.length}.`
+    );
+  }
 }

@@ -35,6 +35,7 @@ import {
   parseCardanoPrivateKey,
   parseCardanoPublicKey,
   checkIfPaymentAddressIsValid,
+  assertHexBytes,
 } from "../validations";
 
 /** Transactions expire after ~2 hours (1 slot ≈ 1 second on mainnet). */
@@ -327,21 +328,10 @@ export function createSignService(
 
       const [paymentSigHex, stakingVKeyHex, stakingSigHex, paymentVKeyHex] = parts;
 
-      // #3: Validate the format of each signature part before using them.
-      const HEX64 = /^[0-9a-fA-F]{64}$/;
-      const HEX128 = /^[0-9a-fA-F]{128}$/;
-      if (
-        !HEX128.test(paymentSigHex) ||
-        !HEX64.test(stakingVKeyHex) ||
-        !HEX128.test(stakingSigHex) ||
-        !HEX64.test(paymentVKeyHex)
-      ) {
-        throw new SigningError(
-          "INVALID_SIGNING_ARGS",
-          "Malformed signature: expected `paymentSigHex(128):stakingVKeyHex(64):stakingSigHex(128):paymentVKeyHex(64)` " +
-            "where each value is a lowercase or uppercase hex string of the indicated length."
-        );
-      }
+      assertHexBytes(paymentSigHex, 64, "paymentSigHex");
+      assertHexBytes(stakingVKeyHex, 32, "stakingVKeyHex");
+      assertHexBytes(stakingSigHex, 64, "stakingSigHex");
+      assertHexBytes(paymentVKeyHex, 32, "paymentVKeyHex");
 
       // #5: Ensure the two witness keys are distinct.
       if (paymentVKeyHex.toLowerCase() === stakingVKeyHex.toLowerCase()) {
