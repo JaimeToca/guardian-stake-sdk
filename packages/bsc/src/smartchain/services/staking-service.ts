@@ -43,18 +43,18 @@ function mapValidators(
   contractValidators: Map<Address, Address>,
   logger: Logger
 ): Validator[] {
-  return bnbValidators
-    .map((bnbValidator) => {
-      const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
-      const creditAddress = contractValidators.get(operatorAddress);
-      if (!creditAddress) {
-        logger.warn("StakingService: validator has no credit address — skipping", {
-          moniker: bnbValidator.moniker,
-          operatorAddress,
-        });
-        return undefined;
-      }
-      return {
+  return bnbValidators.flatMap((bnbValidator) => {
+    const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
+    const creditAddress = contractValidators.get(operatorAddress);
+    if (!creditAddress) {
+      logger.warn("StakingService: validator has no credit address — skipping", {
+        moniker: bnbValidator.moniker,
+        operatorAddress,
+      });
+      return [];
+    }
+    return [
+      {
         id: operatorAddress,
         status: getValidatorStatus(bnbValidator),
         name: bnbValidator.moniker,
@@ -64,9 +64,9 @@ function mapValidators(
         delegators: bnbValidator.delegatorCount,
         operatorAddress,
         creditAddress: parseEvmAddress(creditAddress),
-      };
-    })
-    .filter((v): v is NonNullable<typeof v> => v !== undefined);
+      },
+    ];
+  });
 }
 
 export function createStakingService(
@@ -103,20 +103,20 @@ export function createStakingService(
     const creditContracts = validators.map((v) => parseEvmAddress(v.creditAddress));
     const pooledBNBData = await stakingRpcClient.getPooledBNBData(creditContracts, address);
 
-    return pooledBNBData
-      .map((data, index) => {
-        const stakedAmount = processSingleMulticallResult(data);
-        if (stakedAmount === undefined) return undefined;
-        return {
+    return pooledBNBData.flatMap((data, index) => {
+      const stakedAmount = processSingleMulticallResult(data);
+      if (stakedAmount === undefined) return [];
+      return [
+        {
           id: `delegation_active_${index}`,
           validator: validators[index],
           amount: stakedAmount,
           status: "Active" as const,
           delegationIndex: -1n,
           pendingUntil: 0,
-        };
-      })
-      .filter((item) => item !== undefined);
+        },
+      ];
+    });
   }
 
   async function getUnbondDelegations(
@@ -156,19 +156,21 @@ export function createStakingService(
     );
 
     const delegationsPerValidator = await Promise.all(
-      pendingUnbond.map(async (result, index) => {
+      pendingUnbond.flatMap((result, index) => {
         const pendingCountRaw = processSingleMulticallResult(result);
-        if (pendingCountRaw === undefined) return undefined;
-        return getUnbondDelegations(
-          parseEvmAddress(validators[index].creditAddress),
-          address,
-          Number(pendingCountRaw),
-          validators[index]
-        );
+        if (pendingCountRaw === undefined) return [];
+        return [
+          getUnbondDelegations(
+            parseEvmAddress(validators[index].creditAddress),
+            address,
+            Number(pendingCountRaw),
+            validators[index]
+          ),
+        ];
       })
     );
 
-    return delegationsPerValidator.filter((d): d is Delegation[] => d !== undefined).flat();
+    return delegationsPerValidator.flat();
   }
 
   return {
