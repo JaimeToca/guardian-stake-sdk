@@ -188,7 +188,7 @@ interface StakingServiceContract {
 }
 ```
 
-- `getValidators(params?)` — return a paginated page of validators. Fetch from the chain API using `params.page` / `params.pageSize` (converted to `limit` / `offset`). Cache each page separately. Status filtering is the caller's responsibility — expose `filterByStatus` from the SDK for client-side use.
+- `getValidators(params?)` — return a paginated page of validators. `GetValidatorsParams` only accepts `page` and `pageSize` — there is no `status` field. Fetch from the chain API using those two params (convert to `limit` / `offset` if the API uses that convention). Cache each page separately. Consumers who want to filter by status call `filterByStatus(page.data, status)` themselves — it is already exported by every chain package via `export * from "@guardian-sdk/sdk"`, so no extra wiring is needed.
 - `getDelegations(address)` — return active delegations + pending/claimable unbonds + a `StakingSummary` (protocol-level stats: total staked, max APY, min stake amount, unbond period, etc.).
 - Validator shape: `{ id, name, status, description, image, apy, delegators, operatorAddress, creditAddress }`.
 - Use `"Active" | "Inactive" | "Jailed"` for `ValidatorStatus` and `"Active" | "Pending" | "Claimable"` for `DelegationStatus`.
