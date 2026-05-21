@@ -69,7 +69,7 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 
 | Package | Chain | Status | Docs |
 |---|---|---|---|
-| [`@guardian-sdk/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
+| [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
 | `@guardian/cardano` | Cardano | In Progress (PR #28) | — |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — |
 | `@guardian-sdk/sui` | SUI | Planned | — |
