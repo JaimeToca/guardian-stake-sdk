@@ -41,13 +41,22 @@ describe("BalanceService", () => {
     expect(available?.amount).toBe(BigInt(accountFixture.controlled_amount));
   });
 
-  it("maps Staked balance equal to controlled_amount (ADA is never locked by delegation)", async () => {
+  it("sets Staked = controlled_amount when actively delegated to a pool", async () => {
     const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const staked = balances.find((b) => b.type === "Staked");
 
     expect(staked?.amount).toBe(BigInt(accountFixture.controlled_amount));
+  });
+
+  it("sets Staked = 0 when not delegated (pool_id is null)", async () => {
+    const service = createBalanceService(makeRpcClient({ pool_id: null }) as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const staked = balances.find((b) => b.type === "Staked");
+
+    expect(staked?.amount).toBe(0n);
   });
 
   it("maps Rewards balance from withdrawable_amount", async () => {

@@ -7,11 +7,10 @@ import { resolveStakeAddress } from "../validations";
  *
  * Cardano staking is fundamentally different from EVM staking:
  * - Tokens are NEVER locked when delegating — all ADA remains fully spendable.
- * - "Staked" = total controlled amount (same as Available, since nothing is locked).
+ * - "Available" = total controlled amount (always spendable regardless of delegation).
+ * - "Staked" = controlled amount when actively delegated to a pool; 0 otherwise.
+ *   Only delegated ADA earns staking rewards — undelegated or unregistered accounts earn nothing.
  * - "Rewards" = accumulated rewards available for withdrawal (separate from main balance).
- *
- * The `address` parameter should be a stake address (stake1...) which controls
- * the full wallet balance across all payment addresses sharing the same stake key.
  */
 export function createBalanceService(
   rpcClient: BlockfrostRpcClientContract
@@ -22,13 +21,11 @@ export function createBalanceService(
 
       const controlledAmount = BigInt(account.controlled_amount);
       const claimableRewards = BigInt(account.withdrawable_amount);
+      const stakedAmount = account.pool_id ? controlledAmount : 0n;
 
       return [
-        // All ADA is available — delegation doesn't lock anything
         { type: "Available", amount: controlledAmount },
-        // Staked = same as Available in Cardano (all ADA earns rewards passively)
-        { type: "Staked", amount: controlledAmount },
-        // Accumulated rewards ready to withdraw
+        { type: "Staked", amount: stakedAmount },
         { type: "Rewards", amount: claimableRewards },
       ];
     },
