@@ -294,7 +294,6 @@ cardano({ apiKey: "mainnetXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" })
 | Starter | 500,000 |
 | Professional | 5,000,000 |
 
-The SDK caches validator lists for 10 minutes to reduce API calls. Stake account queries and UTXOs are always fetched fresh.
 
 ---
 
@@ -333,7 +332,7 @@ const PAYMENT_KEY     = "your64hexcharpaymentprivatekeyhere000000000000000000000
 const STAKING_KEY     = "your64hexcharstakingprivatekeyhere00000000000000000000000000000000";
 
 // 1. Browse stake pools
-const pools = await sdk.getValidators(chains.cardanoMainnet);
+const { data: pools } = await sdk.getValidators(chains.cardanoMainnet);
 console.log(`${pools.length} pools found, top pool: ${pools[0].name}`);
 
 // 2. Check current delegation
@@ -398,34 +397,41 @@ interface CardanoConfig {
 
 ### `getValidators`
 
-Returns stake pools registered on Cardano. Fetches the first 20 pools sorted by live stake descending — the largest, most active pools first. Pool metadata (name, ticker, description) is batch-fetched in parallel and results are cached for 10 minutes.
-
-> **Pagination not yet supported.** The SDK currently returns only the top 20 pools by live stake. Full pagination across all ~3,000 registered pools will be added in an upcoming release. If you are delegating to a pool outside this set, `getDelegations()` fetches it directly by pool ID — your delegation is always indexed regardless of whether your pool appears in `getValidators()`.
+Returns a page of stake pools registered on Cardano. Pagination is passed directly to Blockfrost — only the requested page is fetched. Pool metadata (name, ticker, description) is batch-fetched in parallel for that page.
 
 ```typescript
-// All pools
-const pools = await sdk.getValidators(chains.cardanoMainnet);
+// First page, default 20 pools
+const { data, pagination } = await sdk.getValidators(chains.cardanoMainnet);
 
-// Only active pools (excluding those in retirement)
-const active = await sdk.getValidators(chains.cardanoMainnet, "Active");
-
-// Active and inactive
-const subset = await sdk.getValidators(chains.cardanoMainnet, ["Active", "Inactive"]);
+// Paginate
+const page2 = await sdk.getValidators(chains.cardanoMainnet, { page: 2, pageSize: 50 });
+console.log(page2.pagination.hasNextPage); // true/false — use this to drive pagination
 ```
 
-**Returns:** `Promise<Validator[]>`
+**Returns:** `Promise<ValidatorsPage>`
 
 ```typescript
+interface ValidatorsPage {
+  data: Validator[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: undefined;      // Not available — Blockfrost does not return total count
+    totalPages: undefined; // Not available
+    hasNextPage: boolean;  // true when the page returned a full pageSize of results
+  };
+}
+
 interface Validator {
-  id: string;                 // bech32 pool ID — pool1...
-  status: ValidatorStatus;   // "Active" | "Inactive"
-  name: string;              // Pool name from metadata, or ticker, or truncated pool ID
-  description: string;       // Pool description from metadata
-  image: undefined;          // Cardano pools have no standard logo URL format
-  apy: number;               // Estimated annual yield (%)
-  delegators: number | undefined; // Live delegator count (undefined when fetched via getDelegations)
-  operatorAddress: string;   // bech32 pool ID — use in transaction.validator
-  creditAddress: string;     // Same as operatorAddress (no separate credit contract)
+  id: string;                      // bech32 pool ID — pool1...
+  status: ValidatorStatus;         // "Active" | "Inactive"
+  name: string;                    // Pool name from metadata, or ticker, or truncated pool ID
+  description: string;             // Pool description from metadata
+  image: undefined;                // Cardano pools have no standard logo URL format
+  apy: number;                     // Estimated annual yield (%)
+  delegators: number | undefined;  // Live delegator count
+  operatorAddress: string;         // bech32 pool ID — use in transaction.validator
+  creditAddress: string;           // Same as operatorAddress (no separate credit contract)
 }
 
 type ValidatorStatus = "Active" | "Inactive";
@@ -433,9 +439,7 @@ type ValidatorStatus = "Active" | "Inactive";
 // Inactive — pool has submitted a retirement certificate (retiring next epoch)
 ```
 
-> **APY estimation**: Blockfrost does not expose a pre-calculated ROA field. The SDK estimates it as `4.5% × (1 − margin) × saturationFactor × (1 − fixedCostFraction)`, where 4.5% is the approximate protocol-level yield. Actual earned rewards depend on pool luck and real-time performance. For precise historical ROA, call Blockfrost's `/pools/{id}/history` directly.
-
-> **Caching**: Validator data is cached in memory for 10 minutes per `GuardianSDK` instance. Elections and pool changes happen at epoch boundaries (~5 days), so short-lived caches are appropriate.
+> **APY estimation**: Uses the Cardano ledger reward formula (Shelley spec §11.8). APY is derived from live on-chain parameters — monetary expansion rate (ρ), treasury rate (τ), pledge influence (a0), and pool saturation — fetched alongside pools on each call. Actual earned rewards depend on pool luck and real-time block production. For precise historical ROA, call Blockfrost's `/pools/{id}/history` directly.
 
 ---
 
@@ -469,7 +473,7 @@ interface Delegation {
 
 interface StakingSummary {
   totalProtocolStake: number;   // Total ADA staked network-wide (in ADA, not lovelaces)
-  maxApy: number;               // Highest estimated APY across the top 20 pools by live stake
+  maxApy: number;               // Highest estimated APY across the first page of pools
   minAmountToStake: 2_000_000n; // 2 ADA stake key registration deposit (in lovelaces)
   unboundPeriodInMillis: 0;     // No unbonding period
   redelegateFeeRate: 0;         // No fee to switch pools
@@ -725,7 +729,7 @@ const STAKING_KEY     = "your64hexcharstakingprivatekey0000000000000000000000000
 Registers the stake key on-chain (2 ADA deposit) and sets the pool to delegate to. The registration and delegation certificates are bundled in a single transaction.
 
 ```typescript
-const pools = await sdk.getValidators(chains.cardanoMainnet, "Active");
+const { data: pools } = await sdk.getValidators(chains.cardanoMainnet);
 const selectedPool = pools[0];
 
 const transaction = {
@@ -765,7 +769,7 @@ Changes the delegation to a different pool. Takes effect at the next epoch bound
 const { delegations } = await sdk.getDelegations(chains.cardanoMainnet, STAKE_ADDRESS);
 const currentDelegation = delegations[0];
 
-const pools = await sdk.getValidators(chains.cardanoMainnet, "Active");
+const { data: pools } = await sdk.getValidators(chains.cardanoMainnet);
 const newPool = pools.find((p) => p.operatorAddress !== currentDelegation.validator.operatorAddress)!;
 
 const transaction = {
@@ -939,7 +943,7 @@ import { SigningError } from "@guardian-sdk/sdk";
 | Code | Thrown when |
 |---|---|
 | `INVALID_SIGNING_ARGS` | `paymentPrivateKey` or `stakingPrivateKey` missing from signing args |
-| `INVALID_SIGNING_ARGS` | `fee.type` is not `"UtxoFee"` — use `estimateFee()` to get a Cardano fee |
+| `INVALID_FEE_TYPE` | `fee.type` is not `"UtxoFee"` — use `estimateFee()` to get a Cardano fee |
 | `INVALID_SIGNING_ARGS` | The `signature` string passed to `compile()` does not contain exactly four `:` delimited components |
 
 ### `ConfigError`
@@ -987,7 +991,6 @@ import { SUPPORTED_CHAINS } from "@guardian-sdk/cardano";
 
 | Feature | Status | Issue |
 |---|---|---|
-| **`getValidators()` pagination** — Currently returns only the top 20 pools by live stake. Full pagination across all ~3,000 registered pools will be added, along with filtering and sorting options. | Planned | [#42](https://github.com/JaimeToca/guardian-stake-sdk/issues/42) |
 | **UTXO pagination beyond 100** — `getUtxos()` fetches a single page of 100 UTXOs. Wallets with more than 100 UTXOs may get an incomplete input set, breaking fee estimation and signing. A lazy strategy will fetch additional pages only when the current set is insufficient. | Planned | [#43](https://github.com/JaimeToca/guardian-stake-sdk/issues/43) |
 
 ---

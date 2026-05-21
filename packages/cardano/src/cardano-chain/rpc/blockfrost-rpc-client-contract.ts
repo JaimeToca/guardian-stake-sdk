@@ -9,7 +9,7 @@ import type {
 } from "./blockfrost-rpc-types";
 
 export interface BlockfrostRpcClientContract {
-  getPools(page?: number): Promise<BlockfrostPoolExtended[]>;
+  getPools(page?: number, pageSize?: number): Promise<BlockfrostPoolExtended[]>;
   getPool(poolId: string): Promise<BlockfrostPoolExtended>;
   getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null>;
   getAccount(stakeAddress: string): Promise<BlockfrostAccount>;

@@ -1,6 +1,5 @@
 import type { GuardianServiceContract, Logger } from "@guardian-sdk/sdk";
-import { createInMemoryCache, NoopLogger } from "@guardian-sdk/sdk";
-import type { Validator } from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 import { cardanoMainnet } from "../chain";
 import { createBlockfrostRpcClient } from "./rpc/blockfrost-rpc-client";
 import { createStakingService } from "./services/staking-service";
@@ -52,9 +51,8 @@ export interface CardanoConfig {
 export function cardano(config: CardanoConfig = {}): GuardianServiceContract {
   const logger = config.logger ?? new NoopLogger();
   const rpcClient = createBlockfrostRpcClient(config.apiKey, logger, config.baseUrl);
-  const cache = createInMemoryCache<string, Validator[]>(600_000); // 10 min
 
-  const staking = createStakingService(cache, rpcClient, logger);
+  const staking = createStakingService(rpcClient, logger);
   const balance = createBalanceService(rpcClient);
   const sign = createSignService(rpcClient, logger);
   const fee = createFeeService(rpcClient, logger);

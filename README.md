@@ -70,7 +70,7 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | Package | Chain | Status | Docs |
 |---|---|---|---|
 | [`@guardian-sdk/bsc`](./packages/bsc/README.md) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
-| `@guardian/cardano` | Cardano | In Progress (PR #28) | — |
+| [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Cardano | Available | [README](./packages/cardano/README.md) |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — |
 | `@guardian-sdk/sui` | SUI | Planned | — |
 | `@guardian-sdk/tron` | Tron | Planned | — |
@@ -156,8 +156,8 @@ interface ValidatorsPage {
   pagination: {
     page: number;
     pageSize: number;
-    total: number;       // total validators on the network
-    totalPages: number;
+    total: number | undefined;       // undefined for chains where total count is not available
+    totalPages: number | undefined;
     hasNextPage: boolean;
   };
 }
@@ -707,7 +707,7 @@ Planned integrations follow the same architecture — each chain is an independe
 | Tron | `@guardian-sdk/tron` | Planned |
 | Solana | `@guardian-sdk/solana` | Planned |
 | Aptos | `@guardian/aptos` | Planned |
-| Cardano | `@guardian/cardano` | Planned |
+| Cardano | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Available |
 | Polkadot | `@guardian/polkadot` | Planned |
 | NEAR | `@guardian/near` | Planned |
 | Ethereum | `@guardian-sdk/ethereum` | Planned |

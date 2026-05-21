@@ -20,7 +20,7 @@ import type {
  */
 
 const DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
-const POOLS_PAGE_SIZE = 20;
+const DEFAULT_POOLS_PAGE_SIZE = 20;
 
 export function createBlockfrostRpcClient(
   apiKey: string | undefined,
@@ -29,28 +29,28 @@ export function createBlockfrostRpcClient(
 ): BlockfrostRpcClientContract {
   const headers: Record<string, string> = apiKey ? { project_id: apiKey } : {};
 
-  async function getPools(page = 1): Promise<BlockfrostPoolExtended[]> {
-    const url = `${baseUrl}/pools/extended`;
-    logger.debug("BlockfrostRpcClient: fetching pools", { url, page });
-    const start = Date.now();
-
-    const pools = await fetchOrError<BlockfrostPoolExtended[]>({
-      url,
-      method: "GET",
-      headers,
-      params: { count: POOLS_PAGE_SIZE, page },
-    });
-
-    logger.debug("BlockfrostRpcClient: pools fetched", {
-      count: pools.length,
-      ms: Date.now() - start,
-    });
-    return pools;
-  }
-
   return {
-    async getPools(page = 1): Promise<BlockfrostPoolExtended[]> {
-      return getPools(page);
+    async getPools(
+      page = 1,
+      pageSize = DEFAULT_POOLS_PAGE_SIZE
+    ): Promise<BlockfrostPoolExtended[]> {
+      const url = `${baseUrl}/pools/extended`;
+      logger.debug("BlockfrostRpcClient: fetching pools", { page, pageSize });
+      const start = Date.now();
+
+      const pools = await fetchOrError<BlockfrostPoolExtended[]>({
+        url,
+        method: "GET",
+        headers,
+        params: { count: pageSize, page },
+      });
+
+      logger.debug("BlockfrostRpcClient: pools fetched", {
+        page,
+        count: pools.length,
+        ms: Date.now() - start,
+      });
+      return pools;
     },
 
     async getPool(poolId: string): Promise<BlockfrostPoolExtended> {
