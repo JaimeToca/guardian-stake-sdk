@@ -315,7 +315,7 @@ npm install @guardian-sdk/cardano @guardian-sdk/sdk @cardano-sdk/core @cardano-s
 | [`@cardano-sdk/crypto`](https://www.npmjs.com/package/@cardano-sdk/crypto) | Peer dependency — Ed25519 key operations and Blake2b hashing |
 | [`@cardano-sdk/util`](https://www.npmjs.com/package/@cardano-sdk/util) | Peer dependency — shared utilities for the Cardano SDK family |
 
-If your project already uses any of these, the same instances will be shared — no duplicate copies. The signing and hashing libraries (`@noble/ed25519`, `@noble/hashes`, `@scure/base`) are bundled as regular dependencies and do not need to be installed separately.
+All four are peer dependencies. npm v7+ installs them automatically — you only need to list them explicitly if you want to pin a specific version or if you use them directly in your own code.
 
 ---
 

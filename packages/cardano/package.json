@@ -26,16 +26,17 @@
     "test:watch": "vitest"
   },
   "peerDependencies": {
-    "@cardano-sdk/core": "^0.46.12",
-    "@cardano-sdk/crypto": "^0.4.5",
-    "@cardano-sdk/util": "^0.17.1",
-    "@guardian-sdk/sdk": "workspace:*"
+    "@cardano-sdk/core": "0.46",
+    "@cardano-sdk/crypto": "0.4",
+    "@cardano-sdk/util": "0.17",
+    "@guardian-sdk/sdk": "workspace:^"
   },
+  
   "devDependencies": {
     "@cardano-sdk/core": "^0.46.12",
     "@cardano-sdk/crypto": "^0.4.5",
     "@cardano-sdk/util": "^0.17.1",
-    "@guardian-sdk/sdk": "workspace:*",
+    "@guardian-sdk/sdk": "workspace:^",
     "tsup": "^8.5.1",
     "vitest": "^4.1.3"
   },

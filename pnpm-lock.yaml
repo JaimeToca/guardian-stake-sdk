@@ -57,7 +57,7 @@ importers:
   packages/bsc:
     devDependencies:
       '@guardian-sdk/sdk':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../sdk
       tsup:
         specifier: ^8.5.1
@@ -81,7 +81,7 @@ importers:
         specifier: ^0.17.1
         version: 0.17.1
       '@guardian-sdk/sdk':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../sdk
       tsup:
         specifier: ^8.5.1
