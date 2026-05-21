@@ -130,7 +130,7 @@ The same API surface will be available on every supported chain. Pass the chain 
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| [`getValidators(chain, params?)`](#getvalidatorschain) | `ValidatorsPage` | Paginated validators, optionally filtered by status |
+| [`getValidators(chain, params?)`](#getvalidatorschain) | `ValidatorsPage` | Paginated validators |
 | [`getDelegations(chain, address)`](#getdelegationschain-address) | `Delegations` | All delegations for an address plus a protocol-level summary if available |
 | [`getBalances(chain, address)`](#getbalanceschain-address) | `Balance[]` | Available, staked, pending, and claimable balances |
 | [`getNonce(chain, address)`](#getnoncechain-address) | `number` | Current transaction nonce, required before signing |
@@ -146,7 +146,7 @@ The same API surface will be available on every supported chain. Pass the chain 
 
 ### `getValidators(chain)`
 
-Returns a paginated page of validators. Use `params.page` / `params.pageSize` to navigate pages (1-based, default 20 per page). Use `params.status` to filter by validator status.
+Returns a paginated page of validators. Use `params.page` / `params.pageSize` to navigate pages (1-based, default 100 per page). To filter by status client-side, use `filterByStatus(page.data, status)` from the SDK after fetching.
 
 **Returns:** `Promise<ValidatorsPage>`
 
@@ -156,7 +156,7 @@ interface ValidatorsPage {
   pagination: {
     page: number;
     pageSize: number;
-    total: number;       // total validators on the network (unfiltered)
+    total: number;       // total validators on the network
     totalPages: number;
     hasNextPage: boolean;
   };
@@ -178,18 +178,16 @@ type ValidatorStatus = "Active" | "Inactive" | "Jailed";
 ```
 
 ```typescript
-// First page (default: 20 per page)
+// First page (default: 100 per page)
 const { data: validators, pagination } = await sdk.getValidators(chains.bscMainnet);
 console.log(pagination.total, pagination.hasNextPage);
 
 // Explicit page + size
 const page2 = await sdk.getValidators(chains.bscMainnet, { page: 2, pageSize: 10 });
 
-// Only active validators on page 1
-const active = await sdk.getValidators(chains.bscMainnet, { status: "Active" });
-
-// Active and jailed
-const subset = await sdk.getValidators(chains.bscMainnet, { status: ["Active", "Jailed"] });
+// Filter by status client-side
+import { filterByStatus } from "@guardian-sdk/bsc";
+const active = filterByStatus(validators, "Active");
 ```
 
 ---

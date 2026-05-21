@@ -13,7 +13,7 @@ import type {
   ValidatorStatus,
   ValidatorsPage,
 } from "@guardian-sdk/sdk";
-import { filterByStatus, ValidationError } from "@guardian-sdk/sdk";
+import { validatePageParams } from "@guardian-sdk/sdk";
 import { parseEvmAddress } from "../validations";
 
 const UNBOUND_PERIOD = 604800000; // 7 days in millis
@@ -44,7 +44,7 @@ function mapValidators(
   logger: Logger
 ): Validator[] {
   return bnbValidators
-    .map((bnbValidator, index) => {
+    .map((bnbValidator) => {
       const operatorAddress = parseEvmAddress(bnbValidator.operatorAddress);
       const creditAddress = contractValidators.get(operatorAddress);
       if (!creditAddress) {
@@ -55,7 +55,7 @@ function mapValidators(
         return undefined;
       }
       return {
-        id: `${bnbValidator.moniker}_${index}`,
+        id: operatorAddress,
         status: getValidatorStatus(bnbValidator),
         name: bnbValidator.moniker,
         description: bnbValidator.miningStatus,
@@ -176,29 +176,21 @@ export function createStakingService(
       const page = params.page ?? 1;
       const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
 
-      if (!Number.isInteger(page) || page < 1)
-        throw new ValidationError("INVALID_PAGE", "page must be an integer of 1 or greater");
-      if (!Number.isInteger(pageSize) || pageSize < 1)
-        throw new ValidationError(
-          "INVALID_PAGE_SIZE",
-          "pageSize must be an integer of 1 or greater"
-        );
+      validatePageParams(params);
 
       const cacheKey = validatorPageCacheKey(page, pageSize);
-
       const cached = pageCache.get(cacheKey);
+
       if (cached) {
         logger.debug("StakingService: validator page cache hit", { page, pageSize });
-        return {
-          ...cached,
-          data: filterByStatus(cached.data, params.status),
-        };
+        return cached;
       }
 
       logger.debug("StakingService: validator page cache miss — fetching from RPC", {
         page,
         pageSize,
       });
+
       const [{ validators: bnbValidators, total }, contractValidators] = await Promise.all([
         bnbRpcClient.getValidators({ page, pageSize }),
         stakingRpcClient.getCreditContractValidators(),
@@ -218,10 +210,7 @@ export function createStakingService(
 
       pageCache.set(cacheKey, result);
       logger.debug("StakingService: validator page cached", { page, pageSize, total });
-      return {
-        ...result,
-        data: filterByStatus(data, params.status),
-      };
+      return result;
     },
 
     async getDelegations(address: string): Promise<Delegations> {

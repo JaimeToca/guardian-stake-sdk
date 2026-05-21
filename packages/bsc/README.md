@@ -63,7 +63,7 @@ The validator set has grown beyond the original 45-slot design. As of early 2026
 - **Candidates** — occasional block producers, fill slots above position 21
 - **Inactive / Jailed** — registered on-chain but not producing blocks
 
-`getValidators()` returns a paginated page of validators — active, inactive, and jailed. Use `params.page` / `params.pageSize` to navigate pages (default: 20 per page). Pass `params.status` to filter by status.
+`getValidators()` returns a paginated page of validators — active, inactive, and jailed. Use `params.page` / `params.pageSize` to navigate pages (default: 100 per page). To filter by status client-side, use `filterByStatus(page.data, status)` after fetching.
 
 Elections run daily after 00:00 UTC. Each validator sets a **commission rate** — the percentage of block rewards they keep before distributing the rest to delegators. The full validator metadata available on-chain includes moniker, identity, website, details, consensus address, vote address, commission rate, and election info — the SDK surfaces the subset most relevant to delegation UIs.
 
@@ -259,21 +259,19 @@ console.log(`Transaction hash: ${txHash}`);
 
 ### `getValidators`
 
-Returns a paginated page of validators registered on the protocol — active, inactive, and jailed. Pass optional `params` to navigate pages or filter by status.
+Returns a paginated page of validators registered on the protocol — active, inactive, and jailed. Pass optional `params` to navigate pages. To filter by status client-side, use `filterByStatus(page.data, status)` after fetching.
 
 ```typescript
-// First page (default: 20 per page)
+// First page (default: 100 per page)
 const { data: validators, pagination } = await sdk.getValidators(chains.bscMainnet);
 console.log(pagination.total, pagination.hasNextPage);
 
 // Explicit page + size
 const page2 = await sdk.getValidators(chains.bscMainnet, { page: 2, pageSize: 10 });
 
-// Only active validators
-const active = await sdk.getValidators(chains.bscMainnet, { status: "Active" });
-
-// Active and jailed
-const subset = await sdk.getValidators(chains.bscMainnet, { status: ["Active", "Jailed"] });
+// Filter by status client-side
+import { filterByStatus } from "@guardian-sdk/bsc";
+const active = filterByStatus(validators, "Active");
 ```
 
 **Returns:** `Promise<ValidatorsPage>`
@@ -284,7 +282,7 @@ interface ValidatorsPage {
   pagination: {
     page: number;
     pageSize: number;
-    total: number;       // total validators on the network (unfiltered)
+    total: number;       // total validators on the network
     totalPages: number;
     hasNextPage: boolean;
   };

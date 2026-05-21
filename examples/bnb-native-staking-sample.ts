@@ -30,7 +30,7 @@ async function sample_check_delegations() {
   const balances = await sdk.getBalances(bscMainnet, "0x166b6b8BFD51655cEA080Cc2C42fcB858645d29b");
   console.log("Balances:", balances);
 
-  // Fetch validators — first page, 20 per page by default
+  // Fetch validators — first page, default page size
   const validatorsPage = await sdk.getValidators(bscMainnet);
   console.log("Validators:", validatorsPage.data);
   console.log("Pagination:", validatorsPage.pagination);
@@ -38,18 +38,6 @@ async function sample_check_delegations() {
   // Fetch a specific page with a custom page size
   const page2 = await sdk.getValidators(bscMainnet, { page: 2, pageSize: 10 });
   console.log("Page 2 validators:", page2.data);
-
-  // Filter by status
-  const activeValidators = await sdk.getValidators(bscMainnet, { status: "Active" });
-  console.log("Active validators:", activeValidators.data);
-
-  // Combine pagination and status filter
-  const activePage2 = await sdk.getValidators(bscMainnet, {
-    page: 2,
-    pageSize: 10,
-    status: ["Active", "Inactive"],
-  });
-  console.log("Active + Inactive validators (page 2):", activePage2.data);
 
   // Fetch delegations for an address
   const delegations = await sdk.getDelegations(

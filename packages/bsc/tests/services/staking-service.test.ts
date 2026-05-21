@@ -132,36 +132,6 @@ describe("StakingService", () => {
       validators.forEach((v) => expect(v.status).toBe("Jailed"));
     });
 
-    it("filters by a single status", async () => {
-      const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
-      const service = createStakingService(
-        createInMemoryCache(),
-        createInMemoryCache(),
-        makeStakingRpcClient() as any,
-        bnbRpcClient as any
-      );
-
-      const { data: active } = await service.getValidators({ status: "Active" });
-      expect(active).toHaveLength(0);
-
-      const { data: inactive } = await service.getValidators({ status: "Inactive" });
-      expect(inactive).toHaveLength(3);
-      inactive.forEach((v) => expect(v.status).toBe("Inactive"));
-    });
-
-    it("filters by multiple statuses", async () => {
-      const bnbRpcClient = makeBNBRpcClient({ status: "INACTIVE" });
-      const service = createStakingService(
-        createInMemoryCache(),
-        createInMemoryCache(),
-        makeStakingRpcClient() as any,
-        bnbRpcClient as any
-      );
-
-      const { data } = await service.getValidators({ status: ["Active", "Inactive"] });
-      expect(data).toHaveLength(3);
-    });
-
     it("returns all validators when no params are provided", async () => {
       const service = createStakingService(
         createInMemoryCache(),

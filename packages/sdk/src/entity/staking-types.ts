@@ -1,5 +1,4 @@
 export interface GetValidatorsParams {
-  status?: ValidatorStatus | ValidatorStatus[];
   page?: number;
   pageSize?: number;
 }
