@@ -79,7 +79,10 @@ export function buildSignedTransaction(
   const tx = new Transaction(body, witnessSet);
 
   if (!tx.isValid()) {
-    throw new SigningError("INVALID_SIGNING_ARGS", "Transaction failed validity check — verify inputs, fee, and output values.");
+    throw new SigningError(
+      "INVALID_SIGNING_ARGS",
+      "Transaction failed validity check — verify inputs, fee, and output values."
+    );
   }
 
   return tx.toCbor();
