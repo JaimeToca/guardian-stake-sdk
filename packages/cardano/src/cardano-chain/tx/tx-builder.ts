@@ -14,6 +14,7 @@ import {
   Ed25519SignatureHex,
   Hash28ByteBase16,
 } from "@cardano-sdk/crypto";
+import { SigningError } from "@guardian-sdk/sdk";
 import type { CardanoCertificate, TxBodyParams, TxWitness } from "./tx-types";
 
 export type { CardanoCertificate, TxInput, TxBodyParams, TxWitness } from "./tx-types";
@@ -47,7 +48,7 @@ export function buildTransactionBody(params: TxBodyParams): Serialization.Transa
   if (params.withdrawals?.size) {
     coreBody.withdrawals = Array.from(params.withdrawals.entries()).map(
       ([stakeAddress, quantity]) => ({
-        stakeAddress: stakeAddress as Cardano.RewardAccount,
+        stakeAddress: Cardano.RewardAccount(stakeAddress),
         quantity,
       })
     );
@@ -75,7 +76,13 @@ export function buildSignedTransaction(
     );
     witnessSet.setVkeys(vkeys);
   }
-  return new Transaction(body, witnessSet).toCbor();
+  const tx = new Transaction(body, witnessSet);
+
+  if (!tx.isValid()) {
+    throw new SigningError("INVALID_SIGNING_ARGS", "Transaction failed validity check — verify inputs, fee, and output values.");
+  }
+
+  return tx.toCbor();
 }
 
 /**
@@ -90,8 +97,6 @@ export function buildMockTransaction(params: TxBodyParams, witnessCount: number)
   }));
   return buildSignedTransaction(body, mockWitnesses);
 }
-
-// ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function buildCoreCertificate(cert: CardanoCertificate): Cardano.Certificate {
   const stakeCredential: Cardano.Credential = {

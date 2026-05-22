@@ -31,6 +31,7 @@ export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint):
       const lovelaceEntry = utxo.amount.find((a) => a.unit === "lovelace");
       const lovelaces = lovelaceEntry ? BigInt(lovelaceEntry.quantity) : 0n;
       const isAdaOnly = utxo.amount.length === 1 && utxo.amount[0].unit === "lovelace";
+      
       return { utxo, lovelaces, isAdaOnly };
     })
     .filter(({ lovelaces }) => lovelaces > 0n)
