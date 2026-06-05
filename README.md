@@ -74,9 +74,9 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 |---|---|---|---|
 | [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
 | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Cardano | Available | [README](./packages/cardano/README.md) |
+| `@guardian-sdk/tron` | Tron | Planned | — |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — |
 | `@guardian-sdk/sui` | SUI | Planned | — |
-| `@guardian-sdk/tron` | Tron | Planned | — |
 | `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — |
 | `@guardian-sdk/solana` | Solana | Planned | — |
 | `@guardian/aptos` | Aptos | Planned | — |
