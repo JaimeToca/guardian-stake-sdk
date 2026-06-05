@@ -70,18 +70,20 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 
 ## Packages
 
-| Package | Chain | Status | Docs |
-|---|---|---|---|
-| [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
-| [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Cardano | Available | [README](./packages/cardano/README.md) |
-| `@guardian-sdk/tron` | Tron | Planned | — |
-| `@guardian-sdk/ethereum` | Ethereum | Planned | — |
-| `@guardian-sdk/sui` | SUI | Planned | — |
-| `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — |
-| `@guardian-sdk/solana` | Solana | Planned | — |
-| `@guardian/aptos` | Aptos | Planned | — |
-| `@guardian/polkadot` | Polkadot | Planned | — |
-| `@guardian/near` | NEAR | Planned | — |
+| Package | Chain | Status | Docs | Audit |
+|---|---|---|---|---|
+| [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) | None |
+| [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Cardano | Available (alpha) | [README](./packages/cardano/README.md) | None |
+| `@guardian-sdk/tron` | Tron | Planned | — | — |
+| `@guardian-sdk/ethereum` | Ethereum | Planned | — | — |
+| `@guardian-sdk/sui` | SUI | Planned | — | — |
+| `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — | — |
+| `@guardian-sdk/solana` | Solana | Planned | — | — |
+| `@guardian/aptos` | Aptos | Planned | — | — |
+| `@guardian/polkadot` | Polkadot | Planned | — | — |
+| `@guardian/near` | NEAR | Planned | — | — |
+
+> **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
 
 Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian-sdk/sdk` is included automatically as a dependency of each chain package.
 
