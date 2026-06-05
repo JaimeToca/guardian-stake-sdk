@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Tech Stack
+
+- **Runtime**: Node.js ≥ 22
+- **Language**: TypeScript (strict mode)
+- **Package manager**: pnpm workspaces
+- **Test runner**: vitest
+- **Bundler**: tsup
+- **Linter / formatter**: ESLint + Prettier
+- **Key deps**: viem (BSC), `@cardano-sdk/core` · `crypto` · `util` (Cardano), axios (SDK)
+
 ## Commands
 
 ```bash
@@ -16,7 +26,29 @@ pnpm run typecheck
 
 # Run tests
 pnpm run test
+
+# Check formatting
+pnpm run format:check
+
+# Lint
+pnpm run lint
 ```
+
+## Never Do
+
+- **No classes** — all services are factory functions (`createXxxService()`); never use the `class` keyword
+- **No cross-package leaks** — never import `viem` or `@cardano-sdk/*` inside `packages/sdk`; never import `viem` inside `packages/cardano`
+- **No `any` types** — use `unknown` and narrow, or define a proper type
+- **No build-order skipping** — `packages/sdk` must build before `packages/bsc` or `packages/cardano`
+- **No native token logic** — BSC staking deals in BNB only; native token payloads must be rejected upstream
+
+## Code Conventions
+
+- **Factory pattern**: services are created by `createXxx(deps)` functions that close over their dependencies and return a plain object implementing the service contract
+- **Address types**: service contracts accept `string` addresses; BSC services cast internally via `parseEvmAddress()`
+- **Logger injection**: accept a `Logger` (or `NoopLogger`) through config — never call `console.log` directly
+- **Cardano amounts**: always in lovelaces internally; 1 ADA = 1,000,000 lovelaces (`decimals: 6`)
+- **No facade class**: `GuardianServiceContract` is a plain object; both `bsc()` and `cardano()` return it directly
 
 ## Monorepo Structure
 
@@ -34,69 +66,10 @@ Consumers install only the chain package they need (`@guardian-sdk/bsc` or `@gua
 - `packages/bsc/src/smartchain/index.ts` exports `bsc()` — factory for BSC
 - `packages/cardano/src/cardano-chain/index.ts` exports `cardano()` — factory for Cardano
 
-Both factory functions wire all services and return a plain object implementing `GuardianServiceContract` — no facade class.
+Both factory functions wire all services and return a plain object implementing `GuardianServiceContract` — no facade class. Chain-specific details load automatically when working inside a package:
 
-### BSC
+- `.claude/rules/bsc.md` — loaded when editing `packages/bsc/**`
+- `.claude/rules/cardano.md` — loaded when editing `packages/cardano/**`
+- `.claude/rules/sdk.md` — loaded when editing `packages/sdk/**`
 
-**Service wiring**: `bsc()` creates a viem `PublicClient` (with multicall batching enabled), then composes all services.
-
-**Layer breakdown**:
-- `packages/bsc/src/smartchain/index.ts` — `bsc()` factory
-- `packages/bsc/src/smartchain/services/` — Service factory functions:
-  - `createStakingService` — validators, delegations, protocol parameters (uses in-memory cache for validators)
-  - `createBalanceService` — aggregates available/staked/pending/claimable balances
-  - `createFeeService` — fee estimation via transaction simulation
-  - `createSignService` — signs transactions or produces a pre-hash for MPC/external signing
-  - `getNonce` — plain function, fetches account nonce
-  - `broadcast` — plain function, broadcasts a signed transaction
-- `packages/bsc/src/smartchain/rpc/` — Low-level RPC client factory functions:
-  - `createStakingRpcClient` — interacts with BSC staking contracts via viem multicall
-  - `createBnbRpcClient` — fetches validator metadata from BNB Chain's native RPC (not EVM)
-- `packages/bsc/src/smartchain/abi/` — ABI encoding/decoding for staking contract calls
-
-**Address handling**: Service contracts use `string` for addresses throughout. BSC services call `parseEvmAddress(address)` internally to validate and cast to viem's `Address` type.
-
-### Cardano
-
-**Service wiring**: `cardano()` accepts a `CardanoConfig` (`apiKey?`, `baseUrl?`, `logger?`), creates a `BlockfrostRpcClient`, then composes all services.
-
-**Layer breakdown**:
-- `packages/cardano/src/cardano-chain/index.ts` — `cardano()` factory
-- `packages/cardano/src/chain/index.ts` — `cardanoMainnet` chain definition and `chains` registry
-- `packages/cardano/src/cardano-chain/services/` — Service factory functions:
-  - `createStakingService` — stake pools and delegations via Blockfrost
-  - `createBalanceService` — available and staked ADA balances (lovelaces)
-  - `createFeeService` — fee estimation from protocol params + coin selection
-  - `createSignService` — signs or pre-hashes Cardano transactions
-  - `createBroadcastService` — submits CBOR hex via Blockfrost
-- `packages/cardano/src/cardano-chain/rpc/` — Blockfrost HTTP client:
-  - `createBlockfrostRpcClient` — wraps Blockfrost REST API (`BlockfrostRpcClientContract`)
-- `packages/cardano/src/cardano-chain/tx/` — Transaction construction:
-  - `tx-builder.ts` — assembles `Cardano.TxBody` and serialises to CBOR hex via `@cardano-sdk/core`
-  - `coin-selection.ts` — UTXO selection for transaction inputs
-  - `tx-types.ts` — internal transaction body and witness types
-
-**Cardano specifics**:
-- Uses UTXOs (no account nonce — `getNonce()` always resolves to `0`)
-- Native currency is lovelaces: 1 ADA = 1,000,000 lovelaces (`decimals: 6`)
-- Addresses: payment addresses for UTXOs, stake addresses (`stake1...`) for delegations
-- No `chainId` — Cardano uses network magic internally
-
-**Cardano signing flow**: Two paths, same interface as BSC but different key material:
-1. Direct: `sign({ paymentPrivateKey, stakingPrivateKey })` — both are 32-byte Ed25519 keys (64-char hex)
-2. MPC/external: `prehash({ stakingPublicKey })` → external signing → `compile()` — the staking public key is required upfront so the tx body (which embeds stake key hashes) can be built before hashing. `PrehashResult.signArgs._txBodyCbor` carries the serialized body through to `compile()` to prevent a signature mismatch if UTXOs change between calls.
-
-### Shared SDK (`packages/sdk`)
-
-Chain-agnostic interfaces, types, cache utilities, and RPC error helpers. No viem or Cardano dependencies.
-
-Key additions on this branch:
-- `chain/chain-types.ts` — `GuardianChain` now includes `type: "Smartchain" | "Cardano"` and `ecosystem: "Ethereum" | "Cardano"`
-- `service/sign-service-contract.ts` — extracted `SignServiceContract` interface (`sign`, `prehash`, `compile`)
-
-**Adding a new chain**: Create a new directory parallel to `packages/bsc/src/smartchain/` and `packages/cardano/src/cardano-chain/` with a `<chain>()` factory function that wires its own services and returns a plain `GuardianServiceContract` object.
-
-**Dependencies**:
-- `@guardian-sdk/sdk`: `axios` only
-- `@guardian-sdk/bsc`: `@guardian-sdk/sdk`, `viem` (peer dep)
-- `@guardian-sdk/cardano`: `@guardian-sdk/sdk` (peer dep), `@cardano-sdk/core`, `@cardano-sdk/crypto`, `@cardano-sdk/util`
+**Adding a new chain**: add a `.claude/rules/<chain>.md` file alongside a new `packages/<chain>/` directory.

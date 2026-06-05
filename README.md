@@ -9,6 +9,9 @@
   <a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
     <img src="https://img.shields.io/npm/v/@guardian-sdk/bsc?label=%40guardian-sdk%2Fbsc&color=0d9488" alt="npm @guardian-sdk/bsc" />
   </a>
+  <a href="https://www.npmjs.com/package/@guardian-sdk/cardano">
+    <img src="https://img.shields.io/npm/v/@guardian-sdk/cardano?label=%40guardian-sdk%2Fcardano&color=0d9488" alt="npm @guardian-sdk/cardano" />
+  </a>
 <a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
     <img src="https://img.shields.io/npm/dm/@guardian-sdk/bsc?color=0d9488" alt="npm downloads" />
   </a>
@@ -423,6 +426,7 @@ const txHash = await sdk.broadcast(chains.bscMainnet, rawTx);
 For chain-specific details (protocol parameters, transaction shapes, error codes) see:
 
 - [BNB Smart Chain →](./packages/bsc/README.md)
+- [Cardano →](./packages/cardano/README.md)
 
 ---
 

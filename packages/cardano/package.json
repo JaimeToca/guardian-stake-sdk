@@ -1,6 +1,6 @@
 {
   "name": "@guardian-sdk/cardano",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.0",
   "description": "Guardian SDK for Cardano",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
