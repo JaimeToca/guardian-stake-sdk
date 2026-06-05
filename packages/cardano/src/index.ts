@@ -11,3 +11,7 @@ export { cardanoMainnet, chains, SUPPORTED_CHAINS, getChainById, isSupportedChai
 // Cardano-specific signing types
 export type { CardanoSigningWithPrivateKey, CardanoPrehashArgs } from "./cardano-chain/sign-types";
 export { isCardanoSigningWithPrivateKey, isCardanoPrehashArgs } from "./cardano-chain/sign-types";
+
+// Key derivation utilities
+export { deriveCardanoKeys } from "./keys/derive-keys";
+export type { CardanoDerivedKeys } from "./keys/derive-keys";

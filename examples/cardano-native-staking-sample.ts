@@ -1,8 +1,5 @@
-import { Bip32PrivateKey } from "@cardano-sdk/crypto";
-import { mnemonicToEntropy } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english.js";
 import { GuardianSDK, ConsoleLogger } from "@guardian-sdk/sdk";
-import { cardano, chains } from "@guardian-sdk/cardano";
+import { cardano, chains, deriveCardanoKeys } from "@guardian-sdk/cardano";
 import type { CardanoSigningWithPrivateKey } from "@guardian-sdk/cardano";
 import type {
   DelegateTransaction,
@@ -32,7 +29,7 @@ const PAYMENT_ADDRESS =
   "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x";
 
 // Raw Ed25519 private keys (32-byte hex). Set via environment variables — NEVER hardcode or commit.
-// Derive from your mnemonic using deriveKeysFromMnemonic() below.
+// Derive from your BIP32 root key using deriveCardanoKeys() — see bottom of this file.
 const PAYMENT_PRIVATE_KEY = process.env.CARDANO_PAYMENT_PRIVATE_KEY ?? "";
 const STAKING_PRIVATE_KEY = process.env.CARDANO_STAKING_PRIVATE_KEY ?? "";
 
@@ -219,23 +216,18 @@ async function sample_mpc_delegate() {
   console.log(`Submitted: https://cardanoscan.io/transaction/${txHash}`);
 }
 
-// Derives Cardano payment and staking private keys from a 24-word mnemonic.
+// Derives Cardano payment and staking private keys from a BIP32 root key hex (192 hex chars).
 // Uses CIP-1852 paths — compatible with Nami, Eternl, Lace, and all major wallets.
 // NEVER log or commit the output of this function.
-function deriveKeysFromMnemonic(mnemonic: string, passphrase = "", accountIndex = 0) {
-  const harden = (n: number) => 0x80000000 + n;
-  const entropy = mnemonicToEntropy(mnemonic, wordlist);
-  const root = Bip32PrivateKey.fromBip39Entropy(Buffer.from(entropy), passphrase);
-  return {
-    paymentPrivateKey: root
-      .derive([harden(1852), harden(1815), harden(accountIndex), 0, 0])
-      .toRawKey()
-      .hex(),
-    stakingPrivateKey: root
-      .derive([harden(1852), harden(1815), harden(accountIndex), 2, 0])
-      .toRawKey()
-      .hex(),
-  };
-}
+//
+// Usage:
+//   const { paymentPrivateKey, stakingPrivateKey } = deriveCardanoKeys(process.env.CARDANO_ROOT_KEY!);
+//
+// To obtain the root key from a mnemonic, use a BIP39 library:
+//   import { Bip32PrivateKey } from "@cardano-sdk/crypto";
+//   import { mnemonicToEntropy } from "@scure/bip39";
+//   import { wordlist } from "@scure/bip39/wordlists/english.js";
+//   const entropy = mnemonicToEntropy(mnemonic, wordlist);
+//   const rootKeyHex = Bip32PrivateKey.fromBip39Entropy(Buffer.from(entropy), "").hex();
 
 sample_check_delegations();

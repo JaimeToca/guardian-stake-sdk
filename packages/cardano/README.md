@@ -4,6 +4,9 @@ Native staking support for Cardano, part of the [Guardian SDK](../../README.md).
 
 Abstracts Blockfrost API calls and CBOR transaction construction behind a clean, type-safe API so you can build staking features without dealing with bech32 decoding, stake certificate encoding, UTXO coin selection, or Cardano-specifics.
 
+> **⚠️ Alpha release — not production-ready.**
+> This package is published as `1.0.0-alpha.0`. APIs may change between alpha versions without a major version bump. It has not been audited for production use. Do not use it with real funds or in production environments until a stable release is declared.
+
 > **Limitation — pure-ADA wallets only (native token support coming in v1.1.0).**
 > This release only supports wallets whose UTXOs contain ADA exclusively. If your wallet holds native tokens (NFTs, fungible tokens) and there is not enough pure-ADA to cover the transaction, signing and fee estimation will throw `ValidationError("UNSUPPORTED_OPERATION")`. Move native tokens to a separate address before staking, or use a dedicated ADA-only wallet for staking operations.
 
@@ -31,6 +34,7 @@ Abstracts Blockfrost API calls and CBOR transaction construction behind a clean,
   - [estimateFee](#estimatefee)
   - [sign](#sign)
   - [preHash and compile](#prehash-and-compile)
+  - [deriveCardanoKeys](#deriveCardanokeys)
 - [Transaction Flows](#transaction-flows)
   - [Delegate — register and start staking](#delegate--register-and-start-staking)
   - [Redelegate — switch pool](#redelegate--switch-pool)
@@ -88,7 +92,7 @@ The **stake address** (`stake1...`) is a single identifier for your staking acco
 
 Both keys are required to sign any staking transaction. The SDK accepts them as separate `paymentPrivateKey` and `stakingPrivateKey` fields in `sign()`.
 
-> **Key format**: The SDK accepts standard Ed25519 private keys — 32 bytes as 64 hex characters. BIP32-Ed25519 HD wallet keys are 64-byte extended keys; pass only the first 32 bytes (the private scalar). Hex values may optionally be prefixed with `0x`.
+> **Key format**: The SDK accepts standard Ed25519 private keys — 32 bytes as 64 hex characters. BIP32-Ed25519 HD wallet keys are 64-byte extended keys; pass only the first 32 bytes (the private scalar). Use [`deriveCardanoKeys(rootKeyHex)`](#deriveCardanokeys) to derive both keys correctly from a BIP32 root key.
 
 ### UTXO Model — Delegation Without Locking
 
@@ -329,8 +333,12 @@ const sdk = new GuardianSDK([
 
 const PAYMENT_ADDRESS = "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae";
 const STAKE_ADDRESS   = "stake1ux3g2c9dx2nhhehyrezy4uvtyvgmndp3v4kplasjan2fcgfv7jyfa";
-const PAYMENT_KEY     = "your64hexcharpaymentprivatekeyhere00000000000000000000000000000000";
-const STAKING_KEY     = "your64hexcharstakingprivatekeyhere00000000000000000000000000000000";
+
+// Derive your payment and staking keys from a BIP32 root key (192 hex chars).
+// See deriveCardanoKeys() — never hardcode or log these values.
+import { deriveCardanoKeys } from "@guardian-sdk/cardano";
+const { paymentPrivateKey: PAYMENT_KEY, stakingPrivateKey: STAKING_KEY } =
+  deriveCardanoKeys(process.env.CARDANO_ROOT_KEY!);
 
 // 1. Browse stake pools
 const { data: pools } = await sdk.getValidators(chains.cardanoMainnet);
@@ -610,17 +618,20 @@ const fee = await sdk.estimateFee({
 
 Signs a Cardano transaction and returns the CBOR hex string ready to broadcast.
 
-Cardano staking requires **two Ed25519 keys** — pass them as `paymentPrivateKey` and `stakingPrivateKey` in the signing args:
+Cardano staking requires **two Ed25519 keys** — pass them as `paymentPrivateKey` and `stakingPrivateKey` in the signing args. Use [`deriveCardanoKeys()`](#deriveCardanokeys) to obtain them from a BIP32 root key:
 
 ```typescript
+import { deriveCardanoKeys } from "@guardian-sdk/cardano";
 import type { CardanoSigningWithPrivateKey } from "@guardian-sdk/cardano";
+
+const { paymentPrivateKey, stakingPrivateKey } = deriveCardanoKeys(rootKeyHex);
 
 const signingArgs: CardanoSigningWithPrivateKey = {
   transaction,
   fee,
-  nonce: 0,                           // always 0 for Cardano
-  paymentPrivateKey: "64hexchars...", // 32-byte Ed25519 scalar
-  stakingPrivateKey: "64hexchars...", // 32-byte Ed25519 scalar
+  nonce: 0, // always 0 for Cardano
+  paymentPrivateKey,
+  stakingPrivateKey,
 };
 
 const rawTx = await sdk.sign(signingArgs);
@@ -704,6 +715,52 @@ const txHash = await sdk.broadcast(chains.cardanoMainnet, rawTx);
 
 ---
 
+### `deriveCardanoKeys`
+
+Derives the payment and staking private keys from a BIP32 root key. Both keys are required for every signing operation.
+
+```typescript
+import { deriveCardanoKeys } from "@guardian-sdk/cardano";
+
+const { paymentPrivateKey, stakingPrivateKey } = deriveCardanoKeys(rootKeyHex);
+```
+
+**Parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `rootKeyHex` | `string` | BIP32-Ed25519 root private key — 96 bytes as a 192-character hex string |
+
+**Returns:** `{ paymentPrivateKey: string, stakingPrivateKey: string }` — both are 32-byte Ed25519 scalars (64 hex chars), ready to pass to `sign()`.
+
+**Derivation paths (CIP-1852):**
+
+| Key | Path |
+|---|---|
+| Payment | `m / 1852' / 1815' / 0' / 0 / 0` |
+| Staking | `m / 1852' / 1815' / 0' / 2 / 0` |
+
+**Obtaining a root key from a mnemonic:**
+
+`deriveCardanoKeys` accepts a root key hex, not a mnemonic directly. To convert a mnemonic, use a BIP39 library alongside `@cardano-sdk/crypto` (already a bundled dependency):
+
+```typescript
+import { Bip32PrivateKey, ready } from "@cardano-sdk/crypto";
+import { mnemonicToEntropy } from "@scure/bip39";          // npm install @scure/bip39
+import { wordlist } from "@scure/bip39/wordlists/english.js";
+
+await ready(); // initialise WASM module
+
+const entropy = mnemonicToEntropy("your twenty four word mnemonic ...", wordlist);
+const rootKeyHex = Bip32PrivateKey.fromBip39Entropy(Buffer.from(entropy), "").hex();
+
+const { paymentPrivateKey, stakingPrivateKey } = deriveCardanoKeys(rootKeyHex);
+```
+
+> Store `rootKeyHex` the same way you would store a mnemonic — it is equivalent in sensitivity. Never log or commit it.
+
+---
+
 ## Transaction Flows
 
 Full working examples for each staking operation. All examples share this setup:
@@ -719,8 +776,9 @@ const sdk = new GuardianSDK([
 
 const PAYMENT_ADDRESS = "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae";
 const STAKE_ADDRESS   = "stake1ux3g2c9dx2nhhehyrezy4uvtyvgmndp3v4kplasjan2fcgfv7jyfa";
-const PAYMENT_KEY     = "your64hexcharpaymentprivatekey00000000000000000000000000000000000";
-const STAKING_KEY     = "your64hexcharstakingprivatekey00000000000000000000000000000000000";
+
+const { paymentPrivateKey: PAYMENT_KEY, stakingPrivateKey: STAKING_KEY } =
+  deriveCardanoKeys(process.env.CARDANO_ROOT_KEY!);
 ```
 
 ---
