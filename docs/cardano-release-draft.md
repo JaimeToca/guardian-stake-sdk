@@ -1,7 +1,7 @@
 # Cardano Release Draft
 
 > This file is a draft for the future `@guardian-sdk/cardano` release.
-> It is intentionally missing the changeset frontmatter so it is not consumed by `changeset version`.
+> It lives in `docs/` (not `.changeset/`) so the changesets tooling never parses it.
 >
 > When ready to release Cardano:
 > 1. Remove `"@guardian-sdk/cardano"` from `ignore` in `.changeset/config.json`

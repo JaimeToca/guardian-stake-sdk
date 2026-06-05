@@ -5,7 +5,7 @@ Native staking support for Cardano, part of the [Guardian SDK](../../README.md).
 Abstracts Blockfrost API calls and CBOR transaction construction behind a clean, type-safe API so you can build staking features without dealing with bech32 decoding, stake certificate encoding, UTXO coin selection, or Cardano-specifics.
 
 > **⚠️ Alpha release — not production-ready.**
-> This package is published as `1.0.0-alpha.0`. APIs may change between alpha versions without a major version bump. It has not been audited for production use. Do not use it with real funds or in production environments until a stable release is declared.
+> APIs may change between alpha versions without a major version bump. This package has not been audited for production use. Do not use it with real funds or in production environments until a stable release is declared.
 
 > **Limitation — pure-ADA wallets only (native token support coming in v1.1.0).**
 > This release only supports wallets whose UTXOs contain ADA exclusively. If your wallet holds native tokens (NFTs, fungible tokens) and there is not enough pure-ADA to cover the transaction, signing and fee estimation will throw `ValidationError("UNSUPPORTED_OPERATION")`. Move native tokens to a separate address before staking, or use a dedicated ADA-only wallet for staking operations.
@@ -306,18 +306,35 @@ cardano({ apiKey: "mainnetXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" })
 
 ## Installation
 
+This package is in alpha and published under the `alpha` dist-tag. Install it with the `@alpha` suffix — `npm install @guardian-sdk/cardano` will not find it.
+
 ```bash
-npm install @guardian-sdk/cardano @guardian-sdk/sdk
+npm install @guardian-sdk/cardano@alpha \
+  @guardian-sdk/sdk \
+  @cardano-sdk/core@0.46.12 \
+  @cardano-sdk/crypto@0.4.5 \
+  @cardano-sdk/util@0.17.1
+```
+
+If you already have `@guardian-sdk/bsc` installed, `@guardian-sdk/sdk` is already present — you only need to add the Cardano-specific peers:
+
+```bash
+npm install @guardian-sdk/cardano@alpha \
+  @cardano-sdk/core@0.46.12 \
+  @cardano-sdk/crypto@0.4.5 \
+  @cardano-sdk/util@0.17.1
 ```
 
 ### Dependencies
 
-| Package | Role |
-|---|---|
-| [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | Peer dependency — chain-agnostic core, shared types and interfaces |
-| `@cardano-sdk/core` | Bundled dependency — Cardano primitives: addresses, transactions, certificates |
-| `@cardano-sdk/crypto` | Bundled dependency — Ed25519 key operations and Blake2b hashing |
-| `@cardano-sdk/util` | Bundled dependency — shared utilities for the Cardano SDK family |
+| Package | Version | Role |
+|---|---|---|
+| [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | `workspace:^` | Peer — chain-agnostic core, shared types and interfaces |
+| `@cardano-sdk/core` | `0.46.12` | Peer — Cardano primitives: addresses, transactions, certificates |
+| `@cardano-sdk/crypto` | `0.4.5` | Peer — Ed25519 key operations and Blake2b hashing |
+| `@cardano-sdk/util` | `0.17.1` | Peer — shared utilities for the Cardano SDK family |
+
+> **Why exact peer versions?** The `@cardano-sdk` family has no stability guarantees between minor versions and CBOR serialisation is sensitive to the exact release. The versions above are the ones this package was built and tested against. These pins will be loosened to `^` once Cardano support reaches a stable release.
 
 ---
 
