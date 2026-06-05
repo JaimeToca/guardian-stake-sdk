@@ -68,9 +68,8 @@ def kebab_to_camel(s: str) -> str:
     return parts[0] + "".join(p.capitalize() for p in parts[1:])
 
 
-# chain_name: camelCase constant name for the mainnet chain object
-# e.g. "tron" → "tronMainnet", "bnb-smart-chain" → "bnbSmartChainMainnet"
 def make_chain_name(slug: str) -> str:
+    """tron → tronMainnet, bnb-smart-chain → bnbSmartChainMainnet"""
     return kebab_to_camel(slug) + "Mainnet"
 
 
@@ -91,68 +90,73 @@ def write(pkg_dir: Path, rel_path: str, content: str) -> None:
 
 def make_package_json(slug: str, symbol: str, no_viem: bool) -> str:
     pkg = {
-        "name": f"@guardian/{slug}",
+        "name": f"@guardian-sdk/{slug}",
         "version": "0.1.0",
         "description": f"Guardian SDK for {symbol}",
-        "main": "./dist/cjs/index.js",
-        "module": "./dist/esm/index.js",
-        "types": "./dist/cjs/index.d.ts",
+        "main": "./dist/index.js",
+        "module": "./dist/index.mjs",
+        "types": "./dist/index.d.ts",
         "exports": {
             ".": {
-                "types": "./dist/cjs/index.d.ts",
-                "import": "./dist/esm/index.js",
-                "require": "./dist/cjs/index.js",
+                "types": "./dist/index.d.ts",
+                "import": "./dist/index.mjs",
+                "require": "./dist/index.js",
             }
         },
-        "files": ["dist"],
         "sideEffects": False,
+        "files": ["dist"],
         "publishConfig": {"access": "public"},
         "scripts": {
-            "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json",
+            "build": "tsup",
             "typecheck": "tsc --noEmit",
-            "prepublishOnly": "pnpm run build",
             "test": "vitest run",
             "test:watch": "vitest",
         },
-        "dependencies": {"@guardian-sdk/sdk": "*"},
-        "devDependencies": {"vitest": "^3.0.0"},
+        "peerDependencies": {
+            "@guardian-sdk/sdk": "workspace:^",
+        },
+        "devDependencies": {
+            "@guardian-sdk/sdk": "workspace:^",
+            "tsup": "^8.5.1",
+            "vitest": "^4.1.3",
+        },
         "engines": {"node": ">=22"},
-        "keywords": [slug, "staking", "web3", "blockchain", "sdk", "guardian"],
+        "keywords": [slug, "staking", "native-staking", "web3", "blockchain", "sdk", "guardian", "guardian-sdk"],
         "license": "MIT",
     }
     if not no_viem:
-        pkg["peerDependencies"] = {"viem": "^2.47.5"}
-        pkg["devDependencies"]["viem"] = "^2.47.6"
+        pkg["peerDependencies"]["viem"] = "2"
+        pkg["devDependencies"]["viem"] = "^2.48.8"
 
     return json.dumps(pkg, indent=2)
 
 
-def make_tsconfig_cjs() -> str:
+def make_tsconfig() -> str:
     return """{
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist/cjs"
   },
-  "exclude": ["node_modules", "dist", "tests", "vitest.config.ts"]
+  "exclude": ["node_modules", "dist", "tests", "vitest.config.ts", "tsup.config.ts"]
 }
 """
 
 
-def make_tsconfig_esm() -> str:
-    return """{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "rootDir": "./src",
-    "outDir": "./dist/esm",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "declaration": false,
-    "declarationMap": false,
-    "sourceMap": false
-  },
-  "exclude": ["node_modules", "dist", "tests", "vitest.config.ts"]
-}
+def make_tsup_config(no_viem: bool) -> str:
+    external = ["@guardian-sdk/sdk"]
+    if not no_viem:
+        external.insert(0, "viem")
+    external_str = ", ".join(f'"{e}"' for e in external)
+    return f"""import {{ defineConfig }} from "tsup";
+
+export default defineConfig({{
+  entry: ["src/index.ts"],
+  format: ["cjs", "esm"],
+  dts: true,
+  clean: true,
+  external: [{external_str}],
+}});
 """
 
 
@@ -193,21 +197,20 @@ def make_chain_index(slug: str, symbol: str, numeric_chain_id: str, explorer: st
 /** {symbol} mainnet configuration. */
 export const {chain_name}: GuardianChain = {{
   id: "{slug}-mainnet",
-  type: "Smartchain", // TODO: adjust if not EVM
+  type: "Smartchain", // TODO: adjust if not EVM — use "Cardano" for UTXO-based chains
   symbol: "{symbol}",
   decimals: 18, // TODO: confirm native token decimals
-  ecosystem: "Ethereum", // TODO: adjust if not EVM
+  ecosystem: "Ethereum", // TODO: adjust if not EVM — use "Cardano" for Cardano ecosystem
   chainId: "{numeric_chain_id}",
   explorer: "{explorer}",
 }};
 
 /**
- * Registry of all chains supported by `@guardian/{slug}`.
- * Use this for autocomplete — type `chains.` to see available chains.
+ * Registry of all chains supported by `@guardian-sdk/{slug}`.
  *
  * @example
  * ```typescript
- * import {{ chains }} from "@guardian/{slug}";
+ * import {{ chains }} from "@guardian-sdk/{slug}";
  * sdk.getValidators(chains.{chain_name});
  * ```
  */
@@ -215,7 +218,7 @@ export const chains = {{
   {chain_name},
 }} as const;
 
-/** All chains supported by `@guardian/{slug}`. */
+/** All chains supported by `@guardian-sdk/{slug}`. */
 export const SUPPORTED_CHAINS: GuardianChain[] = Object.values(chains);
 
 /** Retrieves a supported chain by its `id` string. */
@@ -231,216 +234,174 @@ export const isSupportedChain = (chain: GuardianChain): boolean =>
 
 
 def make_staking_service(slug: str) -> str:
-    return f"""import type {{ CacheContract, Logger, Delegations, Validator, StakingServiceContract }} from "@guardian-sdk/sdk";
-import {{ NoopLogger }} from "@guardian-sdk/sdk";
+    return f"""import type {{
+  CacheContract,
+  Delegations,
+  GetValidatorsParams,
+  Logger,
+  StakingServiceContract,
+  ValidatorsPage,
+}} from "@guardian-sdk/sdk";
+import {{ NoopLogger, validatePageParams }} from "@guardian-sdk/sdk";
 
-// TODO: import your RPC client types
+// TODO: import your RPC client contract types
 
-export class StakingService implements StakingServiceContract {{
-  private static readonly VALIDATOR_CACHE_KEY = "{slug}-validators";
+const DEFAULT_PAGE_SIZE = 20;
 
-  constructor(
-    private readonly cache: CacheContract<string, Validator[]>,
-    // TODO: inject RPC clients
-    private readonly logger: Logger = new NoopLogger()
-  ) {{}}
+export function createStakingService(
+  cache: CacheContract<string, ValidatorsPage>,
+  // TODO: inject RPC clients
+  logger: Logger = new NoopLogger()
+): StakingServiceContract {{
+  return {{
+    async getValidators(params: GetValidatorsParams = {{}}): Promise<ValidatorsPage> {{
+      validatePageParams(params);
+      const page = params.page ?? 1;
+      const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
 
-  async getValidators(): Promise<Validator[]> {{
-    const cached = this.cache.get(StakingService.VALIDATOR_CACHE_KEY);
-    if (cached) {{
-      this.logger.debug("StakingService: validators cache hit", {{ count: cached.length }});
-      return cached;
-    }}
+      const cacheKey = `{slug}-validators-${{page}}-${{pageSize}}`;
+      const cached = cache.get(cacheKey);
+      if (cached) {{
+        logger.debug("StakingService: validator page cache hit", {{ page, pageSize }});
+        return cached;
+      }}
 
-    this.logger.debug("StakingService: validators cache miss — fetching from RPC");
+      logger.debug("StakingService: validator page cache miss — fetching from RPC", {{ page, pageSize }});
 
-    // TODO: fetch validators from chain RPC / REST API
-    const validators: Validator[] = [];
+      // TODO: fetch validators from chain RPC / REST API
+      const result: ValidatorsPage = {{
+        data: [],
+        pagination: {{ page, pageSize, total: 0, totalPages: 0, hasNextPage: false }},
+      }};
 
-    this.cache.set(StakingService.VALIDATOR_CACHE_KEY, validators);
-    this.logger.debug("StakingService: validators cached", {{ count: validators.length }});
-    return validators;
-  }}
+      cache.set(cacheKey, result);
+      return result;
+    }},
 
-  async getDelegations(_address: string): Promise<Delegations> {{
-    // TODO: fetch active + pending/claimable delegations and protocol summary
-    throw new Error("getDelegations: not yet implemented");
-  }}
+    async getDelegations(_address: string): Promise<Delegations> {{
+      // TODO: fetch active delegations and protocol-level summary
+      throw new Error("getDelegations: not yet implemented");
+    }},
+  }};
 }}
 """
 
 
 def make_balance_service() -> str:
-    return """import type { Balance, BalanceServiceContract, Logger } from "@guardian-sdk/sdk";
-import { NoopLogger } from "@guardian-sdk/sdk";
+    return """import type { Balance, BalanceServiceContract } from "@guardian-sdk/sdk";
 
-export class BalanceService implements BalanceServiceContract {
-  constructor(
-    // TODO: inject staking service or RPC client
-    private readonly logger: Logger = new NoopLogger()
-  ) {}
+// TODO: import your RPC client contract types
 
-  async getBalances(_address: string): Promise<Balance[]> {
-    // TODO: return Available, Staked, Pending, Claimable balances
-    throw new Error("getBalances: not yet implemented");
-  }
+export function createBalanceService(
+  // TODO: inject RPC client or staking service
+): BalanceServiceContract {
+  return {
+    async getBalances(_address: string): Promise<Balance[]> {
+      // TODO: return Available, Staked, Pending, Claimable balances
+      throw new Error("getBalances: not yet implemented");
+    },
+  };
 }
 """
 
 
 def make_fee_service() -> str:
-    return """import type { Fee, FeeServiceContract, Transaction, Logger } from "@guardian-sdk/sdk";
+    return """import type { Fee, FeeServiceContract, Logger, Transaction } from "@guardian-sdk/sdk";
 import { NoopLogger } from "@guardian-sdk/sdk";
 
-export class FeeService implements FeeServiceContract {
-  constructor(
-    // TODO: inject RPC client for simulation
-    private readonly logger: Logger = new NoopLogger()
-  ) {}
+// TODO: import your RPC client contract types
 
-  async estimateFee(_transaction: Transaction): Promise<Fee> {
-    // TODO: simulate the transaction and return gas/fee estimate
-    throw new Error("estimateFee: not yet implemented");
-  }
-}
-"""
-
-
-def make_nonce_service() -> str:
-    return """import type { NonceServiceContract } from "@guardian-sdk/sdk";
-
-export class NonceService implements NonceServiceContract {
-  constructor(
-    // TODO: inject RPC client
-  ) {}
-
-  async getNonce(_address: string): Promise<number> {
-    // TODO: fetch account sequence / nonce
-    throw new Error("getNonce: not yet implemented");
-  }
+export function createFeeService(
+  // TODO: inject RPC client for simulation
+  logger: Logger = new NoopLogger()
+): FeeServiceContract {
+  return {
+    async estimateFee(_transaction: Transaction): Promise<Fee> {
+      // TODO: simulate the transaction and return gas/fee estimate
+      throw new Error("estimateFee: not yet implemented");
+    },
+  };
 }
 """
 
 
 def make_sign_service() -> str:
     return """import type {
-  SignServiceContract,
-  SigningWithPrivateKey,
   BaseSignArgs,
-  PrehashResult,
   CompileArgs,
-  Transaction,
   Logger,
+  PrehashResult,
+  SignServiceContract,
 } from "@guardian-sdk/sdk";
 import { NoopLogger } from "@guardian-sdk/sdk";
 
-export class SignService implements SignServiceContract {
-  constructor(private readonly logger: Logger = new NoopLogger()) {}
+// TODO: import your RPC client contract types
 
-  async sign(_signingArgs: SigningWithPrivateKey): Promise<string> {
-    // TODO: build + sign transaction with private key
-    throw new Error("sign: not yet implemented");
-  }
+export function createSignService(
+  // TODO: inject RPC client if needed for UTXO fetch / nonce
+  logger: Logger = new NoopLogger()
+): SignServiceContract {
+  return {
+    async sign(_signingArgs: BaseSignArgs): Promise<string> {
+      // TODO: build + sign transaction with private key
+      throw new Error("sign: not yet implemented");
+    },
 
-  async prehash(_preHashArgs: BaseSignArgs): Promise<PrehashResult> {
-    // TODO: serialize unsigned transaction for external/MPC signing
-    throw new Error("prehash: not yet implemented");
-  }
+    async prehash(_preHashArgs: BaseSignArgs): Promise<PrehashResult> {
+      // TODO: serialize unsigned transaction for external/MPC signing
+      throw new Error("prehash: not yet implemented");
+    },
 
-  async compile(_compileArgs: CompileArgs): Promise<string> {
-    // TODO: reassemble signed transaction from r, s, v components
-    throw new Error("compile: not yet implemented");
-  }
-
-  buildCallData(_transaction: Transaction): { data: string; amount: bigint } {
-    // TODO: ABI-encode (EVM) or proto-encode the transaction
-    throw new Error("buildCallData: not yet implemented");
-  }
+    async compile(_compileArgs: CompileArgs): Promise<string> {
+      // TODO: reassemble signed transaction from external signature
+      throw new Error("compile: not yet implemented");
+    },
+  };
 }
 """
 
 
-def make_guardian_service() -> str:
-    return """import type {
-  GuardianServiceContract,
-  GuardianChain,
-  Validator,
-  Delegations,
-  Balance,
-  Fee,
-  Transaction,
-  SigningWithPrivateKey,
-  BaseSignArgs,
-  PrehashResult,
-  CompileArgs,
-  StakingServiceContract,
-  BalanceServiceContract,
-  FeeServiceContract,
-  SignServiceContract,
-  NonceServiceContract,
-} from "@guardian-sdk/sdk";
+def make_nonce_service() -> str:
+    return """// getNonce — plain function, fetches account sequence / nonce
+// TODO: inject any RPC client dependency via a closure or by changing this to createNonceService()
 
-export class GuardianService implements GuardianServiceContract {
-  constructor(
-    private readonly chain: GuardianChain,
-    private readonly balanceService: BalanceServiceContract,
-    private readonly nonceService: NonceServiceContract,
-    private readonly feeService: FeeServiceContract,
-    private readonly signService: SignServiceContract,
-    private readonly stakingService: StakingServiceContract
-  ) {}
+export async function getNonce(_address: string): Promise<number> {
+  // TODO: fetch account nonce / sequence number from chain
+  throw new Error("getNonce: not yet implemented");
+}
+"""
 
-  getChainInfo(): GuardianChain {
-    return this.chain;
-  }
 
-  getValidators(): Promise<Validator[]> {
-    return this.stakingService.getValidators();
-  }
+def make_broadcast_service() -> str:
+    return """import type { Logger } from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 
-  getDelegations(address: string): Promise<Delegations> {
-    return this.stakingService.getDelegations(address);
-  }
+// broadcast — plain function, submits a signed raw transaction
+// TODO: inject any RPC client dependency via a closure or by changing this to createBroadcastService()
 
-  getBalances(address: string): Promise<Balance[]> {
-    return this.balanceService.getBalances(address);
-  }
-
-  getNonce(address: string): Promise<number> {
-    return this.nonceService.getNonce(address);
-  }
-
-  estimateFee(transaction: Transaction): Promise<Fee> {
-    return this.feeService.estimateFee(transaction);
-  }
-
-  sign(signingArgs: SigningWithPrivateKey): Promise<string> {
-    return this.signService.sign(signingArgs);
-  }
-
-  prehash(preHashArgs: BaseSignArgs): Promise<PrehashResult> {
-    return this.signService.prehash(preHashArgs);
-  }
-
-  compile(compileArgs: CompileArgs): Promise<string> {
-    return this.signService.compile(compileArgs);
-  }
+export async function broadcast(
+  rawTx: string,
+  // TODO: inject RPC client / logger
+  logger: Logger = new NoopLogger()
+): Promise<string> {
+  // TODO: submit rawTx to the node and return the transaction hash
+  throw new Error("broadcast: not yet implemented");
 }
 """
 
 
 def make_di_factory(slug: str, symbol: str, chain_name: str, factory_fn: str) -> str:
-    pkg = f"@guardian/{slug}"
+    pkg = f"@guardian-sdk/{slug}"
     return f"""import type {{ GuardianServiceContract, Logger }} from "@guardian-sdk/sdk";
-import {{ InMemoryCache, NoopLogger, validateRpcUrl }} from "@guardian-sdk/sdk";
-import type {{ Validator }} from "@guardian-sdk/sdk";
+import {{ createInMemoryCache, NoopLogger, validateRpcUrl }} from "@guardian-sdk/sdk";
+import type {{ ValidatorsPage }} from "@guardian-sdk/sdk";
 import {{ {chain_name} }} from "../chain";
-import {{ GuardianService }} from "./services/guardian-service";
-import {{ StakingService }} from "./services/staking-service";
-import {{ BalanceService }} from "./services/balance-service";
-import {{ FeeService }} from "./services/fee-service";
-import {{ SignService }} from "./services/sign-service";
-import {{ NonceService }} from "./services/nonce-service";
+import {{ createStakingService }} from "./services/staking-service";
+import {{ createBalanceService }} from "./services/balance-service";
+import {{ createFeeService }} from "./services/fee-service";
+import {{ createSignService }} from "./services/sign-service";
+import {{ getNonce }} from "./services/nonce-service";
+import {{ broadcast }} from "./services/broadcast-service";
 
 /**
  * Creates a GuardianServiceContract for {symbol}.
@@ -463,34 +424,36 @@ export function {factory_fn}(config: {{ rpcUrl: string; logger?: Logger }}): Gua
   const logger = config.logger ?? new NoopLogger();
 
   // TODO: create your chain-specific RPC client(s) here, e.g.:
-  // const client = createPublicClient({{ ... }});
+  // const client = createPublicClient({{ transport: http(config.rpcUrl) }});
 
-  const cache = new InMemoryCache<string, Validator[]>();
-  const stakingService = new StakingService(cache, logger);
-  const balanceService = new BalanceService(logger);
-  const nonceService = new NonceService();
-  const signService = new SignService(logger);
-  const feeService = new FeeService(logger);
+  const cache = createInMemoryCache<string, ValidatorsPage>();
+  const staking = createStakingService(cache, logger);
+  const balance = createBalanceService();
+  const sign = createSignService(logger);
+  const fee = createFeeService(logger);
 
-  return new GuardianService(
-    {chain_name},
-    balanceService,
-    nonceService,
-    feeService,
-    signService,
-    stakingService
-  );
+  return {{
+    getChainInfo: () => {chain_name},
+    getValidators: (params) => staking.getValidators(params),
+    getDelegations: (address) => staking.getDelegations(address),
+    getBalances: (address) => balance.getBalances(address),
+    getNonce: (address) => getNonce(address),
+    estimateFee: (tx) => fee.estimateFee(tx),
+    sign: (args) => sign.sign(args),
+    prehash: (args) => sign.prehash(args),
+    compile: (args) => sign.compile(args),
+    broadcast: (rawTx) => broadcast(rawTx, logger),
+  }};
 }}
 """
 
 
 def make_src_index(slug: str, factory_fn: str) -> str:
-    symbol_upper = slug.upper().replace("-", " ")
     return f"""// Re-export everything from @guardian-sdk/sdk so consumers need only one import
 export * from "@guardian-sdk/sdk";
 
-// {symbol_upper}-specific public API
-export {{ {factory_fn} }} from "./mainnet";
+// @guardian-sdk/{slug} public API
+export {{ {factory_fn} }} from "./{slug}-chain";
 export {{ chains, SUPPORTED_CHAINS, getChainById, isSupportedChain }} from "./chain";
 """
 
@@ -498,7 +461,7 @@ export {{ chains, SUPPORTED_CHAINS, getChainById, isSupportedChain }} from "./ch
 def make_config_test(slug: str, factory_fn: str) -> str:
     return f"""import {{ describe, it, expect }} from "vitest";
 import {{ ConfigError }} from "@guardian-sdk/sdk";
-import {{ {factory_fn} }} from "../src/mainnet";
+import {{ {factory_fn} }} from "../src/{slug}-chain";
 
 describe("{factory_fn}()", () => {{
   it("throws ConfigError for a non-URL string", () => {{
@@ -530,24 +493,27 @@ describe("{factory_fn}()", () => {{
 
 def make_staking_test(slug: str) -> str:
     return f"""import {{ describe, it, expect }} from "vitest";
-import {{ StakingService }} from "../../src/mainnet/services/staking-service";
-import {{ InMemoryCache }} from "@guardian-sdk/sdk";
-import type {{ Validator }} from "@guardian-sdk/sdk";
-import {{ mockValidator }} from "@guardian-sdk/sdk/testing";
+import {{ createStakingService }} from "../../src/{slug}-chain/services/staking-service";
+import {{ createInMemoryCache }} from "@guardian-sdk/sdk";
+import type {{ ValidatorsPage }} from "@guardian-sdk/sdk";
 
-describe("StakingService", () => {{
+describe("createStakingService", () => {{
   describe("getValidators()", () => {{
-    it("returns cached validators on second call", async () => {{
-      const cache = new InMemoryCache<string, Validator[]>();
-      const service = new StakingService(cache);
+    it("returns cached result on second call", async () => {{
+      const cache = createInMemoryCache<string, ValidatorsPage>();
+      const service = createStakingService(cache);
 
-      cache.set("{slug}-validators", [mockValidator()]);
+      const mockPage: ValidatorsPage = {{
+        data: [],
+        pagination: {{ page: 1, pageSize: 20, total: 0, totalPages: 0, hasNextPage: false }},
+      }};
+      cache.set("{slug}-validators-1-20", mockPage);
 
-      const result = await service.getValidators();
-      expect(result).toHaveLength(1);
+      const result = await service.getValidators({{ page: 1, pageSize: 20 }});
+      expect(result).toBe(mockPage);
     }});
 
-    // TODO: add tests for fetching from RPC, null APY handling, missing fields, etc.
+    // TODO: add tests for RPC fetch, APY mapping, pagination, etc.
   }});
 }});
 """
@@ -555,18 +521,16 @@ describe("StakingService", () => {{
 
 def make_sign_test(slug: str, chain_name: str) -> str:
     return f"""import {{ describe, it }} from "vitest";
-import {{ SignService }} from "../../src/mainnet/services/sign-service";
+import {{ createSignService }} from "../../src/{slug}-chain/services/sign-service";
 import {{ chains }} from "../../src/chain";
 
-describe("SignService", () => {{
-  const _service = new SignService();
+describe("createSignService", () => {{
+  const _service = createSignService();
   const _chain = chains.{chain_name};
 
-  describe("buildCallData", () => {{
-    it.todo("encodes a Delegate transaction");
-    it.todo("encodes an Undelegate transaction");
-    it.todo("encodes a Redelegate transaction");
-    it.todo("encodes a Claim transaction");
+  describe("sign", () => {{
+    it.todo("signs a Delegate transaction with a private key");
+    it.todo("signs an Undelegate transaction with a private key");
   }});
 
   describe("prehash", () => {{
@@ -574,14 +538,14 @@ describe("SignService", () => {{
   }});
 
   describe("compile", () => {{
-    it.todo("produces a valid signed transaction hex from r, s, v components");
+    it.todo("assembles a signed transaction from an external signature");
   }});
 }});
 """
 
 
 def make_example(slug: str, symbol: str, chain_name: str, factory_fn: str) -> str:
-    pkg = f"@guardian/{slug}"
+    pkg = f"@guardian-sdk/{slug}"
     return f"""/**
  * {symbol} staking — quick-start sample
  * Run: pnpm tsx examples/{slug}-sample.ts
@@ -594,8 +558,8 @@ const sdk = new GuardianSDK([
 ]);
 
 // --- Validators --------------------------------------------------------------
-const validators = await sdk.getValidators(chains.{chain_name});
-console.log(`validators (${{validators.length}}):`, validators.slice(0, 3));
+const {{ data: validators, pagination }} = await sdk.getValidators(chains.{chain_name});
+console.log(`validators (${{pagination.total ?? "?"}})`, validators.slice(0, 3));
 
 // --- Delegations -------------------------------------------------------------
 const ADDRESS = "<your-address>"; // TODO: replace
@@ -605,7 +569,9 @@ console.log(`delegations (${{delegations.length}}):`, delegations);
 
 // --- Balances ----------------------------------------------------------------
 const balances = await sdk.getBalances(chains.{chain_name}, ADDRESS);
-console.log("balances:", balances);
+for (const b of balances) {{
+  console.log(b.type, Number(b.amount) / 10 ** {chain_name.replace("Mainnet", "")}.decimals);  // TODO: verify decimals
+}}
 """
 
 
@@ -645,7 +611,7 @@ def patch_root_package_json(root: Path, slug: str) -> None:
     pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
 
     build_script: str = pkg["scripts"].get("build", "")
-    new_entry = f"pnpm --filter @guardian/{slug} run build"
+    new_entry = f"pnpm --filter @guardian-sdk/{slug} run build"
 
     if new_entry not in build_script:
         pkg["scripts"]["build"] = build_script + f" && {new_entry}"
@@ -666,8 +632,8 @@ def main() -> None:
     symbol = args.symbol or slug.upper()
     numeric_chain_id = args.numeric_chain_id or "0 /* TODO: set correct chain ID */"
     explorer = args.explorer or f"https://{slug}scan.io"
-    chain_name = make_chain_name(slug)   # e.g. "tronMainnet", "ethereumMainnet"
-    factory_fn = kebab_to_camel(slug)    # e.g. "tron", "ethereum"
+    chain_name = make_chain_name(slug)
+    factory_fn = kebab_to_camel(slug)
     no_viem = args.no_viem
 
     pkg_dir = ROOT / "packages" / slug
@@ -676,33 +642,36 @@ def main() -> None:
         print(f"\n❌  packages/{slug} already exists. Aborting to avoid overwriting work.\n")
         sys.exit(1)
 
-    print(f"\nScaffolding @guardian/{slug} ...\n")
+    print(f"\nScaffolding @guardian-sdk/{slug} ...\n")
 
     # -- Config files ---------------------------------------------------------
-    write(pkg_dir, "package.json",        make_package_json(slug, symbol, no_viem))
-    write(pkg_dir, "tsconfig.json",       make_tsconfig_cjs())
-    write(pkg_dir, "tsconfig.esm.json",   make_tsconfig_esm())
-    write(pkg_dir, "tsconfig.test.json",  make_tsconfig_test())
-    write(pkg_dir, "vitest.config.ts",    make_vitest_config())
+    write(pkg_dir, "package.json",       make_package_json(slug, symbol, no_viem))
+    write(pkg_dir, "tsconfig.json",      make_tsconfig())
+    write(pkg_dir, "tsconfig.test.json", make_tsconfig_test())
+    write(pkg_dir, "tsup.config.ts",     make_tsup_config(no_viem))
+    write(pkg_dir, "vitest.config.ts",   make_vitest_config())
 
     # -- Source files ---------------------------------------------------------
     write(pkg_dir, "src/chain/index.ts",
           make_chain_index(slug, symbol, numeric_chain_id, explorer, chain_name))
-    write(pkg_dir, "src/mainnet/services/staking-service.ts",  make_staking_service(slug))
-    write(pkg_dir, "src/mainnet/services/balance-service.ts",  make_balance_service())
-    write(pkg_dir, "src/mainnet/services/fee-service.ts",      make_fee_service())
-    write(pkg_dir, "src/mainnet/services/nonce-service.ts",    make_nonce_service())
-    write(pkg_dir, "src/mainnet/services/sign-service.ts",     make_sign_service())
-    write(pkg_dir, "src/mainnet/services/guardian-service.ts", make_guardian_service())
-    write(pkg_dir, "src/mainnet/index.ts",
+    write(pkg_dir, f"src/{slug}-chain/services/staking-service.ts",  make_staking_service(slug))
+    write(pkg_dir, f"src/{slug}-chain/services/balance-service.ts",  make_balance_service())
+    write(pkg_dir, f"src/{slug}-chain/services/fee-service.ts",      make_fee_service())
+    write(pkg_dir, f"src/{slug}-chain/services/sign-service.ts",     make_sign_service())
+    write(pkg_dir, f"src/{slug}-chain/services/nonce-service.ts",    make_nonce_service())
+    write(pkg_dir, f"src/{slug}-chain/services/broadcast-service.ts", make_broadcast_service())
+    write(pkg_dir, f"src/{slug}-chain/index.ts",
           make_di_factory(slug, symbol, chain_name, factory_fn))
     write(pkg_dir, "src/index.ts",
           make_src_index(slug, factory_fn))
 
     # -- Test stubs -----------------------------------------------------------
-    write(pkg_dir, f"tests/{slug}-config.test.ts",              make_config_test(slug, factory_fn))
-    write(pkg_dir, "tests/services/staking-service.test.ts",   make_staking_test(slug))
-    write(pkg_dir, "tests/services/sign-service.test.ts",      make_sign_test(slug, chain_name))
+    write(pkg_dir, f"tests/{slug}-config.test.ts",
+          make_config_test(slug, factory_fn))
+    write(pkg_dir, "tests/services/staking-service.test.ts",
+          make_staking_test(slug))
+    write(pkg_dir, "tests/services/sign-service.test.ts",
+          make_sign_test(slug, chain_name))
 
     # -- Example --------------------------------------------------------------
     examples_dir = ROOT / "examples"
@@ -720,12 +689,14 @@ def main() -> None:
 ✅  packages/{slug} scaffolded successfully.
 
 Next steps:
-  1. pnpm install
-  2. Fill in the TODOs in packages/{slug}/src/mainnet/services/
-  3. Update packages/{slug}/src/chain/index.ts (chainId, decimals, ecosystem)
-  4. Add @guardian/{slug} to the packages table in README.md
-  5. pnpm --filter @guardian/{slug} run typecheck
-  6. pnpm --filter @guardian/{slug} run test
+  1.  pnpm install
+  2.  Fill in the TODOs in packages/{slug}/src/{slug}-chain/services/
+  3.  Update packages/{slug}/src/chain/index.ts (type, ecosystem, chainId, decimals)
+  4.  Create .claude/rules/{slug}.md with chain-specific architecture notes
+      (globs: packages/{slug}/**)
+  5.  Add @guardian-sdk/{slug} to the packages table in README.md
+  6.  pnpm --filter @guardian-sdk/{slug} run typecheck
+  7.  pnpm --filter @guardian-sdk/{slug} run test
 
 Full contributor guide: docs/adding-a-chain.md
 """)

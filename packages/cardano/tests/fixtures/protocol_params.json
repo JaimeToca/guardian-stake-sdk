@@ -1,0 +1,19 @@
+{
+  "epoch": 624,
+  "min_fee_a": 44,
+  "min_fee_b": 155381,
+  "max_block_size": 90112,
+  "max_tx_size": 16384,
+  "key_deposit": "2000000",
+  "pool_deposit": "500000000",
+  "e_max": 18,
+  "n_opt": 500,
+  "a0": 0.3,
+  "rho": 0.003,
+  "tau": 0.2,
+  "decentralisation_param": 0.0,
+  "protocol_major_ver": 10,
+  "protocol_minor_ver": 0,
+  "min_pool_cost": "170000000",
+  "coins_per_utxo_size": "4310"
+}

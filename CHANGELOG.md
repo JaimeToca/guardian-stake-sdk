@@ -14,8 +14,27 @@
 - `getValidators(chain, params?)` now returns `ValidatorsPage` instead of `Validator[]`. Destructure with `const { data, pagination } = await sdk.getValidators(chain)`.
 - `GetValidatorsParams.status` removed. Filter validators client-side with `filterByStatus(page.data, status)` exported from `@guardian-sdk/bsc`.
 - Validator `id` changed from a `"<moniker>_<index>"` string to the stable `operatorAddress`. Any code keying validators by `id` across pages must be updated.
+- `ClaimTransaction` renamed to `ClaimDelegateTransaction` (type field `"Claim"` → `"ClaimDelegate"`). Update any `switch` statements or transaction builders targeting `"Claim"`.
+
+**`@guardian-sdk/sdk`**
+
+- `GuardianSDK.sign()` and `GuardianServiceContract.sign()` now accept `BaseSignArgs` instead of `SigningWithPrivateKey`. Chain-specific signing args (`SigningWithPrivateKey`, `CardanoSigningWithPrivateKey`) extend `BaseSignArgs` and remain fully compatible — no call-site changes needed for existing BSC usage.
 
 ### Features
+
+**`@guardian-sdk/cardano` (new package)**
+
+- First release of the Cardano chain package.
+- `cardano({ apiKey?, baseUrl?, logger? })` factory function — wires all services and returns a `GuardianServiceContract`.
+- `getValidators({ page?, pageSize? })` — client-side pagination over Blockfrost's full pool list (cached 10 min).
+- `getDelegations(stakeAddress)` — returns the active delegation, reward summary, and staking metadata.
+- `getBalances(stakeAddress)` — available, staked, and claimable reward balances.
+- `estimateFee(transaction)` — UTXO fee estimation using Blockfrost protocol parameters; returns a `UtxoFee`.
+- `sign(CardanoSigningWithPrivateKey)` — signs with separate `paymentPrivateKey` + `stakingPrivateKey` (Ed25519).
+- `prehash` / `compile` — MPC/hardware wallet flow; `compile` accepts `paymentSig:stakingVKey:stakingSig:paymentVKey`.
+- `broadcast(rawTx)` — submits a CBOR-encoded transaction via Blockfrost.
+- Supports `Delegate`, `Undelegate`, `Redelegate`, and `ClaimRewards` transaction types.
+- No unbonding period; stake key registration deposit (2 ADA) returned on deregistration.
 
 **`@guardian-sdk/bsc`**
 
@@ -23,11 +42,16 @@
 - `getValidators` returns a `ValidatorsPage` with a `pagination` object (`page`, `pageSize`, `total`, `totalPages`, `hasNextPage`).
 - Input validation: `getValidators` throws `ValidationError` with code `INVALID_PAGE` or `INVALID_PAGE_SIZE` for out-of-range values.
 - Two typed caches replace the single untyped cache in `createStakingService`: one for the full validator list (used by `getDelegations`), one for paginated pages (used by `getValidators`).
+- New `ClaimRewardsTransaction` type (`"ClaimRewards"`) for chains that separate reward withdrawal from delegation claims (currently used by Cardano).
+- `sign()` now throws `SigningError("INVALID_FEE_TYPE", ...)` if a non-`GasFee` fee object is passed (e.g. a `UtxoFee` from a Cardano estimate).
 
 **`@guardian-sdk/sdk`**
 
 - `GetValidatorsParams`, `ValidatorsPage`, `ValidatorsPagination`, `validatePageParams`, and `filterByStatus` are now exported from the core SDK for reuse across chain implementations.
 - `ValidationErrorCode` extended with `"INVALID_PAGE"` and `"INVALID_PAGE_SIZE"`.
+- `GasFee` and `UtxoFee` exported publicly — use them to narrow the `Fee` union type in chain implementations.
+- `SigningErrorCode` extended with `"INVALID_FEE_TYPE"` — thrown when the fee object type does not match what the target chain expects.
+- `Fee` is now a union type: `GasFee | UtxoFee`. BSC produces `GasFee`; Cardano produces `UtxoFee`.
 
 ---
 

@@ -5,9 +5,6 @@
       "@guardian-sdk/sdk": ["./packages/sdk/src/index.ts"]
     }
   },
-  "include": [
-    "packages/sdk/src/**/*",
-    "packages/bsc/src/**/*"
-  ],
+  "include": ["packages/sdk/src/**/*", "packages/bsc/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

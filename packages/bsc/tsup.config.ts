@@ -5,6 +5,5 @@ export default defineConfig({
   format: ["cjs", "esm"],
   dts: true,
   clean: true,
-  noExternal: ["@guardian-sdk/sdk"],
-  external: ["viem"],
+  external: ["viem", "@guardian-sdk/sdk"],
 });

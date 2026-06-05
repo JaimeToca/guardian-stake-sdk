@@ -9,6 +9,9 @@
   <a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
     <img src="https://img.shields.io/npm/v/@guardian-sdk/bsc?label=%40guardian-sdk%2Fbsc&color=0d9488" alt="npm @guardian-sdk/bsc" />
   </a>
+  <a href="https://www.npmjs.com/package/@guardian-sdk/cardano">
+    <img src="https://img.shields.io/npm/v/@guardian-sdk/cardano?label=%40guardian-sdk%2Fcardano&color=0d9488" alt="npm @guardian-sdk/cardano" />
+  </a>
 <a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
     <img src="https://img.shields.io/npm/dm/@guardian-sdk/bsc?color=0d9488" alt="npm downloads" />
   </a>
@@ -70,7 +73,7 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | Package | Chain | Status | Docs |
 |---|---|---|---|
 | [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
-| `@guardian/cardano` | Cardano | In Progress (PR #28) | — |
+| [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Cardano | Available | [README](./packages/cardano/README.md) |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — |
 | `@guardian-sdk/sui` | SUI | Planned | — |
 | `@guardian-sdk/tron` | Tron | Planned | — |
@@ -156,8 +159,8 @@ interface ValidatorsPage {
   pagination: {
     page: number;
     pageSize: number;
-    total: number;       // total validators on the network
-    totalPages: number;
+    total: number | undefined;       // undefined for chains where total count is not available
+    totalPages: number | undefined;
     hasNextPage: boolean;
   };
 }
@@ -209,7 +212,7 @@ interface Delegation {
   validator: Validator;
   amount: bigint;               // Current value in wei
   status: DelegationStatus;    // Active | Pending | Claimable | Inactive
-  delegationIndex: bigint;     // Required for Claim transactions
+  delegationIndex: bigint;     // Required for ClaimDelegate transactions
   pendingUntil: number;        // Unix timestamp (ms) when unbonding completes
 }
 
@@ -239,21 +242,20 @@ for (const d of delegations) {
 
 ### `getBalances(chain, address)`
 
-Returns the four balance categories for an address.
+Returns the balance categories for an address. Each `Balance` has a `type` and an `amount` in the chain's native unit. The exact types returned and their meaning vary by chain — see the chain-specific docs for details:
+
+- [BNB Smart Chain — getBalances](./packages/bsc/README.md#getbalances)
+- [Cardano — getBalances](./packages/cardano/README.md#getbalances)
 
 **Returns:** `Promise<Balance[]>`
 
 ```typescript
-type BalanceType = "Available" | "Staked" | "Pending" | "Claimable";
+type BalanceType = "Available" | "Staked" | "Pending" | "Claimable" | "Rewards";
 
 interface Balance {
   type: BalanceType;
-  amount: bigint;   // In wei
+  amount: bigint; // in the chain's native unit (wei, lovelaces, …)
 }
-// Available  — Wallet balance, immediately spendable
-// Staked     — Delegated and earning rewards
-// Pending    — In the unbonding window
-// Claimable  — Unbonding complete, ready to withdraw
 ```
 
 ```typescript
@@ -265,7 +267,7 @@ for (const balance of balances) {
   console.log(balance.type, formatEther(balance.amount));
 }
 // Available  1.5
-// Staked     10.0
+// Staked     10.0   ← includes accrued rewards on BSC
 // Pending    2.0
 // Claimable  0.5
 ```
@@ -314,7 +316,7 @@ const fee = await sdk.estimateFee({
 console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
-Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `Claim`. See the [BSC README](./packages/bsc/README.md#estimatefee) for the full shape of each.
+Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `ClaimDelegate` (BSC), `ClaimRewards` (Cardano). See the [BSC README](./packages/bsc/README.md#estimatefee) or [Cardano README](./packages/cardano/README.md#estimatefee) for the full shape of each.
 
 ---
 
@@ -424,6 +426,7 @@ const txHash = await sdk.broadcast(chains.bscMainnet, rawTx);
 For chain-specific details (protocol parameters, transaction shapes, error codes) see:
 
 - [BNB Smart Chain →](./packages/bsc/README.md)
+- [Cardano →](./packages/cardano/README.md)
 
 ---
 
@@ -549,7 +552,8 @@ All fixtures accept an optional `overrides` object — set only what matters for
 | `mockDelegateTransaction(overrides?)` | `DelegateTransaction` | Fee estimation, signing tests |
 | `mockUndelegateTransaction(overrides?)` | `UndelegateTransaction` | Undelegate flow tests |
 | `mockRedelegateTransaction(overrides?)` | `RedelegateTransaction` | Redelegate flow tests |
-| `mockClaimTransaction(overrides?)` | `ClaimTransaction` | Claim flow tests |
+| `mockClaimDelegateTransaction(overrides?)` | `ClaimDelegateTransaction` | BSC claim flow tests |
+| `mockClaimRewardsTransaction(overrides?)` | `ClaimRewardsTransaction` | Cardano rewards claim tests |
 | `MOCK_CHAIN` | `GuardianChain` | Neutral chain constant for tests that don't target a specific chain |
 
 ```typescript
@@ -689,6 +693,7 @@ import { SigningError } from "@guardian-sdk/bsc";
 | Code | Thrown when |
 |---|---|
 | `INVALID_SIGNING_ARGS` | The object passed to `sign()` contains neither a `privateKey` nor an `account` field |
+| `INVALID_FEE_TYPE` | The `fee` object type does not match the chain — e.g. a `UtxoFee` passed to a BSC `sign()` call instead of a `GasFee` |
 | `UNSUPPORTED_TRANSACTION_TYPE` | A `TransactionType` is used that has no ABI encoding defined |
 
 ---
@@ -706,7 +711,7 @@ Planned integrations follow the same architecture — each chain is an independe
 | Tron | `@guardian-sdk/tron` | Planned |
 | Solana | `@guardian-sdk/solana` | Planned |
 | Aptos | `@guardian/aptos` | Planned |
-| Cardano | `@guardian/cardano` | Planned |
+| Cardano | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Available |
 | Polkadot | `@guardian/polkadot` | Planned |
 | NEAR | `@guardian/near` | Planned |
 | Ethereum | `@guardian-sdk/ethereum` | Planned |

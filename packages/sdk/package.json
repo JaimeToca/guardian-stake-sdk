@@ -1,7 +1,6 @@
 {
   "name": "@guardian-sdk/sdk",
   "version": "0.1.0",
-  "private": true,
   "description": "Chain-agnostic core for the Guardian SDK",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -22,6 +21,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json",
     "typecheck": "tsc --noEmit"

@@ -6,8 +6,10 @@ export interface GetValidatorsParams {
 export interface ValidatorsPagination {
   page: number;
   pageSize: number;
-  total: number;
-  totalPages: number;
+  /** Total number of validators. Undefined when the chain cannot determine it without fetching all pages. */
+  total: number | undefined;
+  /** Total number of pages. Undefined when total is not available. */
+  totalPages: number | undefined;
   hasNextPage: boolean;
 }
 
@@ -23,7 +25,7 @@ export interface Validator {
   description: string;
   image: string | undefined;
   apy: number;
-  delegators: number;
+  delegators: number | undefined;
   operatorAddress: string;
   creditAddress: string;
 }
@@ -61,6 +63,6 @@ export interface StakingSummary {
   minAmountToStake: bigint;
   unboundPeriodInMillis: number;
   redelegateFeeRate: number;
-  activeValidators: number;
-  totalValidators: number;
+  activeValidators: number | undefined;
+  totalValidators: number | undefined;
 }

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install)",
+      "Bash(pnpm run build)",
+      "Bash(pnpm run typecheck)",
+      "Bash(pnpm run format:check)",
+      "Bash(pnpm run test)",
+      "Bash(pnpm run lint)",
+      "Bash(pnpm exec eslint *)"
+    ]
+  }
+}

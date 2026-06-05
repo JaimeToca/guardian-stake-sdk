@@ -94,7 +94,7 @@ describe("SignService", () => {
         name: "claim",
         nonce: 4,
         transaction: {
-          type: "Claim" as const,
+          type: "ClaimDelegate" as const,
           chain: bscMainnet,
           amount: 0n,
           validator: VALIDATOR,

@@ -6,13 +6,14 @@ export { StakingServiceContract } from "./staking-service-contract";
 export { NonceServiceContract } from "./nonce-service-contract";
 
 export type { Balance, BalanceType } from "../entity/balance-types";
-export type { FeeType, Fee } from "../entity/fee-types";
+export type { FeeType, Fee, GasFee, UtxoFee } from "../entity/fee-types";
 export type {
   Transaction,
   DelegateTransaction,
   UndelegateTransaction,
   RedelegateTransaction,
-  ClaimTransaction,
+  ClaimDelegateTransaction,
+  ClaimRewardsTransaction,
   OperatorAddress,
   TransactionType,
 } from "../entity/transaction-types";
