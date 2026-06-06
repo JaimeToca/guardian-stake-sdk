@@ -747,3 +747,4 @@ Contributions are welcome — bug fixes, new chain integrations, documentation i
 - **General contributions** — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for setup instructions, commit conventions, and the pull request process.
 - **Bug reports & feature requests** — open an issue using the templates in `.github/ISSUE_TEMPLATE/`.
 - **Security vulnerabilities** — see [`SECURITY.md`](./SECURITY.md). Do not open a public issue.
+

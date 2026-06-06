@@ -373,7 +373,7 @@ for (const b of balances) {
 // Available  9.95 ADA
 // Staked     9.95 ADA   ← equals Available while delegating; 0 when not delegating
 // Pending    0 ADA      ← always 0
-// Claimable  2.1 ADA    ← accumulated rewards
+// Rewards    2.1 ADA    ← accumulated rewards
 
 // 4. Delegate to the top pool
 import type { CardanoSigningWithPrivateKey } from "@guardian-sdk/cardano";
@@ -547,10 +547,10 @@ for (const b of balances) {
 // Available  9.950000 ADA
 // Staked     9.950000 ADA   ← 0 when not delegating
 // Pending    0.000000 ADA
-// Claimable  2.100000 ADA
+// Rewards    2.100000 ADA
 ```
 
-> `Claimable` reflects rewards that have already been distributed and are available to withdraw. Rewards currently being earned in the active epoch are not yet included.
+> `Rewards` reflects rewards that have already been distributed and are available to withdraw. Rewards currently being earned in the active epoch are not yet included.
 
 ---
 

@@ -73,3 +73,10 @@ Both factory functions wire all services and return a plain object implementing 
 - `.claude/rules/sdk.md` — loaded when editing `packages/sdk/**`
 
 **Adding a new chain**: add a `.claude/rules/<chain>.md` file alongside a new `packages/<chain>/` directory.
+
+## Project State
+
+Facts that don't live in code but matter for day-to-day decisions:
+
+- **Cardano is alpha** — `@guardian-sdk/cardano` is published under the `alpha` dist-tag and is in the `ignore` array in `.changeset/config.json`. It does not participate in automated semantic-release. When ready to cut a Cardano release, follow `docs/cardano-release-draft.md` manually.
+- **`examples/` has its own tsconfig** — `examples/tsconfig.json` uses path aliases pointing to package source. The root `pnpm run typecheck` does **not** cover it. Type-check examples separately with `npx tsc --noEmit -p examples/tsconfig.json`.

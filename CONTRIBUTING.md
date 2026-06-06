@@ -14,6 +14,7 @@
 - [Pull request process](#pull-request-process)
 - [Adding a new chain package](#adding-a-new-chain-package)
 - [Release process](#release-process)
+- [Claude Code](#claude-code)
 
 ---
 
@@ -136,6 +137,26 @@ python3 scripts/scaffold_chain.py tron --symbol TRX --chain-id 728126428 --no-vi
 The script creates `packages/<chain>/` with all source files, configs, and test stubs, and patches `eslint.config.mjs` and the root `package.json` automatically. After running it, search for `TODO` in the generated files — those are the only places requiring chain-specific logic.
 
 > **Note:** New chain implementations must include their own disclaimer that the implementation is unaudited and experimental until a formal security review has been completed.
+
+---
+
+## Claude Code
+
+This repo is configured for [Claude Code](https://claude.ai/code). The setup is checked in under `.claude/` so every contributor gets it automatically.
+
+- **[`CLAUDE.md`](./CLAUDE.md)** — project-level rules loaded every session: tech stack, build commands, architectural constraints, code conventions.
+- **`.claude/rules/`** — per-package context injected automatically when editing files in `packages/bsc/**`, `packages/cardano/**`, or `packages/sdk/**`. When adding a new chain, create `.claude/rules/<chain>.md` alongside the package.
+- **`.claude/skills/`** — slash commands for common workflows:
+
+| Skill | What it does |
+|---|---|
+| `/run-sample [bsc\|cardano]` | Runs the read-only sample against the live network |
+| `/add-chain <slug> [flags]` | Scaffolds a new chain package, typechecks, and runs tests |
+| `/doc-drift [bsc\|cardano\|all]` | Checks README API docs against actual TypeScript types |
+| `/api-parity` | Verifies every chain package fully implements `GuardianServiceContract` |
+| `/update-config` | Modifies Claude Code settings — hooks, permissions, env vars |
+
+A `Stop` hook runs automatically after edits: lint across all packages, then tests scoped to whichever package changed.
 
 ---
 
