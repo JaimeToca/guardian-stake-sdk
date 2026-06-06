@@ -7,7 +7,38 @@
       "Bash(pnpm run format:check)",
       "Bash(pnpm run test)",
       "Bash(pnpm run lint)",
-      "Bash(pnpm exec eslint *)"
+      "Bash(pnpm exec eslint *)",
+      "Bash(pnpm exec tsc *)",
+      "Bash(npx tsc *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(ls *)",
+      "Edit(packages/**)",
+      "Edit(.claude/**)",
+      "Edit(examples/**)",
+      "Edit(docs/**)",
+      "Edit(*.json)",
+      "Edit(*.md)",
+      "Edit(*.yaml)",
+      "Edit(*.yml)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rmdir *)",
+      "Bash(sudo *)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git reset*)",
+      "Bash(git checkout*)",
+      "Bash(git rebase*)",
+      "Bash(git merge*)",
+      "Bash(git tag*)"
     ]
   }
 }
