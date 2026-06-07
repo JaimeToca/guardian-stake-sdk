@@ -170,21 +170,46 @@ describe("SignService", () => {
           account: PAYMENT_ADDRESS,
         },
       },
-      {
-        name: "claim",
-        tx: {
-          type: "ClaimRewards" as const,
-          chain: cardanoMainnet,
-          amount: 500_000n,
-          validator: POOL_ID,
-          account: PAYMENT_ADDRESS,
-        },
-      },
     ])("$name — returns a valid CBOR hex string", async ({ tx }) => {
       const service = createSignService(makeRpcClient() as any);
 
       const result = await service.sign({
         transaction: tx as any,
+        fee: CARDANO_FEE,
+        nonce: 0,
+        paymentPrivateKey: PAYMENT_KEY,
+        stakingPrivateKey: STAKING_KEY,
+      });
+
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
+      expect(result).toMatch(/^[0-9a-f]+$/);
+    });
+
+    it("claim — returns a valid CBOR hex string", async () => {
+      const rpc = makeRpcClient();
+      rpc.getAccountOrNull.mockResolvedValue({
+        stake_address: "stake1ux...",
+        active: true,
+        active_epoch: 300,
+        controlled_amount: "10000000",
+        rewards_sum: "1000000",
+        withdrawals_sum: "0",
+        reserves_sum: "0",
+        treasury_sum: "0",
+        withdrawable_amount: "1000000",
+        pool_id: POOL_ID,
+      });
+      const service = createSignService(rpc as any);
+
+      const result = await service.sign({
+        transaction: {
+          type: "ClaimRewards" as const,
+          chain: cardanoMainnet,
+          amount: 500_000n,
+          validator: POOL_ID,
+          account: PAYMENT_ADDRESS,
+        } as any,
         fee: CARDANO_FEE,
         nonce: 0,
         paymentPrivateKey: PAYMENT_KEY,

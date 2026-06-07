@@ -39,13 +39,12 @@ function handleAxiosError(error: unknown): never {
 }
 
 function handleServerResponseError(response: AxiosResponse): never {
-  const { status, statusText, data: errorData } = response;
+  const { status, statusText } = response;
   const displayStatusText = statusText || `HTTP ${status} Error`;
 
   throw new ApiError(`API Request Failed: ${status} - ${displayStatusText}`, {
     status,
     statusText: displayStatusText,
-    data: errorData,
     type: ApiErrorType.ServerResponseError,
   });
 }

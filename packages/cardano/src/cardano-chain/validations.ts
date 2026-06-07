@@ -125,6 +125,20 @@ export function parseCardanoPublicKey(value: string): string {
 }
 
 /**
+ * Parses a non-negative integer lovelace string from Blockfrost responses.
+ * Throws ValidationError("INVALID_AMOUNT") for negative, fractional, or non-numeric strings.
+ */
+export function parseLovelaceString(value: string, fieldName: string): bigint {
+  if (!/^\d+$/.test(value)) {
+    throw new ValidationError(
+      "INVALID_AMOUNT",
+      `${fieldName} must be a non-negative integer string, got "${value}".`
+    );
+  }
+  return BigInt(value);
+}
+
+/**
  * Asserts that `value` is a valid hex string of exactly `byteLength` bytes.
  * Throws SigningError("INVALID_SIGNING_ARGS") naming the field and expected size.
  */

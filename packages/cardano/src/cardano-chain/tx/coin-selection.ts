@@ -1,6 +1,7 @@
 import { ValidationError } from "@guardian-sdk/sdk";
 import type { BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
 import type { TxInput } from "./tx-builder";
+import { parseLovelaceString } from "../validations";
 
 /**
  * Babbage-era default for `coins_per_utxo_size` (lovelaces per serialised byte).
@@ -29,7 +30,9 @@ export function selectUtxos(utxos: BlockfrostUtxo[], requiredLovelaces: bigint):
   const withLovelaces = utxos
     .map((utxo) => {
       const lovelaceEntry = utxo.amount.find((a) => a.unit === "lovelace");
-      const lovelaces = lovelaceEntry ? BigInt(lovelaceEntry.quantity) : 0n;
+      const lovelaces = lovelaceEntry
+        ? parseLovelaceString(lovelaceEntry.quantity, "utxo quantity")
+        : 0n;
       const isAdaOnly = utxo.amount.length === 1 && utxo.amount[0].unit === "lovelace";
 
       return { utxo, lovelaces, isAdaOnly };

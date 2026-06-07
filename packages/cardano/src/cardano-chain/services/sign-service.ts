@@ -36,6 +36,7 @@ import {
   parseCardanoPublicKey,
   checkIfPaymentAddressIsValid,
   assertHexBytes,
+  parseLovelaceString,
 } from "../validations";
 
 /** Transactions expire after ~2 hours (1 slot ≈ 1 second on mainnet). */
@@ -176,7 +177,9 @@ export function createSignService(
         rpcClient.getProtocolParams(),
         rpcClient.getUtxos(transaction.account),
         rpcClient.getLatestBlock(),
-        transaction.type === "Delegate" || transaction.type === "Undelegate"
+        transaction.type === "Delegate" ||
+        transaction.type === "Undelegate" ||
+        transaction.type === "ClaimRewards"
           ? rpcClient.getAccountOrNull(rewardAccount)
           : Promise.resolve(null),
       ]);
@@ -195,8 +198,21 @@ export function createSignService(
       const isStakeKeyRegistered = existingAccount?.active === true;
       const rewardsAvailableToSweep =
         transaction.type === "Undelegate"
-          ? BigInt(existingAccount?.withdrawable_amount ?? "0")
+          ? parseLovelaceString(existingAccount?.withdrawable_amount ?? "0", "withdrawable_amount")
           : 0n;
+
+      if (transaction.type === "ClaimRewards") {
+        const onChainRewards = parseLovelaceString(
+          existingAccount?.withdrawable_amount ?? "0",
+          "withdrawable_amount"
+        );
+        if (transaction.amount > onChainRewards) {
+          throw new ValidationError(
+            "INVALID_AMOUNT",
+            `ClaimRewards amount (${transaction.amount} lovelace) exceeds on-chain rewards (${onChainRewards} lovelace).`
+          );
+        }
+      }
 
       const body = buildBody(
         transaction,
@@ -266,7 +282,9 @@ export function createSignService(
         rpcClient.getProtocolParams(),
         rpcClient.getUtxos(preHashArgs.transaction.account),
         rpcClient.getLatestBlock(),
-        preHashArgs.transaction.type === "Delegate" || preHashArgs.transaction.type === "Undelegate"
+        preHashArgs.transaction.type === "Delegate" ||
+        preHashArgs.transaction.type === "Undelegate" ||
+        preHashArgs.transaction.type === "ClaimRewards"
           ? rpcClient.getAccountOrNull(rewardAccount)
           : Promise.resolve(null),
       ]);
@@ -283,8 +301,21 @@ export function createSignService(
       const isStakeKeyRegistered = existingAccount?.active === true;
       const rewardsAvailableToSweep =
         preHashArgs.transaction.type === "Undelegate"
-          ? BigInt(existingAccount?.withdrawable_amount ?? "0")
+          ? parseLovelaceString(existingAccount?.withdrawable_amount ?? "0", "withdrawable_amount")
           : 0n;
+
+      if (preHashArgs.transaction.type === "ClaimRewards") {
+        const onChainRewards = parseLovelaceString(
+          existingAccount?.withdrawable_amount ?? "0",
+          "withdrawable_amount"
+        );
+        if (preHashArgs.transaction.amount > onChainRewards) {
+          throw new ValidationError(
+            "INVALID_AMOUNT",
+            `ClaimRewards amount (${preHashArgs.transaction.amount} lovelace) exceeds on-chain rewards (${onChainRewards} lovelace).`
+          );
+        }
+      }
 
       const body = buildBody(
         preHashArgs.transaction,
