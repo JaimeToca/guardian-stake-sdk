@@ -51,8 +51,8 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2
       viem:
-        specifier: ^2.48.8
-        version: 2.48.8(typescript@6.0.2)
+        specifier: ^2.52.2
+        version: 2.52.2(typescript@6.0.2)
 
   packages/bsc:
     devDependencies:
@@ -61,10 +61,10 @@ importers:
         version: link:../sdk
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(postcss@8.5.13)(tsx@4.22.3)(typescript@6.0.2)(yaml@2.8.3)
+        version: 8.5.1(postcss@8.5.15)(tsx@4.22.3)(typescript@6.0.2)(yaml@2.8.3)
       viem:
-        specifier: ^2.48.8
-        version: 2.48.8(typescript@6.0.2)
+        specifier: ^2.52.2
+        version: 2.52.2(typescript@6.0.2)
       vitest:
         specifier: ^4.1.3
         version: 4.1.3(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(esbuild@0.27.7)(tsx@4.22.3)(yaml@2.8.3))
@@ -85,7 +85,7 @@ importers:
         version: link:../sdk
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(postcss@8.5.13)(tsx@4.22.3)(typescript@6.0.2)(yaml@2.8.3)
+        version: 8.5.1(postcss@8.5.15)(tsx@4.22.3)(typescript@6.0.2)(yaml@2.8.3)
       vitest:
         specifier: ^4.1.3
         version: 4.1.3(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(esbuild@0.28.0)(tsx@4.22.3)(yaml@2.8.3))
@@ -1850,8 +1850,8 @@ packages:
   outdent@0.5.0:
     resolution: {integrity: sha512-/jHxFIzoMXdqPzTaCpFzAAWhpkSjZPF4Vsn6jAfNpmbH/ymsmd7Qc6VE9BGn0L6YMj6uwpQLxCECpus4ukKS9Q==}
 
-  ox@0.14.20:
-    resolution: {integrity: sha512-rby38C3nDn8eQkf29Zgw4hkCZJ64Qqi0zRPWL8ENUQ7JVuoITqrVtwWQgM/He19SCMUEc7hS/Sjw0jIOSLJhOw==}
+  ox@0.14.29:
+    resolution: {integrity: sha512-M5j87Ec4V99MQdRct/g09eWXW60g6zhHTUs1lr4deUtrPDnezBdCJTgKd7pxqTpSZBFveV0ALi9jMMuT1qKyNg==}
     peerDependencies:
       typescript: '>=5.4.0'
     peerDependenciesMeta:
@@ -1960,8 +1960,8 @@ packages:
       yaml:
         optional: true
 
-  postcss@8.5.13:
-    resolution: {integrity: sha512-qif0+jGGZoLWdHey3UFHHWP0H7Gbmsk8T5VEqyYFbWqPr1XqvLGBbk/sl8V5exGmcYJklJOhOQq1pV9IcsiFag==}
+  postcss@8.5.15:
+    resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
 
   prelude-ls@1.2.1:
@@ -2152,8 +2152,8 @@ packages:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
 
-  tinyglobby@0.2.16:
-    resolution: {integrity: sha512-pn99VhoACYR8nFHhxqix+uvsbXineAasWm5ojXoN8xEwK5Kd3/TrhNn1wByuD52UxWRLy8pu+kRMniEi6Eq9Zg==}
+  tinyglobby@0.2.17:
+    resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
   tinyrainbow@3.1.0:
@@ -2287,8 +2287,8 @@ packages:
   util@0.12.5:
     resolution: {integrity: sha512-kZf/K6hEIrWHI6XqOFUiiMa+79wE/D8Q+NCNAWclkyg3b4d2k7s0QGepNjiABc+aR3N1PAyHL7p6UcLY6LmrnA==}
 
-  viem@2.48.8:
-    resolution: {integrity: sha512-Xj3Nrt66SKtn06kczU91ELn9Difr84ZM5A62BTlaisT5lpgt058i2mBkfMZCXHGb1ocOLjzC2ztPhD0Lvky7uQ==}
+  viem@2.52.2:
+    resolution: {integrity: sha512-HSU12p5aD/kAPZfrlbCUqdiP4P/c6hQ9AhfTS51VbLUQIjkWd1d5EjrCx/SCxZ0zhZVRn4Iv5X5WDqXPG8Ubew==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
@@ -2406,8 +2406,8 @@ packages:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
 
-  ws@7.5.10:
-    resolution: {integrity: sha512-+dbF1tHwZpXcbOJdVOkzLDxZP1ailvSxM6ZweXTegylPny803bFhA+vqBYw4s31NSAk4S2Qz+AKXK9a4wkdjcQ==}
+  ws@7.5.11:
+    resolution: {integrity: sha512-zS54Oen9bITtp7kp2XM3AydrCIq1D+HwJOuH+c+e4LfpL/lotP5osijd+UoMnxwAam1GN8R4KtLAyIrIcBNpiA==}
     engines: {node: '>=8.3.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -2418,8 +2418,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.18.3:
-    resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
+  ws@8.20.1:
+    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -2461,10 +2461,10 @@ snapshots:
       bech32: 2.0.0
       cross-fetch: 3.2.0
       fastq: 1.20.1
-      isomorphic-ws: 4.0.1(ws@7.5.10)
+      isomorphic-ws: 4.0.1(ws@7.5.11)
       nanoid: 3.3.12
       ts-custom-error: 3.3.1
-      ws: 7.5.10
+      ws: 7.5.11
     transitivePeerDependencies:
       - bufferutil
       - encoding
@@ -3928,13 +3928,13 @@ snapshots:
 
   iso-url@1.2.1: {}
 
-  isomorphic-ws@4.0.1(ws@7.5.10):
+  isomorphic-ws@4.0.1(ws@7.5.11):
     dependencies:
-      ws: 7.5.10
+      ws: 7.5.11
 
-  isows@1.0.7(ws@8.18.3):
+  isows@1.0.7(ws@8.20.1):
     dependencies:
-      ws: 8.18.3
+      ws: 8.20.1
 
   joycon@3.1.1: {}
 
@@ -4135,7 +4135,7 @@ snapshots:
 
   outdent@0.5.0: {}
 
-  ox@0.14.20(typescript@6.0.2):
+  ox@0.14.29(typescript@6.0.2):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
       '@noble/ciphers': 1.3.0
@@ -4220,15 +4220,15 @@ snapshots:
 
   possible-typed-array-names@1.1.0: {}
 
-  postcss-load-config@6.0.1(postcss@8.5.13)(tsx@4.22.3)(yaml@2.8.3):
+  postcss-load-config@6.0.1(postcss@8.5.15)(tsx@4.22.3)(yaml@2.8.3):
     dependencies:
       lilconfig: 3.1.3
     optionalDependencies:
-      postcss: 8.5.13
+      postcss: 8.5.15
       tsx: 4.22.3
       yaml: 2.8.3
 
-  postcss@8.5.13:
+  postcss@8.5.15:
     dependencies:
       nanoid: 3.3.12
       picocolors: 1.1.1
@@ -4444,7 +4444,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
 
-  tinyglobby@0.2.16:
+  tinyglobby@0.2.17:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
@@ -4478,7 +4478,7 @@ snapshots:
   tslib@2.8.1:
     optional: true
 
-  tsup@8.5.1(postcss@8.5.13)(tsx@4.22.3)(typescript@6.0.2)(yaml@2.8.3):
+  tsup@8.5.1(postcss@8.5.15)(tsx@4.22.3)(typescript@6.0.2)(yaml@2.8.3):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.27.7)
       cac: 6.7.14
@@ -4489,7 +4489,7 @@ snapshots:
       fix-dts-default-cjs-exports: 1.0.1
       joycon: 3.1.1
       picocolors: 1.1.1
-      postcss-load-config: 6.0.1(postcss@8.5.13)(tsx@4.22.3)(yaml@2.8.3)
+      postcss-load-config: 6.0.1(postcss@8.5.15)(tsx@4.22.3)(yaml@2.8.3)
       resolve-from: 5.0.0
       rollup: 4.60.1
       source-map: 0.7.6
@@ -4498,7 +4498,7 @@ snapshots:
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
     optionalDependencies:
-      postcss: 8.5.13
+      postcss: 8.5.15
       typescript: 6.0.2
     transitivePeerDependencies:
       - jiti
@@ -4587,16 +4587,16 @@ snapshots:
       is-typed-array: 1.1.15
       which-typed-array: 1.1.20
 
-  viem@2.48.8(typescript@6.0.2):
+  viem@2.52.2(typescript@6.0.2):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
       abitype: 1.2.3(typescript@6.0.2)
-      isows: 1.0.7(ws@8.18.3)
-      ox: 0.14.20(typescript@6.0.2)
-      ws: 8.18.3
+      isows: 1.0.7(ws@8.20.1)
+      ox: 0.14.29(typescript@6.0.2)
+      ws: 8.20.1
     optionalDependencies:
       typescript: 6.0.2
     transitivePeerDependencies:
@@ -4608,9 +4608,9 @@ snapshots:
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
-      postcss: 8.5.13
+      postcss: 8.5.15
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     optionalDependencies:
       esbuild: 0.27.7
       fsevents: 2.3.3
@@ -4624,9 +4624,9 @@ snapshots:
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
-      postcss: 8.5.13
+      postcss: 8.5.15
       rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      tinyglobby: 0.2.16
+      tinyglobby: 0.2.17
     optionalDependencies:
       esbuild: 0.28.0
       fsevents: 2.3.3
@@ -4720,9 +4720,9 @@ snapshots:
 
   word-wrap@1.2.5: {}
 
-  ws@7.5.10: {}
+  ws@7.5.11: {}
 
-  ws@8.18.3: {}
+  ws@8.20.1: {}
 
   yaml@2.8.3: {}
 
