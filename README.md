@@ -77,11 +77,8 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | `@guardian-sdk/tron` | Tron | Planned | — | — |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — | — |
 | `@guardian-sdk/sui` | SUI | Planned | — | — |
-| `@guardian/btc-babylon` | Bitcoin (Babylon) | Planned | — | — |
 | `@guardian-sdk/solana` | Solana | Planned | — | — |
-| `@guardian/aptos` | Aptos | Planned | — | — |
-| `@guardian/polkadot` | Polkadot | Planned | — | — |
-| `@guardian/near` | NEAR | Planned | — | — |
+
 
 > **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
 
@@ -712,12 +709,8 @@ Planned integrations follow the same architecture — each chain is an independe
 | SUI | `@guardian-sdk/sui` | Planned |
 | Tron | `@guardian-sdk/tron` | Planned |
 | Solana | `@guardian-sdk/solana` | Planned |
-| Aptos | `@guardian/aptos` | Planned |
 | Cardano | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Available |
-| Polkadot | `@guardian/polkadot` | Planned |
-| NEAR | `@guardian/near` | Planned |
 | Ethereum | `@guardian-sdk/ethereum` | Planned |
-| Bitcoin (Babylon) | `@guardian/btc-babylon` | Planned |
 
 ### SDK improvements
 
