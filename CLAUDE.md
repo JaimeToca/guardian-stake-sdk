@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Response Style
+
+For routine file edits, reads, and command runs, keep replies short — state what changed, skip unsolicited explanations of what the code does.
+
 ## Tech Stack
 
 - **Runtime**: Node.js ≥ 22
