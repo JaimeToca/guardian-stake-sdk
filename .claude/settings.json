@@ -30,7 +30,12 @@
     "deny": [
       "Bash(rm *)",
       "Bash(rmdir *)",
-      "Bash(sudo *)"
+      "Bash(sudo *)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/credentials*.json)",
+      "Read(**/*.pem)"
     ],
     "ask": [
       "Bash(git push*)",
