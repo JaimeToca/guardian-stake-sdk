@@ -692,7 +692,7 @@ For **MPC wallets, hardware signers, or custody setups** where private keys are 
      │    signArgs }         │                           │
      │ ◄─────────────────────│                           │
      │                       │                           │
-     │  serializedTx (body hex)                          │
+     │  serializedTx (32-byte body hash/digest)          │
      │ ──────────────────────────────────────────────────►
      │                       │                           │
      │  paymentSig, stakingVKey, stakingSig, paymentVKey │
