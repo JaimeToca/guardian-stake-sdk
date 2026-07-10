@@ -1,15 +1,10 @@
 import type { Fee, FeeServiceContract, Logger, Transaction } from "@guardian-sdk/sdk";
 import { NoopLogger, ValidationError } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
-import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
-import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE } from "../tx/coin-selection";
+import type { BlockfrostProtocolParams } from "../rpc/blockfrost-rpc-types";
+import { selectUtxosPaged, type SelectedUtxos } from "../tx/coin-selection";
 import { buildMockTransaction, type TxBodyParams } from "../tx/tx-builder";
-import {
-  buildCertificates,
-  buildWithdrawals,
-  computeMinOutputLovelace,
-  computeRequiredLovelaces,
-} from "../tx/tx-helpers";
+import { buildCertificates, buildWithdrawals, computeSelectionTarget } from "../tx/tx-helpers";
 import { checkIfPaymentAddressIsValid } from "../validations";
 
 /**
@@ -54,29 +49,48 @@ export function createFeeService(
   rpcClient: BlockfrostRpcClientContract,
   logger: Logger = new NoopLogger()
 ): FeeServiceContract {
+  // Redelegate implies an already-registered stake key (no registration cert).
+  // Delegate assumes the worst case (unregistered → registration cert + deposit),
+  // which over-estimates size for an already-registered key — a safe direction.
+  function assumeRegisteredForEstimate(transaction: Transaction): boolean {
+    return transaction.type === "Redelegate";
+  }
+
   function estimateTxSize(
     transaction: Transaction,
     paymentAddress: string,
-    utxos: BlockfrostUtxo[],
+    selected: SelectedUtxos,
     params: BlockfrostProtocolParams,
     feePlaceholder: bigint
   ): number {
-    const keyDeposit = BigInt(params.key_deposit);
-    const coinsPerUtxoByte = BigInt(params.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE);
-    const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
+    const isStakeKeyRegistered = assumeRegisteredForEstimate(transaction);
+    const { requiredLovelaces, minUtxo } = computeSelectionTarget(
+      transaction,
+      feePlaceholder,
+      params,
+      isStakeKeyRegistered,
+      paymentAddress
+    );
 
-    // Worst-case assumptions: stake key unregistered (registration cert included).
-    const certificates = buildCertificates(transaction, PLACEHOLDER_STAKE_KEY_HASH, false);
-    const withdrawals = buildWithdrawals(transaction, PLACEHOLDER_STAKE_KEY_HASH);
-    const required = computeRequiredLovelaces(transaction, feePlaceholder, keyDeposit, false);
-
-    const { inputs, totalLovelaces } = selectUtxos(utxos, required + minUtxo);
+    const certificates = buildCertificates(
+      transaction,
+      PLACEHOLDER_STAKE_KEY_HASH,
+      isStakeKeyRegistered
+    );
+    // Include a representative withdrawal for ClaimRewards so the mock carries the
+    // same withdrawals map (and therefore CBOR size) as the signed tx. The exact
+    // reward balance is unknown at estimate time, so the requested amount stands in.
+    const withdrawals = buildWithdrawals(
+      transaction,
+      PLACEHOLDER_STAKE_KEY_HASH,
+      transaction.type === "ClaimRewards" ? transaction.amount : 0n
+    );
 
     // Clamp to minUtxo: the mock change output must satisfy the minimum-ADA rule
     // so the serialised size (and therefore the fee estimate) is accurate.
-    const rawChange = totalLovelaces - required;
+    const rawChange = selected.totalLovelaces - requiredLovelaces;
     const txParams: TxBodyParams = {
-      inputs,
+      inputs: selected.inputs,
       outputAddress: paymentAddress,
       outputLovelaces: rawChange < minUtxo ? minUtxo : rawChange,
       fee: feePlaceholder,
@@ -106,19 +120,36 @@ export function createFeeService(
         );
       }
 
-      checkIfPaymentAddressIsValid(transaction.account);
+      const paymentAddress = transaction.account;
+      checkIfPaymentAddressIsValid(paymentAddress);
 
-      const [protocolParams, utxos] = await Promise.all([
+      // Fetch UTXO page 1 in parallel; the paged selector reuses it and only pulls
+      // further pages if page 1 doesn't cover the (bounded) staking target.
+      const [protocolParams, seedPage] = await Promise.all([
         rpcClient.getProtocolParams(),
-        rpcClient.getUtxos(transaction.account),
+        rpcClient.getUtxos(paymentAddress),
       ]);
+
+      const feePlaceholder = BigInt(protocolParams.min_fee_b);
+      const { target } = computeSelectionTarget(
+        transaction,
+        feePlaceholder,
+        protocolParams,
+        assumeRegisteredForEstimate(transaction),
+        paymentAddress
+      );
+      const selected = await selectUtxosPaged(target, {
+        fetchPage: (page, count) => rpcClient.getUtxos(paymentAddress, page, count),
+        seedPage,
+        logger,
+      });
 
       const txSizeBytes = estimateTxSize(
         transaction,
-        transaction.account,
-        utxos,
+        paymentAddress,
+        selected,
         protocolParams,
-        BigInt(protocolParams.min_fee_b)
+        feePlaceholder
       );
       const baseFee = calculateFee(txSizeBytes, protocolParams);
       const fee = baseFee + (baseFee * FEE_BUFFER_PERCENT) / 100n;

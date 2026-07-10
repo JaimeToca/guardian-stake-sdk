@@ -32,22 +32,37 @@ describe("BalanceService", () => {
     expect(balances).toHaveLength(3);
   });
 
-  it("maps Available balance from controlled_amount", async () => {
+  // controlled_amount already includes withdrawable_amount (rewards), so Available
+  // is the wallet balance net of rewards — avoids double-counting against "Rewards".
+  const WALLET_AMOUNT =
+    BigInt(accountFixture.controlled_amount) - BigInt(accountFixture.withdrawable_amount);
+
+  it("maps Available balance to controlled_amount minus rewards (no double-count)", async () => {
     const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const available = balances.find((b) => b.type === "Available");
 
-    expect(available?.amount).toBe(BigInt(accountFixture.controlled_amount));
+    expect(available?.amount).toBe(WALLET_AMOUNT);
   });
 
-  it("sets Staked = controlled_amount when actively delegated to a pool", async () => {
+  it("Available + Rewards equals the total controlled amount", async () => {
+    const service = createBalanceService(makeRpcClient() as any);
+
+    const balances = await service.getBalances(STAKE_ADDRESS);
+    const available = balances.find((b) => b.type === "Available")?.amount ?? 0n;
+    const rewards = balances.find((b) => b.type === "Rewards")?.amount ?? 0n;
+
+    expect(available + rewards).toBe(BigInt(accountFixture.controlled_amount));
+  });
+
+  it("sets Staked = wallet balance (controlled minus rewards) when delegated", async () => {
     const service = createBalanceService(makeRpcClient() as any);
 
     const balances = await service.getBalances(STAKE_ADDRESS);
     const staked = balances.find((b) => b.type === "Staked");
 
-    expect(staked?.amount).toBe(BigInt(accountFixture.controlled_amount));
+    expect(staked?.amount).toBe(WALLET_AMOUNT);
   });
 
   it("sets Staked = 0 when not delegated (pool_id is null)", async () => {

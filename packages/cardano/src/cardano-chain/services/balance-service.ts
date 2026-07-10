@@ -1,16 +1,21 @@
 import type { Balance, BalanceServiceContract } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
-import { resolveStakeAddress } from "../validations";
+import { parseLovelaceString, resolveStakeAddress } from "../validations";
 
 /**
  * Cardano balance service.
  *
  * Cardano staking is fundamentally different from EVM staking:
- * - Tokens are NEVER locked when delegating — all ADA remains fully spendable.
- * - "Available" = total controlled amount (always spendable regardless of delegation).
- * - "Staked" = controlled amount when actively delegated to a pool; 0 otherwise.
- *   Only delegated ADA earns staking rewards — undelegated or unregistered accounts earn nothing.
- * - "Rewards" = accumulated rewards available for withdrawal (separate from main balance).
+ * - Tokens are NEVER locked when delegating — all wallet ADA remains fully spendable.
+ * - "Available" = wallet (UTXO) balance, always spendable regardless of delegation.
+ * - "Staked" = the delegated wallet balance when actively delegated to a pool; 0 otherwise.
+ *   Only delegated ADA earns staking rewards — undelegated/unregistered accounts earn nothing.
+ * - "Rewards" = accumulated rewards sitting in the reward account, awaiting withdrawal.
+ *
+ * Blockfrost's `controlled_amount` is the *aggregate* controlled by the stake key —
+ * it already includes `withdrawable_amount` (the rewards). We therefore subtract the
+ * rewards out of Available/Staked so the three buckets don't double-count: the reward
+ * balance is reported only under "Rewards", and `Available + Rewards` equals the total.
  */
 export function createBalanceService(
   rpcClient: BlockfrostRpcClientContract
@@ -19,14 +24,16 @@ export function createBalanceService(
     async getBalances(address: string): Promise<Balance[]> {
       const account = await rpcClient.getAccount(resolveStakeAddress(address));
 
-      const controlledAmount = BigInt(account.controlled_amount);
-      const claimableRewards = BigInt(account.withdrawable_amount);
-      const stakedAmount = account.pool_id ? controlledAmount : 0n;
+      const controlledAmount = parseLovelaceString(account.controlled_amount, "controlled_amount");
+      const rewards = parseLovelaceString(account.withdrawable_amount, "withdrawable_amount");
+      // Wallet (spendable) balance excludes rewards still held in the reward account.
+      const walletAmount = controlledAmount - rewards;
+      const stakedAmount = account.pool_id ? walletAmount : 0n;
 
       return [
-        { type: "Available", amount: controlledAmount },
+        { type: "Available", amount: walletAmount },
         { type: "Staked", amount: stakedAmount },
-        { type: "Rewards", amount: claimableRewards },
+        { type: "Rewards", amount: rewards },
       ];
     },
   };

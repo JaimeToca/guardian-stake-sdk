@@ -127,19 +127,23 @@ export function createBlockfrostRpcClient(
       }
     },
 
-    async getUtxos(paymentAddress: string): Promise<BlockfrostUtxo[]> {
+    // Thin single-page fetcher. `order: "desc"` gives a stable ordering so fee
+    // estimation and signing see the same UTXOs. Pagination policy (how many pages
+    // to pull) lives in the selection layer (`selectUtxosPaged`), not here.
+    async getUtxos(paymentAddress: string, page = 1, count = 100): Promise<BlockfrostUtxo[]> {
       const url = `${baseUrl}/addresses/${paymentAddress}/utxos`;
-      logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress });
+      logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress, page, count });
       const start = Date.now();
 
       const utxos = await fetchOrError<BlockfrostUtxo[]>({
         url,
         method: "GET",
         headers,
-        params: { count: 100, order: "desc" }, // Iterate with pagination if more than 100 UTXOs (unlikely for a payment address, but good to be safe)
+        params: { count, page, order: "desc" },
       });
 
       logger.debug("BlockfrostRpcClient: UTXOs fetched", {
+        page,
         count: utxos.length,
         ms: Date.now() - start,
       });

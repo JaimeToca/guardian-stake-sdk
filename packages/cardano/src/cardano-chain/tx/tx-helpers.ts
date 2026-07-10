@@ -1,8 +1,10 @@
 import { Cardano, Serialization } from "@cardano-sdk/core";
 import type { Transaction } from "@guardian-sdk/sdk";
-import { ValidationError, SigningError } from "@guardian-sdk/sdk";
+import { SigningError } from "@guardian-sdk/sdk";
 import { buildRewardAccount, parsePoolId } from "../validations";
+import type { BlockfrostProtocolParams } from "../rpc/blockfrost-rpc-types";
 import type { CardanoCertificate } from "./tx-builder";
+import { DEFAULT_COINS_PER_UTXO_SIZE } from "./coin-selection";
 
 /** Fixed UTxO map entry overhead: 20 words × 8 bytes per word. */
 const MIN_UTXO_OVERHEAD = 160;
@@ -88,7 +90,15 @@ export function buildCertificates(
         ? transaction.toValidator
         : transaction.toValidator.operatorAddress;
     const poolKeyHashHex = parsePoolId(poolId);
-    return [{ type: "StakeDelegation", stakeKeyHashHex, poolKeyHashHex }];
+    // A StakeDelegation certificate is only valid for a registered stake key.
+    // Redelegate normally implies an existing registration, but guard the edge
+    // case (first-time / previously-deregistered key) by prepending registration.
+    const certs: CardanoCertificate[] = [];
+    if (!isStakeKeyRegistered) {
+      certs.push({ type: "StakeRegistration", stakeKeyHashHex });
+    }
+    certs.push({ type: "StakeDelegation", stakeKeyHashHex, poolKeyHashHex });
+    return certs;
   }
 
   if (transaction.type === "Undelegate") {
@@ -104,17 +114,18 @@ export function buildCertificates(
  * Background: Cardano keeps staking rewards in a separate reward account (stake1...).
  * Moving rewards back into the wallet requires an explicit "withdrawal" field in the tx body.
  *
- * - Claim: the user explicitly requested a reward payout — use the requested amount.
- * - Undelegate: the protocol refuses to deregister a stake key while the reward account
- *   is non-empty, so we must sweep whatever is sitting there in the same transaction.
+ * The Cardano ledger only allows a withdrawal to drain the **entire** reward-account
+ * balance — partial withdrawals are rejected. Both flows therefore move the full
+ * on-chain reward balance, never a caller-chosen partial amount:
+ * - Claim: withdraw the whole reward balance into the wallet.
+ * - Undelegate: the protocol refuses to deregister a stake key while the reward
+ *   account is non-empty, so the same full balance is swept in the deregistration tx.
  * - Everything else: no rewards move.
  */
-export function rewardAccountWithdrawal(
-  transaction: Transaction,
-  rewardsAvailableToSweep: bigint
-): bigint {
-  if (transaction.type === "ClaimRewards") return transaction.amount;
-  if (transaction.type === "Undelegate") return rewardsAvailableToSweep;
+export function rewardAccountWithdrawal(transaction: Transaction, rewardsOnChain: bigint): bigint {
+  if (transaction.type === "ClaimRewards" || transaction.type === "Undelegate") {
+    return rewardsOnChain;
+  }
   return 0n;
 }
 
@@ -124,19 +135,16 @@ export function rewardAccountWithdrawal(
  * account to the wallet as part of this transaction.
  *
  * @param stakeKeyHashHex - 56-char hex stake key hash. Pass `"00".repeat(28)` for fee estimation.
- * @param rewardsAvailableToSweep - On-chain reward balance, used only for Undelegate.
+ * @param rewardsOnChain - Full on-chain reward balance to withdraw (ClaimRewards + Undelegate).
+ *   Request-level validation (amount > 0, sufficient rewards) happens upstream in the sign flow.
  */
 export function buildWithdrawals(
   transaction: Transaction,
   stakeKeyHashHex: string,
-  rewardsAvailableToSweep = 0n
+  rewardsOnChain = 0n
 ): Map<string, bigint> {
-  if (transaction.type === "ClaimRewards" && transaction.amount <= 0n) {
-    throw new ValidationError("INVALID_AMOUNT", "Claim amount must be greater than zero.");
-  }
-
-  const amount = rewardAccountWithdrawal(transaction, rewardsAvailableToSweep);
-  if (amount === 0n) return new Map();
+  const amount = rewardAccountWithdrawal(transaction, rewardsOnChain);
+  if (amount <= 0n) return new Map();
 
   return new Map([[buildRewardAccount(stakeKeyHashHex), amount]]);
 }
@@ -155,8 +163,9 @@ export function computeRequiredLovelaces(
 ): bigint {
   switch (transaction.type) {
     case "Delegate":
-      return fee + (isStakeKeyRegistered ? 0n : keyDeposit);
     case "Redelegate":
+      // Both stake to a pool; a first-time/unregistered key must also pay the deposit.
+      return fee + (isStakeKeyRegistered ? 0n : keyDeposit);
     case "Undelegate":
     case "ClaimRewards":
       return fee;
@@ -166,4 +175,34 @@ export function computeRequiredLovelaces(
         `computeRequiredLovelaces: unsupported transaction type "${(transaction as { type: string }).type}" on Cardano.`
       );
   }
+}
+
+/**
+ * Derives the UTXO selection target for a transaction: the minimum lovelace the
+ * selected inputs must cover so that, after paying the fee (and any deposit), the
+ * change output still satisfies the minimum-UTxO rule.
+ *
+ * `target = requiredLovelaces + minUtxo`. Shared by the paged collector (as its
+ * stop threshold) and `buildBody`/`estimateTxSize` (for the change accounting) so
+ * the two never drift.
+ */
+export function computeSelectionTarget(
+  transaction: Transaction,
+  fee: bigint,
+  protocolParams: BlockfrostProtocolParams,
+  isStakeKeyRegistered: boolean,
+  paymentAddress: string
+): { requiredLovelaces: bigint; minUtxo: bigint; target: bigint } {
+  const keyDeposit = BigInt(protocolParams.key_deposit);
+  const coinsPerUtxoByte = BigInt(
+    protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE
+  );
+  const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
+  const requiredLovelaces = computeRequiredLovelaces(
+    transaction,
+    fee,
+    keyDeposit,
+    isStakeKeyRegistered
+  );
+  return { requiredLovelaces, minUtxo, target: requiredLovelaces + minUtxo };
 }

@@ -168,6 +168,42 @@ describe("FeeService", () => {
     });
   });
 
+  it("paginates UTXOs when the first page does not cover the staking target", async () => {
+    const makeUtxo = (lovelaces: string, index: number): BlockfrostUtxo => ({
+      tx_hash: "aa".repeat(32),
+      tx_index: index,
+      output_index: index,
+      amount: [{ unit: "lovelace", quantity: lovelaces }],
+      block: "bb".repeat(32),
+      data_hash: null,
+      inline_datum: null,
+      reference_script_hash: null,
+    });
+    // Page 1: a FULL page (100 UTXOs) of dust totalling ~2 ADA — below the ~3.16 ADA
+    // Delegate target (fee + 2 ADA deposit + minUtxo), so the selector must page on.
+    const page1 = Array.from({ length: 100 }, (_, i) => makeUtxo("20000", i));
+    const page2 = [makeUtxo("5000000", 100)];
+
+    const rpc = {
+      getProtocolParams: vi.fn().mockResolvedValue(PARAMS),
+      getUtxos: vi.fn(async (_addr: string, page?: number) => (page === 2 ? page2 : page1)),
+    };
+    const service = createFeeService(rpc as any);
+
+    const fee = await service.estimateFee({
+      type: "Delegate",
+      chain: cardanoMainnet,
+      amount: 5_000_000n,
+      isMaxAmount: false,
+      validator: POOL_ID,
+      account: PAYMENT_ADDRESS,
+    });
+
+    expect(fee.type).toBe("UtxoFee");
+    expect(fee.total).toBeGreaterThan(0n);
+    expect(rpc.getUtxos).toHaveBeenCalledWith(PAYMENT_ADDRESS, 2, 100);
+  });
+
   it("Delegate tx has more CBOR bytes than Redelegate (registration cert adds size)", async () => {
     const service = createFeeService(makeRpcClient() as any);
 
