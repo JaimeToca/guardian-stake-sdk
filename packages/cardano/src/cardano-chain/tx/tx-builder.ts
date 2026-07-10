@@ -94,10 +94,15 @@ export function buildSignedTransaction(
  */
 export function buildMockTransaction(params: TxBodyParams, witnessCount: number): string {
   const body = buildTransactionBody(params);
-  const mockWitnesses: TxWitness[] = Array.from({ length: witnessCount }, () => ({
-    vkeyHex: "00".repeat(32),
-    sigHex: "00".repeat(64),
-  }));
+  // Each mock witness must be DISTINCT. The witness set is CBOR-encoded as a set
+  // keyed by content, so identical zero-filled entries collapse into one and
+  // under-count the tx size by a full vkey witness (~101 bytes). A real staking tx
+  // always carries distinct payment + staking witnesses, so mirror that by giving
+  // each mock witness an index-derived filler byte.
+  const mockWitnesses: TxWitness[] = Array.from({ length: witnessCount }, (_, i) => {
+    const filler = i.toString(16).padStart(2, "0");
+    return { vkeyHex: filler.repeat(32), sigHex: filler.repeat(64) };
+  });
   return buildSignedTransaction(body, mockWitnesses);
 }
 

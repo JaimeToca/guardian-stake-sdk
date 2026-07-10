@@ -5,22 +5,30 @@ import type { BlockfrostProtocolParams } from "../rpc/blockfrost-rpc-types";
 import { selectUtxosPaged, type SelectedUtxos } from "../tx/coin-selection";
 import { buildMockTransaction, type TxBodyParams } from "../tx/tx-builder";
 import { buildCertificates, buildWithdrawals, computeSelectionTarget } from "../tx/tx-helpers";
-import { checkIfPaymentAddressIsValid } from "../validations";
-
-/**
- * Stake key hash placeholder used for fee estimation.
- * Any 28-byte value works — all mainnet stake addresses serialise to the same CBOR byte length.
- */
-const PLACEHOLDER_STAKE_KEY_HASH = "00".repeat(28);
+import {
+  buildRewardAccount,
+  checkIfPaymentAddressIsValid,
+  getBaseAddressCredentials,
+  parseLovelaceString,
+} from "../validations";
 
 /**
  * Safety buffer applied on top of the calculated fee (10%).
- * Covers minor UTXO count variations without requiring iteration.
+ * Covers UTXO-set changes between estimation and signing without requiring iteration.
  */
 const FEE_BUFFER_PERCENT = 10n;
 
 /** Number of witnesses for a typical staking tx (payment key + staking key). */
 const STAKING_WITNESS_COUNT = 2;
+
+/**
+ * Placeholder slot for the mock transaction's TTL. The signed tx always sets a
+ * `validityInterval` (tip + a few hours); its exact value is irrelevant to the tx
+ * size — only the CBOR byte-width of the slot integer matters. Any value in the
+ * 5-byte uint range (2^16 .. 2^32) encodes identically to a real mainnet slot, so
+ * the mock's TTL entry has the same size as the one the node will validate.
+ */
+const PLACEHOLDER_TTL = 200_000_000;
 
 /**
  * Cardano fee service.
@@ -49,21 +57,16 @@ export function createFeeService(
   rpcClient: BlockfrostRpcClientContract,
   logger: Logger = new NoopLogger()
 ): FeeServiceContract {
-  // Redelegate implies an already-registered stake key (no registration cert).
-  // Delegate assumes the worst case (unregistered → registration cert + deposit),
-  // which over-estimates size for an already-registered key — a safe direction.
-  function assumeRegisteredForEstimate(transaction: Transaction): boolean {
-    return transaction.type === "Redelegate";
-  }
-
   function estimateTxSize(
     transaction: Transaction,
     paymentAddress: string,
     selected: SelectedUtxos,
     params: BlockfrostProtocolParams,
-    feePlaceholder: bigint
+    feePlaceholder: bigint,
+    stakeKeyHashHex: string,
+    isStakeKeyRegistered: boolean,
+    rewardsOnChain: bigint
   ): number {
-    const isStakeKeyRegistered = assumeRegisteredForEstimate(transaction);
     const { requiredLovelaces, minUtxo } = computeSelectionTarget(
       transaction,
       feePlaceholder,
@@ -72,19 +75,11 @@ export function createFeeService(
       paymentAddress
     );
 
-    const certificates = buildCertificates(
-      transaction,
-      PLACEHOLDER_STAKE_KEY_HASH,
-      isStakeKeyRegistered
-    );
-    // Include a representative withdrawal for ClaimRewards so the mock carries the
-    // same withdrawals map (and therefore CBOR size) as the signed tx. The exact
-    // reward balance is unknown at estimate time, so the requested amount stands in.
-    const withdrawals = buildWithdrawals(
-      transaction,
-      PLACEHOLDER_STAKE_KEY_HASH,
-      transaction.type === "ClaimRewards" ? transaction.amount : 0n
-    );
+    const certificates = buildCertificates(transaction, stakeKeyHashHex, isStakeKeyRegistered);
+    // Mirror the signed tx exactly: both ClaimRewards and Undelegate sweep the full
+    // on-chain reward balance, so the mock carries the same withdrawals map (and
+    // therefore the same CBOR size) as the tx `sign()` submits.
+    const withdrawals = buildWithdrawals(transaction, stakeKeyHashHex, rewardsOnChain);
 
     // Clamp to minUtxo: the mock change output must satisfy the minimum-ADA rule
     // so the serialised size (and therefore the fee estimate) is accurate.
@@ -94,6 +89,8 @@ export function createFeeService(
       outputAddress: paymentAddress,
       outputLovelaces: rawChange < minUtxo ? minUtxo : rawChange,
       fee: feePlaceholder,
+      // The signed tx always sets a TTL; include one so the mock size matches.
+      ttl: PLACEHOLDER_TTL,
       certificates: certificates.length > 0 ? certificates : undefined,
       withdrawals: withdrawals.size > 0 ? withdrawals : undefined,
     };
@@ -123,19 +120,37 @@ export function createFeeService(
       const paymentAddress = transaction.account;
       checkIfPaymentAddressIsValid(paymentAddress);
 
-      // Fetch UTXO page 1 in parallel; the paged selector reuses it and only pulls
-      // further pages if page 1 doesn't cover the (bounded) staking target.
-      const [protocolParams, seedPage] = await Promise.all([
+      // The stake credential lives in the base address; use it (not a placeholder)
+      // to fetch the reward account so the estimate sees the SAME registration
+      // status and reward balance the signing path will act on.
+      const { stakeKeyHashHex } = getBaseAddressCredentials(paymentAddress);
+      const rewardAccount = buildRewardAccount(stakeKeyHashHex);
+
+      // Fetch UTXO page 1 and the reward account in parallel; the paged selector
+      // reuses the UTXO page and only pulls further pages if page 1 doesn't cover
+      // the (bounded) staking target.
+      const [protocolParams, seedPage, existingAccount] = await Promise.all([
         rpcClient.getProtocolParams(),
         rpcClient.getUtxos(paymentAddress),
+        rpcClient.getAccountOrNull(rewardAccount),
       ]);
+
+      // Use the real on-chain registration status so the estimate's certificate
+      // set and selection target match the signed tx (no worst-case guessing that
+      // could diverge from the actual tx and under- or over-shoot the fee).
+      const isStakeKeyRegistered = existingAccount?.active === true;
+      // Reward balance swept by ClaimRewards/Undelegate; 0 for the other types.
+      const rewardsOnChain =
+        transaction.type === "Undelegate" || transaction.type === "ClaimRewards"
+          ? parseLovelaceString(existingAccount?.withdrawable_amount ?? "0", "withdrawable_amount")
+          : 0n;
 
       const feePlaceholder = BigInt(protocolParams.min_fee_b);
       const { target } = computeSelectionTarget(
         transaction,
         feePlaceholder,
         protocolParams,
-        assumeRegisteredForEstimate(transaction),
+        isStakeKeyRegistered,
         paymentAddress
       );
       const selected = await selectUtxosPaged(target, {
@@ -149,7 +164,10 @@ export function createFeeService(
         paymentAddress,
         selected,
         protocolParams,
-        feePlaceholder
+        feePlaceholder,
+        stakeKeyHashHex,
+        isStakeKeyRegistered,
+        rewardsOnChain
       );
       const baseFee = calculateFee(txSizeBytes, protocolParams);
       const fee = baseFee + (baseFee * FEE_BUFFER_PERCENT) / 100n;

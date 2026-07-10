@@ -61,9 +61,10 @@ export function computeMinOutputLovelace(paymentAddress: string, coinsPerUtxoByt
 /**
  * Builds the staking certificates for a transaction.
  *
- * @param stakeKeyHashHex - 56-char hex stake key hash. Pass `"00".repeat(28)` for fee estimation.
+ * @param stakeKeyHashHex - 56-char hex stake key hash (the address's stake credential).
  * @param isStakeKeyRegistered - Whether the stake key is already registered on-chain.
- *   Pass `false` for fee estimation (worst-case: registration cert included).
+ *   Both the signing and fee-estimation paths pass the real on-chain status so the
+ *   certificate set matches the tx that is actually submitted.
  */
 export function buildCertificates(
   transaction: Transaction,
@@ -134,7 +135,7 @@ export function rewardAccountWithdrawal(transaction: Transaction, rewardsOnChain
  * An entry here instructs the node to move `amount` lovelaces from the reward
  * account to the wallet as part of this transaction.
  *
- * @param stakeKeyHashHex - 56-char hex stake key hash. Pass `"00".repeat(28)` for fee estimation.
+ * @param stakeKeyHashHex - 56-char hex stake key hash (the address's stake credential).
  * @param rewardsOnChain - Full on-chain reward balance to withdraw (ClaimRewards + Undelegate).
  *   Request-level validation (amount > 0, sufficient rewards) happens upstream in the sign flow.
  */
@@ -152,8 +153,8 @@ export function buildWithdrawals(
 /**
  * Computes the lovelaces that must be covered by UTXOs (excluding change).
  *
- * @param isStakeKeyRegistered - Whether the stake key is already registered.
- *   Pass `false` for fee estimation (worst-case: registration deposit included).
+ * @param isStakeKeyRegistered - Whether the stake key is already registered on-chain.
+ *   An unregistered key must also pay the one-time registration deposit.
  */
 export function computeRequiredLovelaces(
   transaction: Transaction,
