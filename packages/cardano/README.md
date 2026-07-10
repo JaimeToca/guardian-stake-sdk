@@ -569,9 +569,9 @@ const nonce = await sdk.getNonce(chains.cardanoMainnet, address); // always 0
 
 ### `estimateFee`
 
-Estimates the transaction fee by fetching protocol parameters and UTXOs from Blockfrost, building a draft transaction with mock witnesses, and applying the fee formula.
+Estimates the transaction fee by fetching protocol parameters, UTXOs, and the stake account (registration status + reward balance) from Blockfrost, building a draft transaction that mirrors the one `sign()` submits — distinct payment/staking witnesses, a TTL, the real certificate set, and any full-balance reward withdrawal — then applying the fee formula plus a 10% safety buffer.
 
-**`transaction.account` must be set** to the payment address (`addr1...`) so the SDK can fetch UTXOs for coin selection.
+**`transaction.account` must be set** to a base payment address (`addr1q...`) — it carries the stake credential used to fetch UTXOs and the reward account. Enterprise/pointer addresses are rejected with `ValidationError("INVALID_ADDRESS")`.
 
 ```typescript
 const fee = await sdk.estimateFee(transaction);
