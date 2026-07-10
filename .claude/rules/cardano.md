@@ -31,7 +31,7 @@ globs: packages/cardano/**
 
 **`@cardano-sdk/*` are exact-pinned peers** — versions are pinned to exact releases (`0.46.12`, `0.4.5`, `0.17.1`) because the family has no stability guarantees between minors and CBOR serialisation is sensitive to the exact release. If you change a version or move these between `dependencies` and `peerDependencies`, run `pnpm install` immediately — forgetting causes CI to fail with `ERR_PNPM_OUTDATED_LOCKFILE`.
 
-**Balance type is `"Rewards"`, not `"Claimable"`** — Cardano accumulated stake rewards use the `"Rewards"` BalanceType. `"Claimable"` is BSC's term for post-unbonding delegations. They are different concepts. Don't use `"Claimable"` in Cardano code or docs.
+**Balance types differ from BSC** — `getBalances()` returns exactly three types: `Available`, `Staked`, and `Rewards`. Cardano never uses `"Claimable"` (BSC's term for post-unbonding delegations) or `"Pending"` (BSC's unbonding balance) — there is no unbonding period. Accumulated stake rewards are `"Rewards"`; don't introduce `"Claimable"` or `"Pending"` in Cardano code or docs.
 
 **Reward withdrawals must drain the FULL balance** — the Cardano ledger rejects partial withdrawals; a `wdrl` entry must equal the reward account's entire `withdrawable_amount`. This applies to both flows: `ClaimRewards` withdraws the full on-chain balance (NOT `transaction.amount` — that field is only validated: `> 0`, `<= balance`), and `Undelegate` sweeps the full balance because `StakeDeregistration` refuses to run while the reward account is non-empty. `resolveChainState()` in `sign-service.ts` fetches `withdrawable_amount` and both `sign()`/`prehash()` use it. Don't reintroduce partial-amount withdrawals — the node will reject the tx.
 
@@ -55,7 +55,5 @@ globs: packages/cardano/**
    - `signArgs` from `prehash()` must be passed through unchanged to `compile()`.
 
 `PrehashResult.signArgs._txBodyCbor` (and the full `CardanoPrehashArgs`) is defined in `packages/cardano/src/cardano-chain/sign-types.ts`.
-
-**Balances** — `getBalances()` returns exactly three types: `Available`, `Staked`, and `Rewards`. There is never a `Pending` balance on Cardano.
 
 **Keep package docs in sync** — when you change balance modelling, signing behaviour, fee shapes, or delegation amounts, also update the corresponding tables and examples in `packages/cardano/README.md` (drift between code and that README has happened before).

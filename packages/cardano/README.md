@@ -141,8 +141,8 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
 |---|---|
 | **Unregistered** | Stake key does not exist on-chain. A 2 ADA deposit is required to register it. |
 | **Registered, not delegating** | Stake key registered but no pool selected. Key deposit is locked on-chain. No rewards earned. |
-| **Delegating** | ADA earns rewards every epoch. Delegation is active as of epoch N+2 after the delegation transaction. |
-| **Rewards** | Rewards distributed at the end of each epoch, available to withdraw from epoch N+2 onward (visible as the `Rewards` balance). |
+| **Delegating** | ADA earns rewards every epoch. Delegation is active for the leader schedule as of epoch N+2 after the delegation transaction. |
+| **Rewards** | Rewards distributed at the end of each epoch, available to withdraw from epoch N+4 onward (visible as the `Rewards` balance). |
 | **Deregistered** | Stake key removed from chain. The 2 ADA deposit is refunded in the same transaction. Any unclaimed rewards are lost — always claim before deregistering. |
 
 ### Delegation cycle in detail
@@ -158,14 +158,20 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
      └── On-chain snapshot taken. Your ADA counted toward the pool.
 
   3. Epoch N+1:
-     └── Pool produces blocks weighted by total delegated stake.
-         Your stake is included.
+     └── Snapshot is used to determine the leader schedule for epoch N+2.
 
   4. Epoch N+2:
-     └── Rewards for epoch N+1 are calculated and distributed.
+     └── Your stake participates in the leader schedule.
+
+  5. Epoch N+3:
+     └── Pool produces blocks (if selected) using the snapshot that includes your stake.
+         Rewards are earned for this epoch's performance.
+
+  6. Epoch N+4:
+     └── Rewards for epoch N+3 are calculated and distributed.
          Your `Rewards` balance increases.
 
-  5. Repeat from step 2 every epoch (~5 days).
+  7. Repeat from step 2 every epoch (~5 days).
 ```
 
 **Redelegation** (switching pool):
@@ -212,24 +218,27 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
 A Cardano **epoch** spans 5 days (432,000 slots at 1 second per slot). Epochs are numbered sequentially and the exact reward schedule is deterministic:
 
 ```
-  Epoch N       Epoch N+1      Epoch N+2
-  ─────────────────────────────────────────────────────────────────
-  │              │              │
-  ▼              ▼              ▼
-  Tx confirmed   Stake counted  Rewards distributed
-  (delegation    in leader      (visible in
-   included)     schedule       `withdrawable_amount`)
+  Epoch N       Epoch N+1      Epoch N+2      Epoch N+3      Epoch N+4
+  ─────────────────────────────────────────────────────────────────────────────
+  │              │              │              │              │
+  ▼              ▼              ▼              ▼              ▼
+  Tx confirmed   Snapshot       Stake in       Blocks         Rewards
+  (delegation    taken          leader         produced       distributed
+   included)                     schedule       (rewards       (visible in
+                                                 earned)        `withdrawable_amount`)
 ```
 
 | Event | Timing |
 |---|---|
 | Delegation submitted | Epoch N (any slot) |
-| Pool counts your stake | Epoch N+1 |
-| First rewards calculated | End of Epoch N+1 |
-| First rewards spendable | Epoch N+2 (5–10 days after delegation) |
+| Snapshot taken | End of Epoch N |
+| Stake participates in leader schedule | Epoch N+2 |
+| Pool produces blocks with your stake | Epoch N+3 |
+| First rewards calculated | End of Epoch N+3 |
+| First rewards spendable | Epoch N+4 (15–20 days after delegation) |
 | Subsequent rewards | Every epoch (~5 days) |
 
-The first reward after first-time delegation therefore arrives **10–15 days** after the transaction is confirmed, depending on where in the epoch you delegated. After that, rewards are added to your `Rewards` balance at the start of each new epoch.
+The first reward after first-time delegation therefore arrives **15–20 days** after the transaction is confirmed, depending on where in the epoch you delegated. After that, rewards are added to your `Rewards` balance at the start of each new epoch.
 
 ### Fee Model
 
@@ -625,7 +634,7 @@ const fee = await sdk.estimateFee({
 const fee = await sdk.estimateFee({
   type: "ClaimRewards",
   chain: chains.cardanoMainnet,
-  amount: claimableAmount,     // the exact `Rewards` amount to withdraw (must match on-chain withdrawable)
+  amount: claimableAmount,     // validated (> 0 and <= on-chain `Rewards`); the full reward balance is always withdrawn
   account: PAYMENT_ADDRESS,
   validator: currentDelegation.validator,
   index: 0n,                   // not used in Cardano; required by interface
@@ -834,7 +843,7 @@ const signingArgs: CardanoSigningWithPrivateKey = {
 const rawTx = await sdk.sign(signingArgs);
 const txHash = await sdk.broadcast(chains.cardanoMainnet, rawTx);
 console.log(`Delegated! https://cardanoscan.io/transaction/${txHash}`);
-// First rewards arrive in ~10–15 days
+// First rewards arrive in ~15–20 days (N+4)
 ```
 
 > If the stake key is already registered (you have delegated before), the `StakeRegistration` certificate is still included but is harmless on-chain. No second deposit is charged for an already-registered key.
@@ -1072,7 +1081,7 @@ import { SUPPORTED_CHAINS } from "@guardian-sdk/cardano";
 
 | Feature | Status | Issue |
 |---|---|---|
-| **UTXO pagination beyond 100** — `getUtxos()` fetches a single page of 100 UTXOs. Wallets with more than 100 UTXOs may get an incomplete input set, breaking fee estimation and signing. A lazy strategy will fetch additional pages only when the current set is insufficient. | Planned | [#43](https://github.com/JaimeToca/guardian-stake-sdk/issues/43) |
+| **Native-token UTXOs** — staking currently spends pure-ADA UTXOs only; wallets holding native tokens in the same address are not yet supported. | Planned (v1.1.0) | — |
 
 ---
 
