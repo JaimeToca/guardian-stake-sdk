@@ -25,6 +25,11 @@ export function createSignService(tronWebFactory: TronWebFactory) {
         throw new SigningError("INVALID_SIGNING_ARGS", "Tron sign() requires a privateKey.");
       const tronWeb = tronWebFactory.create(args.privateKey);
       const owner = tronWeb.defaultAddress.base58 as string;
+      if (!owner)
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "Could not derive an owner address from the provided private key."
+        );
       const unsigned = await buildUnsignedTx(tronWeb, args.transaction, owner);
       const signed = await tronWeb.trx.sign(asTronWebSignInput(unsigned));
       return JSON.stringify(signed);
@@ -55,6 +60,8 @@ export function createSignService(tronWebFactory: TronWebFactory) {
           "INVALID_SIGNING_ARGS",
           "compile() requires signArgs._rawTx from prehash()."
         );
+      if (!args.signature)
+        throw new SigningError("INVALID_SIGNING_ARGS", "compile() requires a non-empty signature.");
       const signed: UnsignedTronTx = { ...rawTx, signature: [args.signature] };
       return JSON.stringify(signed);
     },
