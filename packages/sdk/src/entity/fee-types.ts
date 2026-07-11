@@ -1,4 +1,4 @@
-export type FeeType = "GasFee" | "UtxoFee";
+export type FeeType = "GasFee" | "UtxoFee" | "ResourceFee";
 
 export interface GasFee {
   type: "GasFee";
@@ -19,4 +19,12 @@ export interface UtxoFee {
   total: bigint;
 }
 
-export type Fee = GasFee | UtxoFee;
+/** Tron fee model: resource-based. `total` is the TRX (SUN) burned when free/available resources don't cover it. */
+export interface ResourceFee {
+  type: "ResourceFee";
+  bandwidth: bigint;
+  energy: bigint;
+  total: bigint;
+}
+
+export type Fee = GasFee | UtxoFee | ResourceFee;

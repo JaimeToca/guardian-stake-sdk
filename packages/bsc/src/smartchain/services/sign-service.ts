@@ -21,7 +21,13 @@ import type {
   RedelegateTransaction,
   Logger,
 } from "@guardian-sdk/sdk";
-import { SigningError, NoopLogger, ValidationError, privateKey } from "@guardian-sdk/sdk";
+import {
+  SigningError,
+  NoopLogger,
+  ValidationError,
+  privateKey,
+  assertValidator,
+} from "@guardian-sdk/sdk";
 import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
 import type { BscSignServiceContract, CallData, SigningWithAccount } from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
@@ -55,6 +61,9 @@ export function createSignService(
   async function bnbToShares(
     transaction: UndelegateTransaction | RedelegateTransaction
   ): Promise<bigint> {
+    if (transaction.type === "Undelegate") {
+      assertValidator(transaction);
+    }
     const validator =
       transaction.type === "Undelegate" ? transaction.validator : transaction.fromValidator;
 
@@ -92,6 +101,7 @@ export function createSignService(
 
     switch (transaction.type) {
       case "Delegate":
+        assertValidator(transaction);
         return {
           data: encodeDelegate(getValidatorAddress(transaction.validator)),
           amount: transaction.amount,
@@ -108,6 +118,7 @@ export function createSignService(
         };
       }
       case "Undelegate": {
+        assertValidator(transaction);
         const shares = await bnbToShares(transaction);
         return {
           data: encodeUndelegate(getValidatorAddress(transaction.validator), shares),
@@ -115,6 +126,7 @@ export function createSignService(
         };
       }
       case "ClaimDelegate":
+        assertValidator(transaction);
         return {
           data: encodeClaim(getValidatorAddress(transaction.validator), transaction.index),
           amount: 0n,

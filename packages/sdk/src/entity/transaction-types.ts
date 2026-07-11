@@ -6,7 +6,8 @@ export type Transaction =
   | UndelegateTransaction
   | RedelegateTransaction
   | ClaimDelegateTransaction
-  | ClaimRewardsTransaction;
+  | ClaimRewardsTransaction
+  | VoteTransaction;
 
 /**
  * Represents the on-chain address of a Validator Operator.
@@ -25,18 +26,21 @@ export type TransactionType =
   | "Undelegate"
   | "Redelegate"
   | "ClaimDelegate"
-  | "ClaimRewards";
+  | "ClaimRewards"
+  | "Vote";
 
 export interface DelegateTransaction extends BaseTransaction {
   type: "Delegate";
   isMaxAmount: boolean;
-  validator: Validator | OperatorAddress;
+  /** Optional: BSC/Cardano require it (enforced at runtime via assertValidator); Tron freeze omits it. */
+  validator?: Validator | OperatorAddress;
 }
 
 export interface UndelegateTransaction extends BaseTransaction {
   type: "Undelegate";
   isMaxAmount: boolean;
-  validator: Validator | OperatorAddress;
+  /** Optional: BSC/Cardano require it; Tron unfreeze omits it. */
+  validator?: Validator | OperatorAddress;
 }
 
 export interface RedelegateTransaction extends BaseTransaction {
@@ -66,5 +70,16 @@ export interface ClaimDelegateTransaction extends BaseTransaction {
  */
 export interface ClaimRewardsTransaction extends BaseTransaction {
   type: "ClaimRewards";
+  validator: Validator | OperatorAddress;
+}
+
+/**
+ * Vote staked Tron Power to a Super Representative. Tron-only.
+ * `amount` is in SUN and must be a whole number of TRX (votes = amount / 1_000_000).
+ *
+ * Supported by: Tron
+ */
+export interface VoteTransaction extends BaseTransaction {
+  type: "Vote";
   validator: Validator | OperatorAddress;
 }

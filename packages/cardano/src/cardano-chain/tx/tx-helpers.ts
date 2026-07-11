@@ -1,6 +1,6 @@
 import { Cardano, Serialization } from "@cardano-sdk/core";
 import type { Transaction } from "@guardian-sdk/sdk";
-import { SigningError } from "@guardian-sdk/sdk";
+import { SigningError, assertValidator } from "@guardian-sdk/sdk";
 import { buildRewardAccount, parsePoolId } from "../validations";
 import type { BlockfrostProtocolParams } from "../rpc/blockfrost-rpc-types";
 import type { CardanoCertificate } from "./tx-builder";
@@ -72,6 +72,7 @@ export function buildCertificates(
   isStakeKeyRegistered: boolean
 ): CardanoCertificate[] {
   if (transaction.type === "Delegate") {
+    assertValidator(transaction);
     const poolId =
       typeof transaction.validator === "string"
         ? transaction.validator

@@ -13,6 +13,7 @@ export default [
       parserOptions: {
         project: [
           "./packages/sdk/tsconfig.json",
+          "./packages/sdk/tsconfig.test.json",
           "./packages/bsc/tsconfig.json",
           "./packages/bsc/tsconfig.test.json",
           "./packages/cardano/tsconfig.json",

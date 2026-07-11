@@ -25,7 +25,8 @@ export type ValidationErrorCode =
   | "INVALID_PRIVATE_KEY"
   | "INVALID_PAGE"
   | "INVALID_PAGE_SIZE"
-  | "UNSUPPORTED_OPERATION";
+  | "UNSUPPORTED_OPERATION"
+  | "INVALID_VALIDATOR";
 
 export type ConfigErrorCode = "UNSUPPORTED_CHAIN" | "INVALID_RPC_URL";
 

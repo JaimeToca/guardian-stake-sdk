@@ -3,12 +3,12 @@ export type GuardianChainIdentifier = string;
 /**
  * The types of Guardian chains.
  */
-export type GuardianChainType = "Smartchain" | "Cardano";
+export type GuardianChainType = "Smartchain" | "Cardano" | "Tron";
 
 /**
  * The broader blockchain ecosystem types.
  */
-export type ChainEcosystemType = "Ethereum" | "Cardano";
+export type ChainEcosystemType = "Ethereum" | "Cardano" | "Tron";
 
 /**
  * Interface defining the structure for a Guardian chain.
