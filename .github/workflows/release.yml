@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    name: Version or Publish
+    name: Release
     runs-on: ubuntu-latest
 
     permissions:
@@ -48,12 +48,8 @@ jobs:
       - name: Test
         run: pnpm run test
 
-      - name: Create release PR or publish
-        uses: changesets/action@v1
-        with:
-          publish: pnpm run publish
-          title: "chore: version packages"
-          commit: "chore: version packages"
+      - name: Release
+        run: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

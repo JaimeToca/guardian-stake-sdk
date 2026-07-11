@@ -85,11 +85,12 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 <type>(<scope>): <short summary>
 
 Types:  feat | fix | perf | refactor | docs | test | chore | ci | build
-Scope:  sdk | bsc | deps | release  (optional but recommended)
+Scope:  sdk | bsc | cardano | deps | release  (optional but recommended)
 
 Examples:
   feat(bsc): add claimable balance to BalanceService
   fix(sdk): correct ConfigError message for unknown chain
+  feat(cardano): improve UTXO pagination bounds
   docs: update BSC README with slashing details
   chore(deps): bump viem to 2.48.0
 ```
@@ -162,11 +163,13 @@ A `Stop` hook runs automatically after edits: lint across all packages, then tes
 
 ## Release process
 
-Releases are fully automated via `semantic-release` on every push to `main`. Do **not** manually bump versions or write changelog entries — just follow the commit convention.
+Releases are fully automated via `semantic-release` (using `multi-semantic-release` for the monorepo) on every push to `main`. Do **not** manually bump versions or write changelog entries — just follow the commit convention.
 
 The release workflow:
-1. Analyzes commits since the last release tag.
-2. Determines the next version (major/minor/patch).
-3. Updates `CHANGELOG.md`.
-4. Publishes `@guardian-sdk/bsc` to npm (`@guardian-sdk/sdk` is private and bundled — it is never published separately).
-5. Creates a GitHub release with release notes.
+1. Analyzes commits since the last release tag (scoped by package where possible).
+2. Determines the next version (major/minor/patch) **independently per package**.
+3. Updates each package's `CHANGELOG.md`.
+4. Publishes `@guardian-sdk/sdk`, `@guardian-sdk/bsc`, and `@guardian-sdk/cardano` to npm (all on the `latest` dist-tag).
+5. Creates GitHub releases with release notes and version tags (e.g. `sdk@0.3.0`, `bsc@2.1.0`).
+
+All three packages are released the same way. Cardano no longer requires special manual steps.
