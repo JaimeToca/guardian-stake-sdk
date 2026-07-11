@@ -22,7 +22,7 @@
 - After any exported-type change in `packages/sdk`, run `/doc-drift` (READMEs drift).
 - `@guardian-sdk/tron` publishes under the `alpha` dist-tag and is added to `.changeset/config.json` `ignore` (like `@guardian-sdk/cardano`); never mix it in a changeset with non-ignored packages.
 
-## Reference response shapes (from the MetaMask snap structs + Tron docs)
+## Reference response shapes (from a reference Tron wallet + Tron docs)
 
 ```ts
 // POST /wallet/getaccount { address, visible: true }
@@ -542,7 +542,7 @@ export function createTronRpcClient(
   };
 }
 ```
-> Note: `/wallet/getchainparameters` is documented as GET in the snap. Using POST works on java-tron FullNodes too; if a target node rejects it, switch that one call to a GET. Keep it POST here for a uniform client.
+> Note: `/wallet/getchainparameters` is sometimes documented as GET. Using POST works on java-tron FullNodes too; if a target node rejects it, switch that one call to a GET. Keep it POST here for a uniform client.
 
 `rpc/index.ts`: `export * from "./tron-rpc-client"; export * from "./tron-rpc-client-contract"; export * from "./tron-rpc-types";`
 

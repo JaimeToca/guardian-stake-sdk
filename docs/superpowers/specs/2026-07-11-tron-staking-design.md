@@ -23,8 +23,8 @@ TRC10/TRC20 tokens, legacy Stake 1.0 (`freezeBalance`).
 Three aligned sources informed this design:
 
 - **SDK contracts** — `packages/sdk` (`Transaction`, `Balance`, `Delegation`, `Fee`, sign args).
-- **MetaMask `snap-tron-wallet`** (`~/Desktop/Dev/Typescript/snap-tron-wallet`) — reference for
-  the lifecycle, endpoint names, account field shapes, and the TronWeb build/sign/broadcast flow.
+- **A reference Tron wallet implementation** — used to confirm the lifecycle, endpoint names,
+  account field shapes, and the TronWeb build/sign/broadcast flow.
 - **Grok research + `apr_tron.txt`** — Stake 2.0 semantics and the APR formula.
 
 **Confirmed facts:**
