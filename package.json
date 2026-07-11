@@ -14,6 +14,7 @@
     "changeset": "changeset",
     "version": "changeset version",
     "publish": "pnpm build && changeset publish",
+    "release": "multi-semantic-release",
     "prepare": "sh scripts/install-hooks.sh"
   },
   "engines": {
@@ -31,6 +32,14 @@
   "devDependencies": {
     "@cardano-sdk/crypto": "^0.4.5",
     "@changesets/cli": "^2.30.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.0",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.1",
+    "@semantic-release/npm": "^12.0.1",
+    "@semantic-release/release-notes-generator": "^14.0.1",
+    "multi-semantic-release": "^3.0.0",
+    "semantic-release": "^24.0.0",
     "@guardian-sdk/sdk": "workspace:*",
     "@scure/bip32": "^2.0.1",
     "@scure/bip39": "^2.0.1",

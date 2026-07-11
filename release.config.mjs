@@ -7,30 +7,23 @@ export default {
     // Generate release notes
     "@semantic-release/release-notes-generator",
 
-    // Update CHANGELOG.md
+    // Update per-package CHANGELOG.md (when executed per package via multi-semantic-release)
     [
       "@semantic-release/changelog",
       {
         changelogFile: "CHANGELOG.md",
-        changelogTitle:
-          "# Changelog\n\n> All notable changes to Guardian SDK packages are documented here.\n> Versions follow [Semantic Versioning](https://semver.org/).\n>\n> **Disclaimer:** Guardian SDK is unaudited, experimental software provided AS-IS. See [SECURITY.md](./SECURITY.md) and [README.md](./README.md) for full disclaimer.",
       },
     ],
 
-    // Publish @guardian-sdk/bsc
-    [
-      "@semantic-release/npm",
-      {
-        pkgRoot: "packages/bsc",
-      },
-    ],
+    // Publish the current package (multi-semantic-release changes context per package)
+    "@semantic-release/npm",
 
-    // Commit updated CHANGELOG.md and package versions back to main
+    // Commit updated CHANGELOG.md + package.json per released package
     [
       "@semantic-release/git",
       {
-        assets: ["CHANGELOG.md", "packages/bsc/package.json"],
-        message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}",
+        assets: ["CHANGELOG.md", "package.json"],
+        message: "chore(release): \${nextRelease.version} [skip ci]\n\n\${nextRelease.notes}",
       },
     ],
 
