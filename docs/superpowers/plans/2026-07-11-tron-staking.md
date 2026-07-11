@@ -711,7 +711,7 @@ git commit -m "feat(tron): APR calculator (voter + SR block-reward terms)"
 
 **Interfaces:**
 - Produces:
-  - `TronResource = "ENERGY" | "BANDWIDTH"` (re-exported; canonical here).
+  - `TronResource` — re-exported from `rpc/tron-rpc-types.ts` (canonical in Task 3), not redefined.
   - `TronDelegateTransaction extends DelegateTransaction { resource: TronResource }`.
   - `TronUndelegateTransaction extends UndelegateTransaction { resource: TronResource }`.
   - `TronSignArgs extends BaseSignArgs { _rawTx?: UnsignedTronTx }` and `UnsignedTronTx` (the TronWeb tx object).
@@ -769,11 +769,12 @@ describe("buildUnsignedTx", () => {
 
 - [ ] **Step 3: Implement**
 
-`tron-types.ts`:
+`tron-types.ts` (note: `TronResource` is canonical in `rpc/tron-rpc-types.ts` from Task 3; re-export it here, do NOT redefine):
 ```ts
 import type { BaseSignArgs, DelegateTransaction, UndelegateTransaction } from "@guardian-sdk/sdk";
+import type { TronResource } from "../rpc/tron-rpc-types";
 
-export type TronResource = "ENERGY" | "BANDWIDTH";
+export type { TronResource };
 export const SUN_PER_TRX = 1_000_000n;
 
 export interface TronDelegateTransaction extends DelegateTransaction {
