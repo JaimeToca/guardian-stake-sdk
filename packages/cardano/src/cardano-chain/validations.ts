@@ -92,6 +92,35 @@ export function resolveStakeAddress(address: string): string {
 }
 
 /**
+ * Extracts the payment and stake key-hash credentials (56-char hex) from a
+ * Cardano base address (addr1q...).
+ *
+ * Staking transactions require a base address because both credentials must be
+ * present: the payment credential authorizes spending the UTXOs, and the stake
+ * credential authorizes the delegation certificates and reward withdrawals.
+ * Enterprise/pointer/reward addresses are rejected — they cannot carry a full
+ * staking transaction.
+ *
+ * @throws ValidationError("INVALID_ADDRESS") if `address` is not a base address.
+ */
+export function getBaseAddressCredentials(address: string): {
+  paymentKeyHashHex: string;
+  stakeKeyHashHex: string;
+} {
+  const base = Cardano.Address.fromString(address)?.asBase();
+  if (!base) {
+    throw new ValidationError(
+      "INVALID_ADDRESS",
+      `Cardano staking requires a base address (addr1q...) that carries a stake credential, got: "${address}".`
+    );
+  }
+  return {
+    paymentKeyHashHex: base.getPaymentCredential().hash,
+    stakeKeyHashHex: base.getStakeCredential().hash,
+  };
+}
+
+/**
  * Validates a Cardano Ed25519 private key.
  * Accepts a 32-byte (64 hex char) Ed25519 scalar as hex string.
  */
@@ -122,6 +151,20 @@ export function parseCardanoPublicKey(value: string): string {
     );
   }
   return value;
+}
+
+/**
+ * Parses a non-negative integer lovelace string from Blockfrost responses.
+ * Throws ValidationError("INVALID_AMOUNT") for negative, fractional, or non-numeric strings.
+ */
+export function parseLovelaceString(value: string, fieldName: string): bigint {
+  if (!/^\d+$/.test(value)) {
+    throw new ValidationError(
+      "INVALID_AMOUNT",
+      `${fieldName} must be a non-negative integer string, got "${value}".`
+    );
+  }
+  return BigInt(value);
 }
 
 /**

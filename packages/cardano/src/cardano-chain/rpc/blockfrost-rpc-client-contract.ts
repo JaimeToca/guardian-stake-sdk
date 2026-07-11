@@ -14,7 +14,7 @@ export interface BlockfrostRpcClientContract {
   getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null>;
   getAccount(stakeAddress: string): Promise<BlockfrostAccount>;
   getAccountOrNull(stakeAddress: string): Promise<BlockfrostAccount | null>;
-  getUtxos(paymentAddress: string): Promise<BlockfrostUtxo[]>;
+  getUtxos(paymentAddress: string, page?: number, count?: number): Promise<BlockfrostUtxo[]>;
   getProtocolParams(): Promise<BlockfrostProtocolParams>;
   getLatestBlock(): Promise<BlockfrostBlock>;
   getNetwork(): Promise<BlockfrostNetwork>;

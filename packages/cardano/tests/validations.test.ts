@@ -5,6 +5,7 @@ import {
   parsePoolId,
   buildRewardAccount,
   parseCardanoPrivateKey,
+  getBaseAddressCredentials,
 } from "../src/cardano-chain/validations";
 
 /**
@@ -145,5 +146,23 @@ describe("parseCardanoPrivateKey", () => {
 
   it("accepts uppercase hex", () => {
     expect(parseCardanoPrivateKey("A".repeat(64))).toBe("A".repeat(64));
+  });
+});
+
+describe("getBaseAddressCredentials", () => {
+  const SPEND_KEY_HASH = "9493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e";
+
+  it("extracts the payment and stake key-hash credentials from a base address", () => {
+    const creds = getBaseAddressCredentials(PAYMENT_ADDRESS);
+    expect(creds.paymentKeyHashHex).toBe(SPEND_KEY_HASH);
+    expect(creds.stakeKeyHashHex).toBe(STAKE_KEY_HASH);
+  });
+
+  it("throws for a reward/stake address (no payment credential)", () => {
+    expect(() => getBaseAddressCredentials(STAKE_ADDRESS)).toThrow(ValidationError);
+  });
+
+  it("throws for a non-address string", () => {
+    expect(() => getBaseAddressCredentials("not-an-address")).toThrow(ValidationError);
   });
 });

@@ -13,19 +13,27 @@ import { Ed25519PrivateKey, Ed25519PrivateNormalKeyHex } from "@cardano-sdk/cryp
 /**
  * Real mainnet values, verified with @cardano-sdk/core.
  *
- * PAYMENT_ADDRESS: CIP-0019 official test vector (addr1q...)
+ * PAYMENT_ADDRESS is the mainnet base address DERIVED from PAYMENT_KEY + STAKING_KEY
+ * (payment credential = hash(PAYMENT_KEY pubkey), stake credential = hash(STAKING_KEY
+ * pubkey)). The sign flow validates that the supplied keys match the address's
+ * credentials, so the address and keys must be kept in sync — regenerate with
+ * Cardano.BaseAddress.fromCredentials if the keys change.
+ *
  * POOL_ID: verified mainnet pool (bech32 checksum confirmed)
  *   cold key hash → 0f292fcaa02b8b2f9b3c8f9fd8e0bb21abedb692a6d5058df3ef2735
  *
  * PAYMENT_KEY / STAKING_KEY: Ed25519 seeds (32-byte hex) — test-only, never use in production.
  */
 const PAYMENT_ADDRESS =
-  "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x";
+  "addr1q8zx3ulfhwq8y2us7jq6mdauc74tz3amlgjaklcyfpgpumdah8qadmw0j7sv28jecu6nztqvey5m7tjgkjuh6e5wjsyqdtcp6a";
 const POOL_ID = "pool1pu5jlj4q9w9jlxeu370a3c9myx47md5j5m2str0naunn2q3lkdy";
 
 // Well-known Hardhat/test Ed25519 seeds — do NOT use on mainnet
 const PAYMENT_KEY = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae3d55";
 const STAKING_KEY = "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4d0bd6d1";
+// Ed25519 public key (32-byte hex) derived from PAYMENT_KEY — matches the payment
+// credential embedded in PAYMENT_ADDRESS. Used by the compile() external-signing tests.
+const PAYMENT_PUBLIC_KEY = "700e2ce7c4b674427eab27ba820bcf6f0faebe68e09fe8564292114e41dc6a41";
 
 const PARAMS = protocolParamsFixture as BlockfrostProtocolParams;
 const UTXOS = utxosFixture as BlockfrostUtxo[];
@@ -38,6 +46,22 @@ const CARDANO_FEE = {
 
 let STAKING_PUBLIC_KEY: string;
 
+/** A registered, actively-delegating account with `withdrawable` lovelace of rewards. */
+function registeredAccount(withdrawable = "1000000") {
+  return {
+    stake_address: "stake1ux...",
+    active: true,
+    active_epoch: 300,
+    controlled_amount: "10000000",
+    rewards_sum: withdrawable,
+    withdrawals_sum: "0",
+    reserves_sum: "0",
+    treasury_sum: "0",
+    withdrawable_amount: withdrawable,
+    pool_id: POOL_ID,
+  };
+}
+
 function makeRpcClient() {
   return {
     getProtocolParams: vi.fn().mockResolvedValue(PARAMS),
@@ -46,6 +70,13 @@ function makeRpcClient() {
     getAccountOrNull: vi.fn().mockResolvedValue(null), // unregistered by default
     submitTx: vi.fn(),
   };
+}
+
+/** Rpc client whose stake account is registered (needed for Undelegate/ClaimRewards). */
+function makeRegisteredRpcClient(withdrawable = "1000000") {
+  const rpc = makeRpcClient();
+  rpc.getAccountOrNull.mockResolvedValue(registeredAccount(withdrawable));
+  return rpc;
 }
 
 // @cardano-sdk/crypto uses libsodium-wrappers-sumo which initialises asynchronously.
@@ -132,6 +163,105 @@ describe("SignService", () => {
         return true;
       });
     });
+
+    it("throws SigningError when keys do not match transaction.account", async () => {
+      const service = createSignService(makeRpcClient() as any);
+
+      // Swap the keys so neither credential matches the address.
+      await expect(
+        service.sign({
+          transaction: {
+            type: "Delegate",
+            chain: cardanoMainnet,
+            amount: 5_000_000n,
+            isMaxAmount: false,
+            validator: POOL_ID,
+            account: PAYMENT_ADDRESS,
+          },
+          fee: CARDANO_FEE,
+          nonce: 0,
+          paymentPrivateKey: STAKING_KEY,
+          stakingPrivateKey: PAYMENT_KEY,
+        } as any)
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("INVALID_SIGNING_ARGS");
+        return true;
+      });
+    });
+
+    it("throws when undelegating a stake key that is not registered", async () => {
+      const service = createSignService(makeRpcClient() as any); // null account = unregistered
+
+      await expect(
+        service.sign({
+          transaction: {
+            type: "Undelegate",
+            chain: cardanoMainnet,
+            amount: 0n,
+            isMaxAmount: false,
+            validator: POOL_ID,
+            account: PAYMENT_ADDRESS,
+          },
+          fee: CARDANO_FEE,
+          nonce: 0,
+          paymentPrivateKey: PAYMENT_KEY,
+          stakingPrivateKey: STAKING_KEY,
+        } as any)
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("UNSUPPORTED_OPERATION");
+        return true;
+      });
+    });
+
+    it("throws when the claim amount exceeds the on-chain reward balance", async () => {
+      const service = createSignService(makeRegisteredRpcClient("1000000") as any);
+
+      await expect(
+        service.sign({
+          transaction: {
+            type: "ClaimRewards",
+            chain: cardanoMainnet,
+            amount: 2_000_000n, // more than the 1 ADA on-chain balance
+            validator: POOL_ID,
+            account: PAYMENT_ADDRESS,
+          },
+          fee: CARDANO_FEE,
+          nonce: 0,
+          paymentPrivateKey: PAYMENT_KEY,
+          stakingPrivateKey: STAKING_KEY,
+        } as any)
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_AMOUNT");
+        return true;
+      });
+    });
+
+    it("throws when claiming with no rewards available", async () => {
+      const service = createSignService(makeRegisteredRpcClient("0") as any);
+
+      await expect(
+        service.sign({
+          transaction: {
+            type: "ClaimRewards",
+            chain: cardanoMainnet,
+            amount: 500_000n,
+            validator: POOL_ID,
+            account: PAYMENT_ADDRESS,
+          },
+          fee: CARDANO_FEE,
+          nonce: 0,
+          paymentPrivateKey: PAYMENT_KEY,
+          stakingPrivateKey: STAKING_KEY,
+        } as any)
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_AMOUNT");
+        return true;
+      });
+    });
   });
 
   describe("sign — happy path", () => {
@@ -159,27 +289,6 @@ describe("SignService", () => {
           account: PAYMENT_ADDRESS,
         },
       },
-      {
-        name: "undelegate",
-        tx: {
-          type: "Undelegate" as const,
-          chain: cardanoMainnet,
-          amount: 0n,
-          isMaxAmount: false,
-          validator: POOL_ID,
-          account: PAYMENT_ADDRESS,
-        },
-      },
-      {
-        name: "claim",
-        tx: {
-          type: "ClaimRewards" as const,
-          chain: cardanoMainnet,
-          amount: 500_000n,
-          validator: POOL_ID,
-          account: PAYMENT_ADDRESS,
-        },
-      },
     ])("$name — returns a valid CBOR hex string", async ({ tx }) => {
       const service = createSignService(makeRpcClient() as any);
 
@@ -193,6 +302,47 @@ describe("SignService", () => {
 
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(0);
+      expect(result).toMatch(/^[0-9a-f]+$/);
+    });
+
+    it("undelegate — returns a valid CBOR hex string (registered key, sweeps rewards)", async () => {
+      const service = createSignService(makeRegisteredRpcClient() as any);
+
+      const result = await service.sign({
+        transaction: {
+          type: "Undelegate" as const,
+          chain: cardanoMainnet,
+          amount: 0n,
+          isMaxAmount: false,
+          validator: POOL_ID,
+          account: PAYMENT_ADDRESS,
+        } as any,
+        fee: CARDANO_FEE,
+        nonce: 0,
+        paymentPrivateKey: PAYMENT_KEY,
+        stakingPrivateKey: STAKING_KEY,
+      });
+
+      expect(result).toMatch(/^[0-9a-f]+$/);
+    });
+
+    it("claim — returns a valid CBOR hex string (full reward balance)", async () => {
+      const service = createSignService(makeRegisteredRpcClient("1000000") as any);
+
+      const result = await service.sign({
+        transaction: {
+          type: "ClaimRewards" as const,
+          chain: cardanoMainnet,
+          amount: 1_000_000n, // equals the on-chain withdrawable balance
+          validator: POOL_ID,
+          account: PAYMENT_ADDRESS,
+        } as any,
+        fee: CARDANO_FEE,
+        nonce: 0,
+        paymentPrivateKey: PAYMENT_KEY,
+        stakingPrivateKey: STAKING_KEY,
+      });
+
       expect(result).toMatch(/^[0-9a-f]+$/);
     });
 
@@ -382,9 +532,9 @@ describe("SignService", () => {
       // format: paymentSigHex:stakingVKeyHex:stakingSigHex:paymentVKeyHex
       // stakingVKey must match the STAKING_PUBLIC_KEY used in prehash() — compile() verifies this
       const paymentSig = "aa".repeat(64); // 64-byte signature
-      const stakingVKey = STAKING_PUBLIC_KEY; // must match prehash stakingPublicKey
+      const stakingVKey = STAKING_PUBLIC_KEY; // must match prehash stakingPublicKey + address
       const stakingSig = "dd".repeat(64); // 64-byte signature
-      const paymentVKey = "ee".repeat(32); // 32-byte public key
+      const paymentVKey = PAYMENT_PUBLIC_KEY; // must match the address's payment credential
       const signature = `${paymentSig}:${stakingVKey}:${stakingSig}:${paymentVKey}`;
 
       const result = await service.compile({ signArgs, signature });

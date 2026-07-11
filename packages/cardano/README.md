@@ -104,13 +104,13 @@ This has two important consequences:
 
 2. **No unbonding period.** Changing or stopping delegation takes effect in the next epoch with no waiting period. You pay only the regular transaction fee.
 
-`getDelegations()` reports `amount` as your total controlled ADA — the economic weight your delegation carries — rather than a locked amount. `Available` always reflects the full controlled amount. `Staked` equals `Available` while actively delegating to a pool, and drops to zero when the stake key is not delegating — only delegated ADA earns rewards.
+`getDelegations()` reports `amount` as your total controlled ADA (including any rewards currently in the reward account) — the economic weight your delegation carries. `Available` and `Staked` in `getBalances()` are derived by subtracting `withdrawable_amount` from `controlled_amount`, so they reflect the actual spendable UTXO balance. `Staked` equals `Available` while actively delegating to a pool, and drops to zero when the stake key is not delegating — only delegated ADA earns rewards.
 
 ### Rewards
 
 Rewards do **not** auto-compound into your staked balance. They accumulate separately in your reward account and must be explicitly withdrawn using a `ClaimRewards` transaction.
 
-Rewards become spendable two epochs after they are earned (see [Epochs and Reward Timing](#epochs-and-reward-timing)). The `Claimable` balance in `getBalances()` is the amount available to withdraw right now.
+Rewards become spendable two epochs after they are earned (see [Epochs and Reward Timing](#epochs-and-reward-timing)). The `Rewards` balance in `getBalances()` is the amount available to withdraw right now.
 
 When you withdraw rewards, the ADA moves from the reward account to a payment address you control. You can withdraw and redelegate simultaneously in the same transaction, or withdraw separately.
 
@@ -129,7 +129,7 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
 ```
 
 ```
-  [ Delegating ] ──► rewards accumulate each epoch ──► [ Claimable rewards ]
+  [ Delegating ] ──► rewards accumulate each epoch ──► [ Rewards available ]
                                                                │
                                                            claim()
                                                                │
@@ -141,8 +141,8 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
 |---|---|
 | **Unregistered** | Stake key does not exist on-chain. A 2 ADA deposit is required to register it. |
 | **Registered, not delegating** | Stake key registered but no pool selected. Key deposit is locked on-chain. No rewards earned. |
-| **Delegating** | ADA earns rewards every epoch. Delegation is active as of epoch N+2 after the delegation transaction. |
-| **Claimable rewards** | Rewards distributed at the end of each epoch, available to withdraw from epoch N+2 onward. |
+| **Delegating** | ADA earns rewards every epoch. Delegation is active for the leader schedule as of epoch N+2 after the delegation transaction. |
+| **Rewards** | Rewards distributed at the end of each epoch, available to withdraw from epoch N+4 onward (visible as the `Rewards` balance). |
 | **Deregistered** | Stake key removed from chain. The 2 ADA deposit is refunded in the same transaction. Any unclaimed rewards are lost — always claim before deregistering. |
 
 ### Delegation cycle in detail
@@ -158,14 +158,20 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
      └── On-chain snapshot taken. Your ADA counted toward the pool.
 
   3. Epoch N+1:
-     └── Pool produces blocks weighted by total delegated stake.
-         Your stake is included.
+     └── Snapshot is used to determine the leader schedule for epoch N+2.
 
   4. Epoch N+2:
-     └── Rewards for epoch N+1 are calculated and distributed.
-         Your Claimable balance increases.
+     └── Your stake participates in the leader schedule.
 
-  5. Repeat from step 2 every epoch (~5 days).
+  5. Epoch N+3:
+     └── Pool produces blocks (if selected) using the snapshot that includes your stake.
+         Rewards are earned for this epoch's performance.
+
+  6. Epoch N+4:
+     └── Rewards for epoch N+3 are calculated and distributed.
+         Your `Rewards` balance increases.
+
+  7. Repeat from step 2 every epoch (~5 days).
 ```
 
 **Redelegation** (switching pool):
@@ -198,7 +204,7 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
 **Claiming rewards**:
 
 ```
-  1. Check Claimable balance: getBalances() → Claimable amount
+  1. Check Rewards balance: getBalances() → `Rewards` amount
 
   2. Submit claim tx with:
      └── Withdrawal entry: reward account → lovelace amount
@@ -212,24 +218,27 @@ When you withdraw rewards, the ADA moves from the reward account to a payment ad
 A Cardano **epoch** spans 5 days (432,000 slots at 1 second per slot). Epochs are numbered sequentially and the exact reward schedule is deterministic:
 
 ```
-  Epoch N       Epoch N+1      Epoch N+2
-  ─────────────────────────────────────────────────────────────────
-  │              │              │
-  ▼              ▼              ▼
-  Tx confirmed   Stake counted  Rewards distributed → Claimable
-  (delegation    in leader      (visible in
-   included)     schedule       withdrawable_amount)
+  Epoch N       Epoch N+1      Epoch N+2      Epoch N+3      Epoch N+4
+  ─────────────────────────────────────────────────────────────────────────────
+  │              │              │              │              │
+  ▼              ▼              ▼              ▼              ▼
+  Tx confirmed   Snapshot       Stake in       Blocks         Rewards
+  (delegation    taken          leader         produced       distributed
+   included)                     schedule       (rewards       (visible in
+                                                 earned)        `withdrawable_amount`)
 ```
 
 | Event | Timing |
 |---|---|
 | Delegation submitted | Epoch N (any slot) |
-| Pool counts your stake | Epoch N+1 |
-| First rewards calculated | End of Epoch N+1 |
-| First rewards spendable | Epoch N+2 (5–10 days after delegation) |
+| Snapshot taken | End of Epoch N |
+| Stake participates in leader schedule | Epoch N+2 |
+| Pool produces blocks with your stake | Epoch N+3 |
+| First rewards calculated | End of Epoch N+3 |
+| First rewards spendable | Epoch N+4 (15–20 days after delegation) |
 | Subsequent rewards | Every epoch (~5 days) |
 
-The first reward after first-time delegation therefore arrives **10–15 days** after the transaction is confirmed, depending on where in the epoch you delegated. After that, rewards are added to your Claimable balance at the start of each new epoch.
+The first reward after first-time delegation therefore arrives **15–20 days** after the transaction is confirmed, depending on where in the epoch you delegated. After that, rewards are added to your `Rewards` balance at the start of each new epoch.
 
 ### Fee Model
 
@@ -370,10 +379,10 @@ const balances = await sdk.getBalances(chains.cardanoMainnet, STAKE_ADDRESS);
 for (const b of balances) {
   console.log(b.type, Number(b.amount) / 1e6, "ADA");
 }
-// Available  9.95 ADA
-// Staked     9.95 ADA   ← equals Available while delegating; 0 when not delegating
-// Pending    0 ADA      ← always 0
-// Rewards    2.1 ADA    ← accumulated rewards
+// Available  9.95 ADA   ← controlled minus rewards (spendable UTXOs)
+// Staked     9.95 ADA   ← equals Available while delegating
+// Pending    0 ADA      ← never used on Cardano
+// Rewards    2.1 ADA    ← withdrawable rewards
 
 // 4. Delegate to the top pool
 import type { CardanoSigningWithPrivateKey } from "@guardian-sdk/cardano";
@@ -516,7 +525,7 @@ interface StakingSummary {
 
 ### `getBalances`
 
-Returns the four balance categories for an address. Accepts either a stake address (`stake1...`) or a base payment address (`addr1q...`) — the stake credential is extracted automatically from a payment address. Balances reflect the total ADA controlled by the stake key across all associated payment addresses.
+Returns balance information for an address (Cardano surfaces `Available`, `Staked`, and `Rewards`). Accepts either a stake address (`stake1...`) or a base payment address (`addr1q...`) — the stake credential is extracted automatically from a payment address. Balances reflect the total ADA controlled by the stake key across all associated payment addresses.
 
 ```typescript
 const balances = await sdk.getBalances(
@@ -531,12 +540,15 @@ All amounts are in lovelaces (1 ADA = 1,000,000 lovelaces).
 
 | Type | What it represents on Cardano |
 |---|---|
-| **Available** | `controlled_amount` from Blockfrost — all ADA controlled by the stake key, fully spendable at all times |
-| **Staked** | `controlled_amount` when the stake key is actively delegated to a pool; `0` otherwise. Only delegated ADA earns staking rewards — undelegated or unregistered accounts return `0` here. |
+| **Available** | Spendable UTXO balance (`controlled_amount` minus `withdrawable_amount`). Fully spendable at all times regardless of delegation. |
+| **Staked** | Equals `Available` when the stake key is actively delegated to a pool; `0` otherwise. Only delegated ADA earns staking rewards. |
 | **Rewards** | `withdrawable_amount` from Blockfrost — rewards that have been distributed and are sitting in the reward account, ready to withdraw via a `ClaimRewards` transaction |
 
 ```typescript
 type BalanceType = "Available" | "Staked" | "Pending" | "Rewards";
+```
+
+> Cardano does not use the `Pending` type (it is present for BSC compatibility). `getBalances()` returns `Available`, `Staked`, and `Rewards`.
 ```
 
 ```typescript
@@ -544,10 +556,10 @@ const balances = await sdk.getBalances(chains.cardanoMainnet, STAKE_ADDRESS);
 for (const b of balances) {
   console.log(b.type, (Number(b.amount) / 1e6).toFixed(6), "ADA");
 }
-// Available  9.950000 ADA
-// Staked     9.950000 ADA   ← 0 when not delegating
-// Pending    0.000000 ADA
-// Rewards    2.100000 ADA
+// Available  9.950000 ADA   ← controlled_amount minus withdrawable_amount
+// Staked     9.950000 ADA   ← equals Available while delegating
+// Pending    0.000000 ADA   ← never used on Cardano
+// Rewards    2.100000 ADA   ← withdrawable_amount
 ```
 
 > `Rewards` reflects rewards that have already been distributed and are available to withdraw. Rewards currently being earned in the active epoch are not yet included.
@@ -566,9 +578,9 @@ const nonce = await sdk.getNonce(chains.cardanoMainnet, address); // always 0
 
 ### `estimateFee`
 
-Estimates the transaction fee by fetching protocol parameters and UTXOs from Blockfrost, building a draft transaction with mock witnesses, and applying the fee formula.
+Estimates the transaction fee by fetching protocol parameters, UTXOs, and the stake account (registration status + reward balance) from Blockfrost, building a draft transaction that mirrors the one `sign()` submits — distinct payment/staking witnesses, a TTL, the real certificate set, and any full-balance reward withdrawal — then applying the fee formula plus a 10% safety buffer.
 
-**`transaction.account` must be set** to the payment address (`addr1...`) so the SDK can fetch UTXOs for coin selection.
+**`transaction.account` must be set** to a base payment address (`addr1q...`) — it carries the stake credential used to fetch UTXOs and the reward account. Enterprise/pointer addresses are rejected with `ValidationError("INVALID_ADDRESS")`.
 
 ```typescript
 const fee = await sdk.estimateFee(transaction);
@@ -622,7 +634,7 @@ const fee = await sdk.estimateFee({
 const fee = await sdk.estimateFee({
   type: "ClaimRewards",
   chain: chains.cardanoMainnet,
-  amount: claimableAmount,     // exact lovelace amount to withdraw
+  amount: claimableAmount,     // validated (> 0 and <= on-chain `Rewards`); the full reward balance is always withdrawn
   account: PAYMENT_ADDRESS,
   validator: currentDelegation.validator,
   index: 0n,                   // not used in Cardano; required by interface
@@ -680,7 +692,7 @@ For **MPC wallets, hardware signers, or custody setups** where private keys are 
      │    signArgs }         │                           │
      │ ◄─────────────────────│                           │
      │                       │                           │
-     │  serializedTx (body hex)                          │
+     │  serializedTx (32-byte body hash/digest)          │
      │ ──────────────────────────────────────────────────►
      │                       │                           │
      │  paymentSig, stakingVKey, stakingSig, paymentVKey │
@@ -703,13 +715,14 @@ const { serializedTransaction, signArgs } = await sdk.preHash({
   nonce: 0,
 });
 
-// serializedTransaction is the hex-encoded CBOR transaction body.
-// Send it to your external signer. The signer must:
-//   1. Decode the hex to bytes
-//   2. Hash with Blake2b-256 → 32-byte digest
-//   3. Sign digest with payment Ed25519 key  → paymentSig (64 bytes → 128 hex)
-//   4. Sign digest with staking Ed25519 key  → stakingSig (64 bytes → 128 hex)
-//   5. Return both signatures and both verification keys
+// For Cardano, `serializedTransaction` is the Blake2b-256 **hash** of the tx body
+// (32 bytes / 64 hex chars) — this is the exact value the Ed25519 signer must sign.
+// The full CBOR body is carried inside `signArgs._txBodyCbor` for use in compile().
+// Send `serializedTransaction` to your external signer. The signer must:
+//   1. Treat it as the 32-byte digest to sign
+//   2. Sign with payment Ed25519 key  → paymentSig (64 bytes → 128 hex)
+//   3. Sign with staking Ed25519 key  → stakingSig (64 bytes → 128 hex)
+//   4. Return both signatures and both verification keys (vkeys)
 ```
 
 **Step 2 — compile the signed transaction:**
@@ -830,7 +843,7 @@ const signingArgs: CardanoSigningWithPrivateKey = {
 const rawTx = await sdk.sign(signingArgs);
 const txHash = await sdk.broadcast(chains.cardanoMainnet, rawTx);
 console.log(`Delegated! https://cardanoscan.io/transaction/${txHash}`);
-// First rewards arrive in ~10–15 days
+// First rewards arrive in ~15–20 days (N+4)
 ```
 
 > If the stake key is already registered (you have delegated before), the `StakeRegistration` certificate is still included but is harmless on-chain. No second deposit is charged for an already-registered key.
@@ -882,8 +895,8 @@ Deregisters the stake key. The 2 ADA registration deposit is returned in the sam
 ```typescript
 // Step 1: claim any pending rewards first (see Claim flow below)
 const balances = await sdk.getBalances(chains.cardanoMainnet, STAKE_ADDRESS);
-const claimable = balances.find((b) => b.type === "Claimable")!;
-if (claimable.amount > 0n) {
+const rewards = balances.find((b) => b.type === "Rewards")!;
+if (rewards.amount > 0n) {
   // claim first — rewards are lost on deregistration
 }
 
@@ -921,9 +934,9 @@ Withdraws accumulated rewards from the reward account to your payment address. D
 
 ```typescript
 const balances = await sdk.getBalances(chains.cardanoMainnet, STAKE_ADDRESS);
-const claimable = balances.find((b) => b.type === "Rewards")!;
+const rewards = balances.find((b) => b.type === "Rewards")!;
 
-if (claimable.amount === 0n) {
+if (rewards.amount === 0n) {
   console.log("No rewards available yet. Check back after the next epoch.");
 } else {
   const { delegations } = await sdk.getDelegations(chains.cardanoMainnet, STAKE_ADDRESS);
@@ -931,14 +944,14 @@ if (claimable.amount === 0n) {
   const transaction = {
     type: "ClaimRewards" as const,
     chain: chains.cardanoMainnet,
-    amount: claimable.amount,          // exact lovelace amount to withdraw
+    amount: rewards.amount,          // exact lovelace amount to withdraw
     account: PAYMENT_ADDRESS,
     validator: delegations[0].validator,
     index: 0n,                         // unused in Cardano; required by interface
   };
 
   const fee = await sdk.estimateFee(transaction);
-  console.log(`Claiming ${(Number(claimable.amount) / 1e6).toFixed(6)} ADA, fee: ~${(Number(fee.total) / 1e6).toFixed(4)} ADA`);
+  console.log(`Claiming ${(Number(rewards.amount) / 1e6).toFixed(6)} ADA, fee: ~${(Number(fee.total) / 1e6).toFixed(4)} ADA`);
 
   const signingArgs: CardanoSigningWithPrivateKey = {
     transaction, fee, nonce: 0,
@@ -1068,7 +1081,7 @@ import { SUPPORTED_CHAINS } from "@guardian-sdk/cardano";
 
 | Feature | Status | Issue |
 |---|---|---|
-| **UTXO pagination beyond 100** — `getUtxos()` fetches a single page of 100 UTXOs. Wallets with more than 100 UTXOs may get an incomplete input set, breaking fee estimation and signing. A lazy strategy will fetch additional pages only when the current set is insufficient. | Planned | [#43](https://github.com/JaimeToca/guardian-stake-sdk/issues/43) |
+| **Native-token UTXOs** — staking currently spends pure-ADA UTXOs only; wallets holding native tokens in the same address are not yet supported. | Planned (v1.1.0) | — |
 
 ---
 

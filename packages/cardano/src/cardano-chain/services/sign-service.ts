@@ -21,21 +21,22 @@ import {
 } from "../sign-types";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
 import type { BlockfrostProtocolParams, BlockfrostUtxo } from "../rpc/blockfrost-rpc-types";
-import { selectUtxos, DEFAULT_COINS_PER_UTXO_SIZE } from "../tx/coin-selection";
+import { selectUtxosPaged, type SelectedUtxos } from "../tx/coin-selection";
 import { buildTransactionBody, buildSignedTransaction, type TxWitness } from "../tx/tx-builder";
 import {
   buildCertificates,
   buildWithdrawals,
   rewardAccountWithdrawal,
-  computeMinOutputLovelace,
-  computeRequiredLovelaces,
+  computeSelectionTarget,
 } from "../tx/tx-helpers";
 import {
   buildRewardAccount,
   parseCardanoPrivateKey,
   parseCardanoPublicKey,
   checkIfPaymentAddressIsValid,
+  getBaseAddressCredentials,
   assertHexBytes,
+  parseLovelaceString,
 } from "../validations";
 
 /** Transactions expire after ~2 hours (1 slot ≈ 1 second on mainnet). */
@@ -70,34 +71,30 @@ export function createSignService(
   function buildBody(
     transaction: Transaction,
     paymentAddress: string,
-    utxos: BlockfrostUtxo[],
+    selected: SelectedUtxos,
     fee: bigint,
     protocolParams: BlockfrostProtocolParams,
     stakeKeyHashHex: string,
     ttl: number,
     isStakeKeyRegistered: boolean,
-    rewardsAvailableToSweep = 0n
+    rewardsOnChain = 0n
   ): ReturnType<typeof buildTransactionBody> {
     const keyDeposit = BigInt(protocolParams.key_deposit);
-    const coinsPerUtxoByte = BigInt(
-      protocolParams.coins_per_utxo_size ?? DEFAULT_COINS_PER_UTXO_SIZE
-    );
-    const minUtxo = computeMinOutputLovelace(paymentAddress, coinsPerUtxoByte);
-
-    const certificates = buildCertificates(transaction, stakeKeyHashHex, isStakeKeyRegistered);
-    const withdrawals = buildWithdrawals(transaction, stakeKeyHashHex, rewardsAvailableToSweep);
-    const requiredLovelaces = computeRequiredLovelaces(
+    const { requiredLovelaces, minUtxo } = computeSelectionTarget(
       transaction,
       fee,
-      keyDeposit,
-      isStakeKeyRegistered
+      protocolParams,
+      isStakeKeyRegistered,
+      paymentAddress
     );
 
-    // Select enough inputs to cover required + minUtxo so the change output is always valid.
-    const { inputs, totalLovelaces } = selectUtxos(utxos, requiredLovelaces + minUtxo);
+    const certificates = buildCertificates(transaction, stakeKeyHashHex, isStakeKeyRegistered);
+    const withdrawals = buildWithdrawals(transaction, stakeKeyHashHex, rewardsOnChain);
+
+    const { inputs, totalLovelaces } = selected;
 
     // Rewards moving from the reward account into the wallet (0 for Delegate/Redelegate).
-    const rewardsReceived = rewardAccountWithdrawal(transaction, rewardsAvailableToSweep);
+    const rewardsReceived = rewardAccountWithdrawal(transaction, rewardsOnChain);
 
     // The 2 ADA key deposit is refunded by the protocol when the stake key is deregistered.
     const keyDepositRefund = transaction.type === "Undelegate" ? keyDeposit : 0n;
@@ -126,6 +123,124 @@ export function createSignService(
       ttl,
       certificates: certificates.length > 0 ? certificates : undefined,
       withdrawals: withdrawals.size > 0 ? withdrawals : undefined,
+    });
+  }
+
+  /**
+   * Fetches and validates the on-chain state both `sign()` and `prehash()` need:
+   * protocol params, UTXOs, TTL, whether the stake key is registered, and the
+   * withdrawable reward balance. Also enforces the transaction-type preconditions
+   * (Undelegate requires a registered key; ClaimRewards must request a valid,
+   * available amount) so both signing paths stay in lockstep.
+   *
+   * `transaction.account` must already be validated by the caller.
+   */
+  async function resolveChainState(
+    transaction: Transaction,
+    stakeKeyHashHex: string
+  ): Promise<{
+    protocolParams: BlockfrostProtocolParams;
+    seedPage: BlockfrostUtxo[];
+    ttl: number;
+    isStakeKeyRegistered: boolean;
+    rewardsOnChain: bigint;
+  }> {
+    // Every staking type except a first-ever Delegate benefits from the account:
+    // Delegate/Redelegate need registration status, Undelegate/ClaimRewards need
+    // both registration status and the reward balance.
+    const needsAccount =
+      transaction.type === "Delegate" ||
+      transaction.type === "Redelegate" ||
+      transaction.type === "Undelegate" ||
+      transaction.type === "ClaimRewards";
+    const rewardAccount = buildRewardAccount(stakeKeyHashHex);
+
+    // Fetch UTXO page 1 here (in parallel with the rest); the paged selector reuses
+    // it as the seed page and only fetches further pages if page 1 is insufficient.
+    const [protocolParams, seedPage, latestBlock, existingAccount] = await Promise.all([
+      rpcClient.getProtocolParams(),
+      rpcClient.getUtxos(transaction.account as string),
+      rpcClient.getLatestBlock(),
+      needsAccount ? rpcClient.getAccountOrNull(rewardAccount) : Promise.resolve(null),
+    ]);
+
+    // #8: Sanity-check the slot number before computing the TTL.
+    if (latestBlock.slot <= 0) {
+      throw new SigningError(
+        "INVALID_SIGNING_ARGS",
+        "Received an invalid slot number from the node. Cannot compute a safe TTL."
+      );
+    }
+    const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
+
+    // Stake key is considered registered only when the account is actively delegating.
+    // active: false/null covers "never registered" and "deregistered" — both need
+    // a StakeRegistration cert (conservative).
+    const isStakeKeyRegistered = existingAccount?.active === true;
+
+    const rewardsOnChain =
+      transaction.type === "Undelegate" || transaction.type === "ClaimRewards"
+        ? parseLovelaceString(existingAccount?.withdrawable_amount ?? "0", "withdrawable_amount")
+        : 0n;
+
+    // A stake key that isn't registered cannot be deregistered, and there is no
+    // 2 ADA deposit to refund — reject rather than build a tx the node will reject.
+    if (transaction.type === "Undelegate" && !isStakeKeyRegistered) {
+      throw new ValidationError(
+        "UNSUPPORTED_OPERATION",
+        "Cannot undelegate: the stake key is not registered on-chain (nothing to deregister)."
+      );
+    }
+
+    // Cardano withdraws the ENTIRE reward balance (partial withdrawals are invalid),
+    // so `transaction.amount` is validated but the full on-chain balance is claimed.
+    if (transaction.type === "ClaimRewards") {
+      if (transaction.amount <= 0n) {
+        throw new ValidationError("INVALID_AMOUNT", "Claim amount must be greater than zero.");
+      }
+      if (rewardsOnChain <= 0n) {
+        throw new ValidationError(
+          "INVALID_AMOUNT",
+          "No rewards are available to claim for this stake key."
+        );
+      }
+      if (transaction.amount > rewardsOnChain) {
+        throw new ValidationError(
+          "INVALID_AMOUNT",
+          `ClaimRewards amount (${transaction.amount} lovelace) exceeds on-chain rewards (${rewardsOnChain} lovelace).`
+        );
+      }
+      if (transaction.amount !== rewardsOnChain) {
+        logger.debug(
+          "SignService: Cardano requires draining the full reward balance; claiming entire balance",
+          { requested: transaction.amount.toString(), claimed: rewardsOnChain.toString() }
+        );
+      }
+    }
+
+    return { protocolParams, seedPage, ttl, isStakeKeyRegistered, rewardsOnChain };
+  }
+
+  /** Paginates the payment address's UTXOs (seeded with page 1) and selects inputs. */
+  function selectInputs(
+    transaction: Transaction,
+    fee: bigint,
+    protocolParams: BlockfrostProtocolParams,
+    isStakeKeyRegistered: boolean,
+    seedPage: BlockfrostUtxo[]
+  ): Promise<SelectedUtxos> {
+    const paymentAddress = transaction.account as string;
+    const { target } = computeSelectionTarget(
+      transaction,
+      fee,
+      protocolParams,
+      isStakeKeyRegistered,
+      paymentAddress
+    );
+    return selectUtxosPaged(target, {
+      fetchPage: (page, count) => rpcClient.getUtxos(paymentAddress, page, count),
+      seedPage,
+      logger,
     });
   }
 
@@ -171,43 +286,43 @@ export function createSignService(
 
       checkIfPaymentAddressIsValid(transaction.account);
 
-      const rewardAccount = buildRewardAccount(stakeKeyHashHex);
-      const [protocolParams, utxos, latestBlock, existingAccount] = await Promise.all([
-        rpcClient.getProtocolParams(),
-        rpcClient.getUtxos(transaction.account),
-        rpcClient.getLatestBlock(),
-        transaction.type === "Delegate" || transaction.type === "Undelegate"
-          ? rpcClient.getAccountOrNull(rewardAccount)
-          : Promise.resolve(null),
-      ]);
-
-      // #8: Sanity-check the slot number before computing the TTL.
-      if (latestBlock.slot <= 0) {
+      // #4: the payment and staking keys must correspond to transaction.account,
+      // otherwise the witnesses won't satisfy the tx and the node rejects it.
+      const addrCreds = getBaseAddressCredentials(transaction.account);
+      if (addrCreds.paymentKeyHashHex.toLowerCase() !== paymentPubKey.hash().hex().toLowerCase()) {
         throw new SigningError(
           "INVALID_SIGNING_ARGS",
-          "Received an invalid slot number from the node. Cannot compute a safe TTL."
+          "paymentPrivateKey does not correspond to transaction.account (payment credential mismatch)."
         );
       }
-      const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
-      // Stake key is considered registered only when the account is actively delegating.
-      // active: false covers both "never registered" and "deregistered" cases — both need StakeRegistration.
-      // active: null is treated identically to false (conservative — include registration cert).
-      const isStakeKeyRegistered = existingAccount?.active === true;
-      const rewardsAvailableToSweep =
-        transaction.type === "Undelegate"
-          ? BigInt(existingAccount?.withdrawable_amount ?? "0")
-          : 0n;
+      if (addrCreds.stakeKeyHashHex.toLowerCase() !== stakeKeyHashHex.toLowerCase()) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "stakingPrivateKey does not correspond to transaction.account (stake credential mismatch)."
+        );
+      }
+
+      const { protocolParams, seedPage, ttl, isStakeKeyRegistered, rewardsOnChain } =
+        await resolveChainState(transaction, stakeKeyHashHex);
+
+      const selected = await selectInputs(
+        transaction,
+        fee.total,
+        protocolParams,
+        isStakeKeyRegistered,
+        seedPage
+      );
 
       const body = buildBody(
         transaction,
         transaction.account,
-        utxos,
+        selected,
         fee.total,
         protocolParams,
         stakeKeyHashHex,
         ttl,
         isStakeKeyRegistered,
-        rewardsAvailableToSweep
+        rewardsOnChain
       );
 
       const txBodyHash = body.hash();
@@ -260,42 +375,39 @@ export function createSignService(
         Ed25519PublicKeyHex(preHashArgs.stakingPublicKey)
       );
       const stakeKeyHashHex = stakingPubKey.hash().hex();
-      const rewardAccount = buildRewardAccount(stakeKeyHashHex);
 
-      const [protocolParams, utxos, latestBlock, existingAccount] = await Promise.all([
-        rpcClient.getProtocolParams(),
-        rpcClient.getUtxos(preHashArgs.transaction.account),
-        rpcClient.getLatestBlock(),
-        preHashArgs.transaction.type === "Delegate" || preHashArgs.transaction.type === "Undelegate"
-          ? rpcClient.getAccountOrNull(rewardAccount)
-          : Promise.resolve(null),
-      ]);
-
-      // #8: Sanity-check the slot number before computing the TTL.
-      if (latestBlock.slot <= 0) {
+      // #4: the staking key must match the address's stake credential. The payment
+      // key is not available in the external-signing flow — its match against the
+      // address is enforced later in compile().
+      const addrCreds = getBaseAddressCredentials(preHashArgs.transaction.account);
+      if (addrCreds.stakeKeyHashHex.toLowerCase() !== stakeKeyHashHex.toLowerCase()) {
         throw new SigningError(
           "INVALID_SIGNING_ARGS",
-          "Received an invalid slot number from the node. Cannot compute a safe TTL."
+          "stakingPublicKey does not correspond to transaction.account (stake credential mismatch)."
         );
       }
-      const ttl = latestBlock.slot + TTL_VALIDITY_SLOTS;
-      // active: null is treated identically to false — include registration cert (conservative).
-      const isStakeKeyRegistered = existingAccount?.active === true;
-      const rewardsAvailableToSweep =
-        preHashArgs.transaction.type === "Undelegate"
-          ? BigInt(existingAccount?.withdrawable_amount ?? "0")
-          : 0n;
+
+      const { protocolParams, seedPage, ttl, isStakeKeyRegistered, rewardsOnChain } =
+        await resolveChainState(preHashArgs.transaction, stakeKeyHashHex);
+
+      const selected = await selectInputs(
+        preHashArgs.transaction,
+        preHashArgs.fee.total,
+        protocolParams,
+        isStakeKeyRegistered,
+        seedPage
+      );
 
       const body = buildBody(
         preHashArgs.transaction,
         preHashArgs.transaction.account,
-        utxos,
+        selected,
         preHashArgs.fee.total,
         protocolParams,
         stakeKeyHashHex,
         ttl,
         isStakeKeyRegistered,
-        rewardsAvailableToSweep
+        rewardsOnChain
       );
 
       // Return the tx body hash — the exact 32-byte preimage the external signer must sign with Ed25519.
@@ -355,6 +467,25 @@ export function createSignService(
       const stakeKeyHashHex = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(stakingVKeyHex))
         .hash()
         .hex();
+
+      // #4: both witness keys must correspond to transaction.account. In the MPC flow
+      // this is the first point the payment key is known, so it's validated here.
+      const addrCreds = getBaseAddressCredentials(transaction.account);
+      const paymentKeyHashHex = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(paymentVKeyHex))
+        .hash()
+        .hex();
+      if (addrCreds.paymentKeyHashHex.toLowerCase() !== paymentKeyHashHex.toLowerCase()) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "paymentVKeyHex does not correspond to transaction.account (payment credential mismatch)."
+        );
+      }
+      if (addrCreds.stakeKeyHashHex.toLowerCase() !== stakeKeyHashHex.toLowerCase()) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "stakingVKeyHex does not correspond to transaction.account (stake credential mismatch)."
+        );
+      }
 
       // #9: When compileArgs.signArgs came from prehash(), verify the staking key matches.
       const prehashArgs = isCardanoPrehashArgs(compileArgs.signArgs)

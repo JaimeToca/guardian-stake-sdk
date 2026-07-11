@@ -1,4 +1,4 @@
-import { fetchOrError, NoopLogger, ApiError } from "@guardian-sdk/sdk";
+import { fetchOrError, NoopLogger, ApiError, ConfigError } from "@guardian-sdk/sdk";
 import { hexStringToBuffer } from "@cardano-sdk/util";
 import type { Logger } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "./blockfrost-rpc-client-contract";
@@ -11,6 +11,7 @@ import type {
   BlockfrostProtocolParams,
   BlockfrostUtxo,
 } from "./blockfrost-rpc-types";
+import { parsePoolId } from "../validations";
 
 /**
  * Client for the Blockfrost REST API (https://blockfrost.io).
@@ -22,11 +23,27 @@ import type {
 const DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
 const DEFAULT_POOLS_PAGE_SIZE = 20;
 
+function validateBaseUrl(url: string): void {
+  try {
+    const { protocol } = new URL(url);
+    if (protocol !== "https:" && protocol !== "http:") {
+      throw new ConfigError(
+        "INVALID_RPC_URL",
+        `Invalid baseUrl: only "https:" and "http:" protocols are allowed, got "${protocol}".`
+      );
+    }
+  } catch (err) {
+    if (err instanceof ConfigError) throw err;
+    throw new ConfigError("INVALID_RPC_URL", `Invalid baseUrl: "${url}" is not a valid URL.`);
+  }
+}
+
 export function createBlockfrostRpcClient(
   apiKey: string | undefined,
   logger: Logger = new NoopLogger(),
   baseUrl: string = DEFAULT_BASE_URL
 ): BlockfrostRpcClientContract {
+  validateBaseUrl(baseUrl);
   const headers: Record<string, string> = apiKey ? { project_id: apiKey } : {};
 
   return {
@@ -54,6 +71,7 @@ export function createBlockfrostRpcClient(
     },
 
     async getPool(poolId: string): Promise<BlockfrostPoolExtended> {
+      parsePoolId(poolId);
       const url = `${baseUrl}/pools/${poolId}`;
       logger.debug("BlockfrostRpcClient: fetching pool", { poolId });
 
@@ -61,6 +79,7 @@ export function createBlockfrostRpcClient(
     },
 
     async getPoolMetadata(poolId: string): Promise<BlockfrostPoolMetadata | null> {
+      parsePoolId(poolId);
       const url = `${baseUrl}/pools/${poolId}/metadata`;
       logger.debug("BlockfrostRpcClient: fetching pool metadata", { poolId });
 
@@ -108,19 +127,23 @@ export function createBlockfrostRpcClient(
       }
     },
 
-    async getUtxos(paymentAddress: string): Promise<BlockfrostUtxo[]> {
+    // Thin single-page fetcher. `order: "desc"` gives a stable ordering so fee
+    // estimation and signing see the same UTXOs. Pagination policy (how many pages
+    // to pull) lives in the selection layer (`selectUtxosPaged`), not here.
+    async getUtxos(paymentAddress: string, page = 1, count = 100): Promise<BlockfrostUtxo[]> {
       const url = `${baseUrl}/addresses/${paymentAddress}/utxos`;
-      logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress });
+      logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress, page, count });
       const start = Date.now();
 
       const utxos = await fetchOrError<BlockfrostUtxo[]>({
         url,
         method: "GET",
         headers,
-        params: { count: 100, order: "desc" }, // Iterate with pagination if more than 100 UTXOs (unlikely for a payment address, but good to be safe)
+        params: { count, page, order: "desc" },
       });
 
       logger.debug("BlockfrostRpcClient: UTXOs fetched", {
+        page,
         count: utxos.length,
         ms: Date.now() - start,
       });

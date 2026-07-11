@@ -47,3 +47,7 @@ docs/index.html
 
 # Misc
 .iterm2-project
+
+# Local Claude Code agents and agent memory (not shared via git)
+.claude/agents/
+.claude/agent-memory/
