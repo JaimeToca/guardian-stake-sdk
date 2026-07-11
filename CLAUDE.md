@@ -78,6 +78,16 @@ Both factory functions wire all services and return a plain object implementing 
 
 **Adding a new chain**: add a `.claude/rules/<chain>.md` file alongside a new `packages/<chain>/` directory.
 
+## Model Routing (subagents)
+
+When spawning subagents via the Agent tool, pick the cheapest model that fits the task — don't inherit the orchestrator's model out of habit.
+
+- **Haiku** — data-gathering with no judgment: file search, grep, reads, counting, "find where X is defined", listing usages, summarizing existing code. Default `Explore` and simple `general-purpose` lookups to Haiku.
+- **Sonnet** — writing or refactoring code, multi-file edits, synthesis across several sources, and most `chain-debugger` / `ts-blockchain-reviewer` / `test-and-samples-runner` work.
+- **Opus** — architecture decisions, subtle multi-step reasoning, and `security-auditor` runs (transaction construction, key handling, fund-safety) where a wrong answer is expensive.
+
+This is guidance, not a hard router: match the model to the work, and reserve Opus for tasks where the cost of being wrong justifies it.
+
 ## Project State
 
 Facts that don't live in code but matter for day-to-day decisions:
