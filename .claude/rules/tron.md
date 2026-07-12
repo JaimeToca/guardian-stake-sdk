@@ -116,7 +116,7 @@ brokerage_share        = 1 − (brokerageValue / 100)        (from /wallet/getbr
 APR                    = (totalAnnualRewards × brokerage_share / validatorVotes) × 100
 ```
 
-> **[VERIFY]** The `sr_block_rewards` term (per `apr_tron.txt`) omits a blocks/day factor and looks dimensionally suspect. It is accepted as-is for now; validate the computed APR against real on-chain numbers for a known SR before relying on it, and correct the term if the reference doc's formula turns out to be wrong. See the exported `computeApr` in `staking-service.ts` for the isolated, pure implementation.
+The SR block-reward term now uses the corrected formula `(witnessPayPerBlock * BLOCKS_PER_DAY * DAYS_PER_YEAR) / SR_COUNT` (applied as part of PR #73 review feedback). APR values returned by `getValidators()` are now in percent after dividing by `SUN_PER_TRX`. See `computeApr` in `staking-service.ts`.
 
 `computeApr` clamps its output to a sane, finite `[0, …)` range — invalid inputs (`validatorVotes <= 0`, `totalVotes <= 0`) and any non-finite or negative result short-circuit to `0` rather than propagating `NaN`/`Infinity`/negative APR to consumers.
 

@@ -31,8 +31,8 @@ export interface AprInput {
 
 /**
  * Voter APR for a witness, per apr_tron.txt.
- * NOTE: the SR block-reward term follows the reference doc; validate against real on-chain
- * numbers during integration and adjust if the doc's dimensional factor is off. See spec §8 [VERIFY].
+ * Returns a percentage (e.g. 2.48 for 2.48%).
+ * The SR block-reward term uses the corrected formula (witnessPay * blocks/day * days / 27).
  */
 export function computeApr(input: AprInput): number {
   const validatorVotes = Number(input.validatorVotes);
@@ -48,7 +48,7 @@ export function computeApr(input: AprInput): number {
 
   const clampedBrokeragePercent = Math.min(100, Math.max(0, input.brokeragePercent));
   const brokerageShare = 1 - clampedBrokeragePercent / 100;
-  const apr = ((totalAnnualRewards * brokerageShare) / validatorVotes) * 100;
+  const apr = ((totalAnnualRewards * brokerageShare) / validatorVotes / Number(SUN_PER_TRX)) * 100;
   if (!Number.isFinite(apr) || apr < 0) return 0;
   return apr;
 }

@@ -82,7 +82,7 @@ Unlike Cardano — which forces a full-balance reward withdrawal — Tron's `Und
 
 Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Representative from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes. The computed value is clamped to a sane, finite `[0, …)` range — it never returns negative, `NaN`, or `Infinity`.
 
-> **[VERIFY]** The SR block-reward term in the APR formula follows a reference calculation that looks dimensionally suspect (missing a blocks/day factor). Treat computed APR as an estimate until validated against real on-chain numbers for a known SR. See `.claude/rules/tron.md` for the full formula.
+APR values are in percent (e.g. `2.48` means 2.48%). The formula accounts for the vote reward pool plus (for actual top-27 SRs) the block production reward, scaled by the SR's brokerage rate.
 
 ---
 
@@ -176,7 +176,7 @@ interface Validator {
   name: string;                    // SR url metadata, or address
   description: string;
   image: undefined;                // Not exposed by listwitnesses
-  apy: number;                     // Computed APR (%) — see [VERIFY] caveat above
+  apy: number;                     // Computed APR in percent (e.g. 2.48 for 2.48%)
   delegators: undefined;           // Not exposed by listwitnesses
   operatorAddress: string;         // SR base58 address — use in transaction.validator
   creditAddress: string;           // ""

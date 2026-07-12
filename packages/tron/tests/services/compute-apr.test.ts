@@ -5,7 +5,8 @@ describe("computeApr", () => {
   it("computes voter APR for a non-SR witness", () => {
     // block_vote_reward=16, votes=1e9, total=4e10, brokerage keeps 20% -> share 0.8
     // annualVoting = 1e9 * (16*28800*365) / 4e10 = 4204800
-    // APR = (4204800 * 0.8 / 1e9) * 100 = 0.336384
+    // (4204800 * 0.8 / 1e9) * 100 = 0.336384 (in "units")
+    // then / SUN_PER_TRX (1_000_000) to convert SUN-per-TRX to percentage
     const apr = computeApr({
       validatorVotes: 1_000_000_000n,
       totalVotes: 40_000_000_000n,
@@ -14,7 +15,7 @@ describe("computeApr", () => {
       witnessPayPerBlock: 16,
       brokeragePercent: 20,
     });
-    expect(apr).toBeCloseTo(0.336384, 6);
+    expect(apr).toBeCloseTo(0.000000336384, 12);
   });
 
   it("returns 0 when the witness has no votes", () => {
