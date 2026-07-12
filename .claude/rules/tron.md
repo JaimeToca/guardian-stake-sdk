@@ -129,37 +129,50 @@ TronWeb does the crypto; the interface matches BSC/Cardano.
 All amounts in SUN. `TronDelegateTransaction`/`TronUndelegateTransaction` add the required `resource` field on top of the shared `Delegate`/`Undelegate` types; `Vote` is a new shared `Transaction` type requiring `validator` (the SR).
 
 ```ts
-import { GuardianSDK } from "@guardian-sdk/sdk";
+import { GuardianSDK, chains } from "@guardian-sdk/tron";
 import { tron, type TronDelegateTransaction, type TronUndelegateTransaction } from "@guardian-sdk/tron";
-import type { VoteTransaction, ClaimDelegateTransaction, ClaimRewardsTransaction } from "@guardian-sdk/sdk";
+import type { VoteTransaction, ClaimDelegateTransaction, ClaimRewardsTransaction, SigningWithPrivateKey } from "@guardian-sdk/sdk";
 
 const sdk = new GuardianSDK([tron({ rpcUrl: "https://<your-tron-fullnode>" })]); // FullNode HTTP, no TronGrid
-const chain = sdk.getChainInfo();
+const ADDRESS = "TYourTronBase58Address...";
+const privateKey = process.env.TRON_PRIVATE_KEY!;
 
 // 1. FREEZE — stake 100 TRX for BANDWIDTH. Gains resource + Tron Power. Earns NOTHING yet.
 const freeze: TronDelegateTransaction = {
-  type: "Delegate", chain, amount: 100_000_000n, isMaxAmount: false, resource: "BANDWIDTH",
+  type: "Delegate", chain: chains.tronMainnet, amount: 100_000_000n, isMaxAmount: false, resource: "BANDWIDTH", account: ADDRESS,
 };
-await sdk.broadcast(await sdk.sign({ transaction: freeze, fee: await sdk.estimateFee(freeze), nonce: 0, privateKey }));
+const freezeFee = await sdk.estimateFee(freeze);
+const freezeRawTx = await sdk.sign({ transaction: freeze, fee: freezeFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, freezeRawTx);
 // getDelegations() → [{ status: "Frozen", amount: 100_000_000n, validator: <placeholder> }]
 
 // 2. VOTE — allocate 100 votes (100 TRX of Tron Power) to a Super Representative. NOW earning rewards.
-const vote: VoteTransaction = { type: "Vote", chain, validator: "T<SR-address>", amount: 100_000_000n };
-await sdk.broadcast(await sdk.sign({ transaction: vote, fee: await sdk.estimateFee(vote), nonce: 0, privateKey }));
+const vote: VoteTransaction = { type: "Vote", chain: chains.tronMainnet, validator: "T<SR-address>", amount: 100_000_000n, account: ADDRESS };
+const voteFee = await sdk.estimateFee(vote);
+const voteRawTx = await sdk.sign({ transaction: vote, fee: voteFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, voteRawTx);
 // getDelegations() → [{ status: "Active", amount: 100_000_000n, validator: <real SR> }]
 
 // 3. UNFREEZE — partial unstake of 40 TRX. Starts the 14-day unbonding clock.
 const unfreeze: TronUndelegateTransaction = {
-  type: "Undelegate", chain, amount: 40_000_000n, isMaxAmount: false, resource: "BANDWIDTH",
+  type: "Undelegate", chain: chains.tronMainnet, amount: 40_000_000n, isMaxAmount: false, resource: "BANDWIDTH", account: ADDRESS,
 };
-await sdk.broadcast(await sdk.sign({ transaction: unfreeze, fee: await sdk.estimateFee(unfreeze), nonce: 0, privateKey }));
+const unfreezeFee = await sdk.estimateFee(unfreeze);
+const unfreezeRawTx = await sdk.sign({ transaction: unfreeze, fee: unfreezeFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, unfreezeRawTx);
 // getDelegations() → Active 60 TRX + Pending 40 TRX (pendingUntil = now + 14d)
 
 // 4a. CLAIM PRINCIPAL — after 14 days, withdraw the matured unfrozen TRX (WithdrawExpireUnfreeze).
-const claimPrincipal: ClaimDelegateTransaction = { type: "ClaimDelegate", chain, amount: 0n, validator: "T<SR-address>", index: 0n };
+const claimPrincipal: ClaimDelegateTransaction = { type: "ClaimDelegate", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", index: 0n, account: ADDRESS };
+const claimPrincipalFee = await sdk.estimateFee(claimPrincipal);
+const claimPrincipalRawTx = await sdk.sign({ transaction: claimPrincipal, fee: claimPrincipalFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, claimPrincipalRawTx);
 
 // 4b. CLAIM REWARDS — independent, anytime rewards accrued (24h cooldown) (WithdrawBalance).
-const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain, amount: 0n, validator: "T<SR-address>" };
+const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", account: ADDRESS };
+const claimRewardsFee = await sdk.estimateFee(claimRewards);
+const claimRewardsRawTx = await sdk.sign({ transaction: claimRewards, fee: claimRewardsFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, claimRewardsRawTx);
 ```
 
 The full runnable version of this flow is `examples/tron-native-staking-sample.ts`.
