@@ -1,5 +1,5 @@
 import type { Logger } from "@guardian-sdk/sdk";
-import { NoopLogger, fetchOrError } from "@guardian-sdk/sdk";
+import { NoopLogger, fetchOrError, ApiError } from "@guardian-sdk/sdk";
 import JSONbig from "json-bigint";
 import type { TronRpcClientContract } from "./tron-rpc-client-contract";
 import type {
@@ -161,8 +161,9 @@ export function createTronRpcClient(
       if (raw.result !== true && !raw.txid) {
         const reason = decodeHexMessage(raw.message);
         logger.error("Tron broadcast rejected", { code: raw.code, message: reason });
-        throw new Error(
-          `Tron broadcast rejected: ${raw.code ?? "FAILED"}${reason ? ` — ${reason}` : ""}`
+        throw new ApiError(
+          `Tron broadcast rejected: ${raw.code ?? "FAILED"}${reason ? ` — ${reason}` : ""}`,
+          { type: "ServerResponseError" }
         );
       }
       return raw.txid ?? "";
