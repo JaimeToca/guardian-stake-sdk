@@ -77,7 +77,7 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 |---|---|---|---|---|
 | [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) | None |
 | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Cardano | Available (alpha) | [README](./packages/cardano/README.md) | None |
-| [`@guardian-sdk/tron`](./packages/tron/README.md) | Tron | Available (alpha) | [README](./packages/tron/README.md) | None |
+| [`@guardian-sdk/tron`](./packages/tron/README.md) | Tron | Available | [README](./packages/tron/README.md) | None |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — | — |
 | `@guardian-sdk/sui` | SUI | Planned | — | — |
 | `@guardian-sdk/solana` | Solana | Planned | — | — |
@@ -215,7 +215,7 @@ interface Delegation {
   id: string;
   validator: Validator;
   amount: bigint;               // Current value in wei
-  status: DelegationStatus;    // Active | Pending | Claimable | Inactive
+  status: DelegationStatus;    // Active | Pending | Claimable | Inactive | Frozen (Tron only — frozen but not yet voted)
   delegationIndex: bigint;     // Required for ClaimDelegate transactions
   pendingUntil: number;        // Unix timestamp (ms) when unbonding completes
 }
@@ -293,11 +293,17 @@ const nonce = await sdk.getNonce(chains.bscMainnet, "0xYourAddress");
 
 ### `estimateFee(transaction)`
 
-Simulates a transaction on-chain and returns the estimated gas fee.
+Estimates the fee for a staking transaction. The concrete `Fee` shape returned is chain-specific — `GasFee` on BSC, `UtxoFee` on Cardano, `ResourceFee` on Tron:
+
+- [BNB Smart Chain — estimateFee](./packages/bsc/README.md#estimatefee)
+- [Cardano — estimateFee](./packages/cardano/README.md#estimatefee)
+- [Tron — estimateFee](./packages/tron/README.md#estimatefee)
 
 **Returns:** `Promise<Fee>`
 
 ```typescript
+type Fee = GasFee | UtxoFee | ResourceFee;
+
 interface GasFee {
   type: "GasFee";
   gasPrice: bigint;   // In wei
@@ -321,7 +327,7 @@ const fee = await sdk.estimateFee({
 console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
-Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `ClaimDelegate` (BSC), `ClaimRewards` (Cardano, Tron), `Vote` (Tron). See the [BSC README](./packages/bsc/README.md#estimatefee), [Cardano README](./packages/cardano/README.md#estimatefee), or [Tron README](./packages/tron/README.md#estimatefee) for the full shape of each.
+Transaction types: `Delegate`, `Undelegate`, `Redelegate` (BSC, Cardano), `ClaimDelegate` (BSC, Tron), `ClaimRewards` (Cardano, Tron), `Vote` (Tron). See the [BSC README](./packages/bsc/README.md#estimatefee), [Cardano README](./packages/cardano/README.md#estimatefee), or [Tron README](./packages/tron/README.md#estimatefee) for the full shape of each.
 
 ---
 
@@ -363,7 +369,7 @@ interface PrehashResult {
 
 **`compile` returns:** `Promise<string>` — the final signed raw transaction.
 
-`compile` accepts a `signature` field — a raw signature string produced by your external signer. The format is chain-specific (e.g. hex for BSC, base64 for Solana). Each chain package handles the decoding internally.
+`compile` accepts a `signature` field — a raw signature string produced by your external signer. The format is chain-specific (e.g. hex for BSC and Tron; Cardano expects the 4-part `paymentSigHex:stakingVKeyHex:stakingSigHex:paymentVKeyHex` format). Each chain package handles the decoding internally.
 
 ```typescript
 // Step 1 — serialize
@@ -722,7 +728,7 @@ Planned integrations follow the same architecture — each chain is an independe
 |---|---|---|
 | BNB Smart Chain | [`@guardian-sdk/bsc`](./packages/bsc/README.md) | Available |
 | SUI | `@guardian-sdk/sui` | Planned |
-| Tron | [`@guardian-sdk/tron`](./packages/tron/README.md) | Available (alpha) |
+| Tron | [`@guardian-sdk/tron`](./packages/tron/README.md) | Available |
 | Solana | `@guardian-sdk/solana` | Planned |
 | Cardano | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Available (alpha) |
 | Ethereum | `@guardian-sdk/ethereum` | Planned |
