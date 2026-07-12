@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeApr } from "../../src/tron-chain/apr/apr-calculator";
+import { computeApr } from "../../src/tron-chain/services/staking-service";
 
 describe("computeApr", () => {
   it("computes voter APR for a non-SR witness", () => {

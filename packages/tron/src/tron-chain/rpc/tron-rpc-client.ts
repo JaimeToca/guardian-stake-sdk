@@ -1,5 +1,5 @@
 import type { Logger } from "@guardian-sdk/sdk";
-import { NoopLogger, ApiError } from "@guardian-sdk/sdk";
+import { NoopLogger, fetchOrError } from "@guardian-sdk/sdk";
 import JSONbig from "json-bigint";
 import type { TronRpcClientContract } from "./tron-rpc-client-contract";
 import type {
@@ -11,30 +11,36 @@ import type {
 
 const jsonBig = JSONbig({ useNativeBigInt: true });
 
+/**
+ * FullNode balances/votes are int64 SUN values that can exceed Number.MAX_SAFE_INTEGER, so
+ * parse the raw body with json-bigint instead of axios's default JSON.parse (which would
+ * silently lose precision). Passed as axios `transformResponse` on every call.
+ */
+const parseBigIntResponse = (raw: unknown): unknown =>
+  typeof raw === "string" && raw.length > 0 ? jsonBig.parse(raw) : raw;
+
 const num = (v: bigint | number | undefined): number =>
   typeof v === "number" ? v : typeof v === "bigint" ? Number(v) : 0;
 const big = (v: bigint | number | undefined): bigint =>
   typeof v === "bigint" ? v : typeof v === "number" ? BigInt(Math.trunc(v)) : 0n;
 
+/** Tron encodes on-chain failure reasons as a hex string in `message`; decode to a readable error. */
+const decodeHexMessage = (message: string | undefined): string | undefined => {
+  if (!message) return undefined;
+  try {
+    return Buffer.from(message, "hex").toString("utf8") || undefined;
+  } catch {
+    return message;
+  }
+};
+
 export function createTronRpcClient(
   rpcUrl: string,
   logger: Logger = new NoopLogger()
 ): TronRpcClientContract {
-  async function post(path: string, body?: unknown): Promise<unknown> {
-    const res = await fetch(`${rpcUrl}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-    if (!res.ok)
-      throw new ApiError("Tron RPC error", { status: res.status, type: "ServerResponseError" });
-    const text = await res.text();
-    return jsonBig.parse(text) as unknown;
-  }
-
   return {
     async getAccount(address) {
-      const raw = (await post("/wallet/getaccount", { address, visible: true })) as {
+      const raw = await fetchOrError<{
         balance?: bigint | number;
         frozenV2?: { type?: string; amount?: bigint | number }[];
         unfrozenV2?: {
@@ -42,7 +48,12 @@ export function createTronRpcClient(
           unfreeze_expire_time?: bigint | number;
         }[];
         votes?: { vote_address: string; vote_count: bigint | number }[];
-      };
+      }>({
+        url: `${rpcUrl}/wallet/getaccount`,
+        method: "POST",
+        data: { address, visible: true },
+        transformResponse: [parseBigIntResponse],
+      });
       const frozen = (raw.frozenV2 ?? [])
         .filter((f) => f.type !== "TRON_POWER" && big(f.amount) > 0n)
         .map((f) => ({
@@ -66,32 +77,47 @@ export function createTronRpcClient(
       return account;
     },
     async getAccountResources(address) {
-      const raw = (await post("/wallet/getaccountresource", { address, visible: true })) as {
+      const raw = await fetchOrError<{
         freeNetLimit?: bigint | number;
         freeNetUsed?: bigint | number;
         NetLimit?: bigint | number;
         NetUsed?: bigint | number;
+      }>({
+        url: `${rpcUrl}/wallet/getaccountresource`,
+        method: "POST",
+        data: { address, visible: true },
+        transformResponse: [parseBigIntResponse],
+      });
+      const resources: TronAccountResources = {
+        freeNetLimit: big(raw.freeNetLimit),
+        freeNetUsed: big(raw.freeNetUsed),
+        netLimit: big(raw.NetLimit),
+        netUsed: big(raw.NetUsed),
       };
-      const freeBandwidth = big(Math.max(0, num(raw.freeNetLimit) - num(raw.freeNetUsed)));
-      const stakedBandwidth = big(Math.max(0, num(raw.NetLimit) - num(raw.NetUsed)));
-      const resources: TronAccountResources = { freeBandwidth, stakedBandwidth };
       return resources;
     },
     async getReward(address) {
-      const raw = (await post("/wallet/getReward", { address, visible: true })) as {
-        reward?: bigint | number;
-      };
+      const raw = await fetchOrError<{ reward?: bigint | number }>({
+        url: `${rpcUrl}/wallet/getReward`,
+        method: "POST",
+        data: { address, visible: true },
+        transformResponse: [parseBigIntResponse],
+      });
       return big(raw.reward);
     },
     async listWitnesses() {
-      const raw = (await post("/wallet/listwitnesses")) as {
+      const raw = await fetchOrError<{
         witnesses?: {
           address: string;
           voteCount?: bigint | number;
           url?: string;
           isJobs?: boolean;
         }[];
-      };
+      }>({
+        url: `${rpcUrl}/wallet/listwitnesses`,
+        method: "POST",
+        transformResponse: [parseBigIntResponse],
+      });
       return (raw.witnesses ?? []).map<TronWitness>((w) => ({
         address: w.address,
         voteCount: big(w.voteCount),
@@ -100,29 +126,44 @@ export function createTronRpcClient(
       }));
     },
     async getChainParameters() {
-      const raw = (await post("/wallet/getchainparameters")) as {
+      const raw = await fetchOrError<{
         chainParameter?: { key: string; value?: bigint | number }[];
-      };
+      }>({
+        url: `${rpcUrl}/wallet/getchainparameters`,
+        method: "POST",
+        transformResponse: [parseBigIntResponse],
+      });
       return Object.fromEntries((raw.chainParameter ?? []).map((p) => [p.key, num(p.value)]));
     },
     async getBrokerage(address) {
-      const raw = (await post("/wallet/getbrokerage", { address, visible: true })) as {
-        brokerage?: bigint | number;
-      };
+      const raw = await fetchOrError<{ brokerage?: bigint | number }>({
+        url: `${rpcUrl}/wallet/getbrokerage`,
+        method: "POST",
+        data: { address, visible: true },
+        transformResponse: [parseBigIntResponse],
+      });
       return num(raw.brokerage);
     },
     async broadcast(signedTxJson) {
-      const raw = (await post("/wallet/broadcasttransaction", JSON.parse(signedTxJson))) as {
+      const raw = await fetchOrError<{
         result?: boolean;
         txid?: string;
         code?: string;
         message?: string;
-      };
+      }>({
+        url: `${rpcUrl}/wallet/broadcasttransaction`,
+        method: "POST",
+        data: JSON.parse(signedTxJson),
+        transformResponse: [parseBigIntResponse],
+      });
+      // The FullNode returns HTTP 200 even for a rejected broadcast, so fetchOrError won't throw.
+      // Surface the node's own code + decoded reason instead of masking it behind a generic error.
       if (raw.result !== true && !raw.txid) {
-        logger.error("Tron broadcast failed", { code: raw.code, message: raw.message });
-        throw new ApiError(`Tron broadcast failed: ${raw.code ?? "unknown"}`, {
-          type: "ServerResponseError",
-        });
+        const reason = decodeHexMessage(raw.message);
+        logger.error("Tron broadcast rejected", { code: raw.code, message: reason });
+        throw new Error(
+          `Tron broadcast rejected: ${raw.code ?? "FAILED"}${reason ? ` — ${reason}` : ""}`
+        );
       }
       return raw.txid ?? "";
     },

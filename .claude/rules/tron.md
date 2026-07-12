@@ -9,14 +9,13 @@ globs: packages/tron/**
 - `packages/tron/src/tron-chain/index.ts` — `tron()` factory
 - `packages/tron/src/chain/index.ts` — `tronMainnet` chain definition and `chains` registry
 - `packages/tron/src/tron-chain/services/` — Service factory functions:
-  - `createStakingService` — Super Representatives + computed APR (cached), resource-granular `getDelegations`
+  - `createStakingService` — Super Representatives + computed APR (cached), resource-granular `getDelegations`; the pure `computeApr(AprInput)` formula lives (and is exported) here
   - `createBalanceService` — `Available`/`Staked`/`Pending`/`Claimable`/`Rewards`, SUN
   - `createFeeService` — resource-based estimate (`ResourceFee`)
   - `createSignService` — sign / prehash / compile via TronWeb
   - `createBroadcastService` — `POST /wallet/broadcasttransaction`
-- `packages/tron/src/tron-chain/rpc/` — `createTronRpcClient` — thin FullNode HTTP client (`getaccount`, `getaccountresource`, `getReward`, `listwitnesses`, `getchainparameters`, `getbrokerage`, `getnowblock`, `broadcasttransaction`)
+- `packages/tron/src/tron-chain/rpc/` — `createTronRpcClient` — thin FullNode HTTP client over the shared `fetchOrError` (axios) helper with a json-bigint `transformResponse` for int64 SUN precision (`getaccount`, `getaccountresource`, `getReward`, `listwitnesses`, `getchainparameters`, `getbrokerage`, `getnowblock`, `broadcasttransaction`). Maps responses verbatim — e.g. `getAccountResources` returns raw `freeNetLimit`/`freeNetUsed`/`netLimit`/`netUsed`; deriving available bandwidth is the fee service's job. A rejected broadcast (FullNode returns HTTP 200 with `result:false`) throws the node's real `code` + decoded hex `message`, not a wrapped `ApiError`.
 - `packages/tron/src/tron-chain/tronweb/tronweb-factory.ts` — `createTronWebFactory(fullHost)` — builds and signs via TronWeb's `transactionBuilder`/`trx.sign`
-- `packages/tron/src/tron-chain/apr/apr-calculator.ts` — `computeApr(AprInput)` — pure, unit-testable APR formula
 - `packages/tron/src/tron-chain/tx/` — Transaction construction:
   - `tx-builder.ts` — `buildUnsignedTx(tronWeb, tx, ownerAddress)` narrows on `tx.type`, calls the matching TronWeb builder
   - `tron-types.ts` — `TronResource`, `TronDelegateTransaction`, `TronUndelegateTransaction`, `SUN_PER_TRX`, `TronSignArgs`, `UnsignedTronTx`
@@ -79,7 +78,7 @@ Claiming one never claims the other. A wallet UI must offer both actions separat
 
 ## Fee estimation is resource-aware, floored at 1 SUN/point
 
-`createFeeService.estimateFee` computes bandwidth price as `BigInt(Math.max(1, params.getTransactionFee ?? 1000))` — floored at 1 SUN/point so a chain returning `getTransactionFee: 0` (or omitting it) never produces a free-but-wrong estimate. When `getAccountResources(account).freeBandwidth + stakedBandwidth` already covers `ESTIMATED_TX_BANDWIDTH` (350 points), the op is genuinely free (`total: 0n`); otherwise the shortfall is burned at the floored price. `ClaimDelegate`/`ClaimRewards` without an `account` fall back to a conservative full burn (no resources to check).
+`createFeeService.estimateFee` computes bandwidth price as `BigInt(Math.max(1, params.getTransactionFee ?? 1000))` — floored at 1 SUN/point so a chain returning `getTransactionFee: 0` (or omitting it) never produces a free-but-wrong estimate. The fee service derives available bandwidth from the raw `getAccountResources` fields (`(freeNetLimit − freeNetUsed) + (netLimit − netUsed)`, each floored at 0); when that already covers `ESTIMATED_TX_BANDWIDTH` (350 points), the op is genuinely free (`total: 0n`); otherwise the shortfall is burned at the floored price. `ClaimDelegate`/`ClaimRewards` without an `account` fall back to a conservative full burn (no resources to check).
 
 ## Partial unstaking is allowed (contrast Cardano) — but `isMaxAmount` is NOT
 
@@ -117,7 +116,7 @@ brokerage_share        = 1 − (brokerageValue / 100)        (from /wallet/getbr
 APR                    = (totalAnnualRewards × brokerage_share / validatorVotes) × 100
 ```
 
-> **[VERIFY]** The `sr_block_rewards` term (per `apr_tron.txt`) omits a blocks/day factor and looks dimensionally suspect. It is accepted as-is for now; validate the computed APR against real on-chain numbers for a known SR before relying on it, and correct the term if the reference doc's formula turns out to be wrong. See `apr-calculator.ts` for the isolated, pure implementation.
+> **[VERIFY]** The `sr_block_rewards` term (per `apr_tron.txt`) omits a blocks/day factor and looks dimensionally suspect. It is accepted as-is for now; validate the computed APR against real on-chain numbers for a known SR before relying on it, and correct the term if the reference doc's formula turns out to be wrong. See the exported `computeApr` in `staking-service.ts` for the isolated, pure implementation.
 
 `computeApr` clamps its output to a sane, finite `[0, …)` range — invalid inputs (`validatorVotes <= 0`, `totalVotes <= 0`) and any non-finite or negative result short-circuit to `0` rather than propagating `NaN`/`Infinity`/negative APR to consumers.
 

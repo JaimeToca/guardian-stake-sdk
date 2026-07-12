@@ -19,10 +19,13 @@ const SR: Validator = {
   creditAddress: "",
 };
 
-const ampleResources: TronAccountResources = {
-  freeBandwidth: 200n,
-  stakedBandwidth: 200n,
-}; // available = 400 >= 350
+// Build raw net limit/used fields for a desired amount of available free + staked bandwidth
+// (the fee service derives `available = (limit − used)` for each, floored at 0).
+function bw(freeBandwidth: bigint, stakedBandwidth: bigint): TronAccountResources {
+  return { freeNetLimit: freeBandwidth, freeNetUsed: 0n, netLimit: stakedBandwidth, netUsed: 0n };
+}
+
+const ampleResources: TronAccountResources = bw(200n, 200n); // available = 400 >= 350
 
 function makeRpc(
   account: TronAccount,
@@ -239,7 +242,7 @@ describe("createFeeService — balance-aware validation", () => {
 
 describe("createFeeService — resource-aware fee", () => {
   it("account with ample bandwidth (available >= 350) returns total 0n", async () => {
-    const rpc = makeRpc(baseAccount, { freeBandwidth: 200n, stakedBandwidth: 200n });
+    const rpc = makeRpc(baseAccount, bw(200n, 200n));
     const fee = createFeeService(rpc, makeStaking());
     const tx: Transaction = {
       type: "Delegate",
@@ -254,7 +257,7 @@ describe("createFeeService — resource-aware fee", () => {
   });
 
   it("account with insufficient bandwidth (available 100) burns the shortfall", async () => {
-    const rpc = makeRpc(baseAccount, { freeBandwidth: 100n, stakedBandwidth: 0n });
+    const rpc = makeRpc(baseAccount, bw(100n, 0n));
     const fee = createFeeService(rpc, makeStaking());
     const tx: Transaction = {
       type: "Delegate",
@@ -269,7 +272,7 @@ describe("createFeeService — resource-aware fee", () => {
   });
 
   it("account with zero resources burns the full estimated bandwidth", async () => {
-    const rpc = makeRpc(baseAccount, { freeBandwidth: 0n, stakedBandwidth: 0n });
+    const rpc = makeRpc(baseAccount, bw(0n, 0n));
     const fee = createFeeService(rpc, makeStaking());
     const tx: Transaction = {
       type: "Delegate",
@@ -284,7 +287,7 @@ describe("createFeeService — resource-aware fee", () => {
   });
 
   it("ClaimRewards WITH account is resource-aware (ample bandwidth -> 0n)", async () => {
-    const rpc = makeRpc(baseAccount, { freeBandwidth: 200n, stakedBandwidth: 200n });
+    const rpc = makeRpc(baseAccount, bw(200n, 200n));
     const getAccountResources = rpc.getAccountResources as Mock;
     const fee = createFeeService(rpc, makeStaking());
     const tx: Transaction = {
@@ -301,7 +304,7 @@ describe("createFeeService — resource-aware fee", () => {
   });
 
   it("ClaimRewards WITHOUT account falls back to conservative full burn", async () => {
-    const rpc = makeRpc(baseAccount, { freeBandwidth: 200n, stakedBandwidth: 200n });
+    const rpc = makeRpc(baseAccount, bw(200n, 200n));
     const getAccountResources = rpc.getAccountResources as Mock;
     const fee = createFeeService(rpc, makeStaking());
     const tx: Transaction = {
@@ -317,7 +320,7 @@ describe("createFeeService — resource-aware fee", () => {
   });
 
   it("Delegate with insufficient bandwidth AND getTransactionFee: 0 still burns a positive fee (not 0n)", async () => {
-    const rpc = makeRpc(baseAccount, { freeBandwidth: 100n, stakedBandwidth: 0n });
+    const rpc = makeRpc(baseAccount, bw(100n, 0n));
     (rpc.getChainParameters as Mock).mockResolvedValue({ getTransactionFee: 0 });
     const fee = createFeeService(rpc, makeStaking());
     const tx: Transaction = {

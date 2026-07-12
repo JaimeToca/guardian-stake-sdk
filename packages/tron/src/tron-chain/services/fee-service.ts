@@ -73,7 +73,12 @@ export function createFeeService(
       let total: bigint;
       if (tx.account) {
         const res = await rpc.getAccountResources(tx.account);
-        const available = res.freeBandwidth + res.stakedBandwidth;
+        // Available bandwidth = (limit − used) for both the free daily allowance and staked
+        // bandwidth, floored at 0. Derived here rather than in the RPC client, which returns raw limits.
+        const freeBandwidth =
+          res.freeNetLimit > res.freeNetUsed ? res.freeNetLimit - res.freeNetUsed : 0n;
+        const stakedBandwidth = res.netLimit > res.netUsed ? res.netLimit - res.netUsed : 0n;
+        const available = freeBandwidth + stakedBandwidth;
         total =
           available >= ESTIMATED_TX_BANDWIDTH
             ? 0n

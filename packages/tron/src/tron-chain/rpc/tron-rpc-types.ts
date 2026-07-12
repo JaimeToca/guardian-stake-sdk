@@ -14,7 +14,14 @@ export interface TronWitness {
   isSr: boolean;
 }
 
+/**
+ * Raw bandwidth limits/usage from `getaccountresource`, in bandwidth points. The RPC client
+ * maps the response verbatim; deriving "available bandwidth" (`limit − used`, floored at 0)
+ * is left to the consumer (see `fee-service`).
+ */
 export interface TronAccountResources {
-  freeBandwidth: bigint;
-  stakedBandwidth: bigint;
+  freeNetLimit: bigint;
+  freeNetUsed: bigint;
+  netLimit: bigint;
+  netUsed: bigint;
 }

@@ -1,6 +1,7 @@
 import { GuardianSDK, chains, tron, ConsoleLogger } from "@guardian-sdk/tron";
 import type { TronDelegateTransaction, TronUndelegateTransaction } from "@guardian-sdk/tron";
 import type {
+  Transaction,
   VoteTransaction,
   ClaimDelegateTransaction,
   ClaimRewardsTransaction,
@@ -22,166 +23,150 @@ const PRIVATE_KEY = process.env.TRON_PRIVATE_KEY ?? "";
 const ADDRESS = process.env.TRON_ADDRESS ?? "TYourTronBase58Address...";
 const SR_ADDRESS = process.env.TRON_SR_ADDRESS ?? "T<SR-address>";
 
-// Full lifecycle: freeze → vote → partial unfreeze → claim principal + claim rewards.
-// Each step is a separate on-chain transaction. Run against a real FullNode + funded
-// testnet/mainnet account to see it end to end.
-async function sample_full_lifecycle() {
-  // ── 1. FREEZE — stake 100 TRX for BANDWIDTH. Gains resource + Tron Power. Earns NOTHING yet. ──
-  const freeze: TronDelegateTransaction = {
+/**
+ * Estimate the fee, fetch the nonce (always 0 on Tron), sign with the raw key, and broadcast.
+ * Every write action below funnels through here, so the per-action functions stay focused on
+ * just building their transaction.
+ */
+async function submit(transaction: Transaction): Promise<string> {
+  const fee = await sdk.estimateFee(transaction);
+  const nonce = await sdk.getNonce(tronMainnet, ADDRESS); // Tron uses ref-block + expiration, so this is 0
+  const signArgs: SigningWithPrivateKey = { transaction, fee, nonce, privateKey: PRIVATE_KEY };
+  const rawTx = await sdk.sign(signArgs);
+  return sdk.broadcast(tronMainnet, rawTx);
+}
+
+// ── FREEZE ──────────────────────────────────────────────────────────────────────────────────
+// Stake TRX for a resource. Gains the resource + 1:1 Tron Power, but earns NOTHING until you vote.
+export async function freeze(amount: bigint, resource: "BANDWIDTH" | "ENERGY"): Promise<string> {
+  const tx: TronDelegateTransaction = {
     type: "Delegate",
     chain: tronMainnet,
-    amount: 100_000_000n, // 100 TRX in SUN
+    amount,
     isMaxAmount: false,
-    resource: "BANDWIDTH",
+    resource,
     account: ADDRESS,
   };
+  const txHash = await submit(tx);
+  console.log(`Frozen! https://tronscan.org/#/transaction/${txHash}`);
+  return txHash;
+}
 
-  const freezeFee = await sdk.estimateFee(freeze);
-  const freezeNonce = await sdk.getNonce(tronMainnet, ADDRESS); // always 0 on Tron
-  const freezeSignArgs: SigningWithPrivateKey = {
-    transaction: freeze,
-    fee: freezeFee,
-    nonce: freezeNonce,
-    privateKey: PRIVATE_KEY,
-  };
-  const freezeRawTx = await sdk.sign(freezeSignArgs);
-  const freezeTxHash = await sdk.broadcast(tronMainnet, freezeRawTx);
-  console.log(`Frozen! https://tronscan.org/#/transaction/${freezeTxHash}`);
-
-  // getDelegations() now shows a Frozen placeholder position — staked but not yet voted.
-  const afterFreeze = await sdk.getDelegations(tronMainnet, ADDRESS);
-  console.log(
-    "After freeze:",
-    afterFreeze.delegations.map((d) => ({ status: d.status, amount: d.amount }))
-  );
-  // Expect: [{ status: "Frozen", amount: 100_000_000n }] — earning BANDWIDTH only, no TRX rewards.
-
-  // ── 2. VOTE — allocate 100 votes (100 TRX of Tron Power) to a Super Representative. ──
-  // NOW earning TRX voting rewards.
-  const vote: VoteTransaction = {
+// ── VOTE ────────────────────────────────────────────────────────────────────────────────────
+// Allocate Tron Power to a Super Representative. This is what actually starts earning TRX rewards.
+export async function vote(srAddress: string, amount: bigint): Promise<string> {
+  const tx: VoteTransaction = {
     type: "Vote",
     chain: tronMainnet,
-    validator: SR_ADDRESS,
-    amount: 100_000_000n,
+    validator: srAddress,
+    amount,
     account: ADDRESS,
   };
+  const txHash = await submit(tx);
+  console.log(`Voted! https://tronscan.org/#/transaction/${txHash}`);
+  return txHash;
+}
 
-  const voteFee = await sdk.estimateFee(vote);
-  const voteNonce = await sdk.getNonce(tronMainnet, ADDRESS);
-  const voteSignArgs: SigningWithPrivateKey = {
-    transaction: vote,
-    fee: voteFee,
-    nonce: voteNonce,
-    privateKey: PRIVATE_KEY,
-  };
-  const voteRawTx = await sdk.sign(voteSignArgs);
-  const voteTxHash = await sdk.broadcast(tronMainnet, voteRawTx);
-  console.log(`Voted! https://tronscan.org/#/transaction/${voteTxHash}`);
-
-  // getDelegations() now shows an Active position with the real SR — earning TRX rewards.
-  const afterVote = await sdk.getDelegations(tronMainnet, ADDRESS);
-  console.log(
-    "After vote:",
-    afterVote.delegations.map((d) => ({
-      status: d.status,
-      amount: d.amount,
-      validator: d.validator.id,
-    }))
-  );
-  // Expect: [{ status: "Active", amount: 100_000_000n, validator: SR_ADDRESS }]
-
-  // ── 3. UNFREEZE — partial unstake of 40 TRX. Starts its own 14-day unbonding clock. ──
-  const unfreeze: TronUndelegateTransaction = {
+// ── UNSTAKE ─────────────────────────────────────────────────────────────────────────────────
+// Begin unfreezing (partial allowed). Starts an independent ~14-day unbonding clock for this amount.
+export async function unstake(amount: bigint, resource: "BANDWIDTH" | "ENERGY"): Promise<string> {
+  const tx: TronUndelegateTransaction = {
     type: "Undelegate",
     chain: tronMainnet,
-    amount: 40_000_000n, // 40 TRX in SUN — partial; the remaining 60 TRX stays Active
+    amount,
     isMaxAmount: false,
-    resource: "BANDWIDTH",
+    resource,
     account: ADDRESS,
   };
+  const txHash = await submit(tx);
+  console.log(`Unfrozen (partial)! https://tronscan.org/#/transaction/${txHash}`);
+  return txHash;
+}
 
-  const unfreezeFee = await sdk.estimateFee(unfreeze);
-  const unfreezeNonce = await sdk.getNonce(tronMainnet, ADDRESS);
-  const unfreezeSignArgs: SigningWithPrivateKey = {
-    transaction: unfreeze,
-    fee: unfreezeFee,
-    nonce: unfreezeNonce,
-    privateKey: PRIVATE_KEY,
-  };
-  const unfreezeRawTx = await sdk.sign(unfreezeSignArgs);
-  const unfreezeTxHash = await sdk.broadcast(tronMainnet, unfreezeRawTx);
-  console.log(`Unfrozen (partial)! https://tronscan.org/#/transaction/${unfreezeTxHash}`);
-
-  // getDelegations() now shows Active 60 TRX (still voted) + Pending 40 TRX (pendingUntil = now + 14d).
-  const afterUnfreeze = await sdk.getDelegations(tronMainnet, ADDRESS);
-  console.log(
-    "After unfreeze:",
-    afterUnfreeze.delegations.map((d) => ({
-      status: d.status,
-      amount: d.amount,
-      pendingUntil: d.pendingUntil,
-    }))
-  );
-
-  // ── 4a. CLAIM PRINCIPAL — after 14 days, withdraw the matured unfrozen TRX. ──
-  // Independent transaction — WithdrawExpireUnfreeze. Only succeeds once `pendingUntil` has passed.
-  // validator/index are optional on ClaimDelegateTransaction and IGNORED by Tron
-  // (withdrawExpireUnfreeze withdraws whatever has matured for this account) — omitted here.
-  const claimPrincipal: ClaimDelegateTransaction = {
+// ── WITHDRAW: matured principal ───────────────────────────────────────────────────────────────
+// WithdrawExpireUnfreeze — sweeps unfrozen TRX whose 14-day bond has matured back to the wallet.
+// validator/index are optional on ClaimDelegateTransaction and IGNORED by Tron — omit them.
+export async function withdrawPrincipal(): Promise<string> {
+  const tx: ClaimDelegateTransaction = {
     type: "ClaimDelegate",
     chain: tronMainnet,
-    amount: 0n, // Tron ignores this; the on-chain unfreeze queue determines the withdrawn amount
+    amount: 0n, // ignored by Tron; the on-chain unfreeze queue determines the withdrawn amount
     account: ADDRESS,
   };
+  const txHash = await submit(tx);
+  console.log(`Claimed principal! https://tronscan.org/#/transaction/${txHash}`);
+  return txHash;
+}
 
-  const claimPrincipalFee = await sdk.estimateFee(claimPrincipal);
-  const claimPrincipalNonce = await sdk.getNonce(tronMainnet, ADDRESS);
-  const claimPrincipalSignArgs: SigningWithPrivateKey = {
-    transaction: claimPrincipal,
-    fee: claimPrincipalFee,
-    nonce: claimPrincipalNonce,
-    privateKey: PRIVATE_KEY,
-  };
-  const claimPrincipalRawTx = await sdk.sign(claimPrincipalSignArgs);
-  const claimPrincipalTxHash = await sdk.broadcast(tronMainnet, claimPrincipalRawTx);
-  console.log(`Claimed principal! https://tronscan.org/#/transaction/${claimPrincipalTxHash}`);
-
-  // ── 4b. CLAIM REWARDS — independent of the principal claim above. ──
-  // Anytime rewards have accrued (24h cooldown, ~1 TRX minimum) — WithdrawBalance.
+// ── WITHDRAW: voting rewards ──────────────────────────────────────────────────────────────────
+// WithdrawBalance — independent of the principal claim; 24h cooldown, ~1 TRX on-chain minimum.
+// No-op (returns undefined) when there is nothing to claim.
+export async function withdrawRewards(): Promise<string | undefined> {
   const balances = await sdk.getBalances(tronMainnet, ADDRESS);
   const rewards = balances.find((b) => b.type === "Rewards");
-
   if (!rewards || rewards.amount === 0n) {
     console.log("No rewards to claim yet.");
-    return;
+    return undefined;
   }
-
-  // validator is optional on ClaimRewardsTransaction and IGNORED by Tron
-  // (withdrawBlockRewards withdraws the whole account reward balance) — omitted here.
-  const claimRewards: ClaimRewardsTransaction = {
+  // validator is optional on ClaimRewardsTransaction and IGNORED by Tron — omit it.
+  const tx: ClaimRewardsTransaction = {
     type: "ClaimRewards",
     chain: tronMainnet,
     amount: rewards.amount,
     account: ADDRESS,
   };
+  const txHash = await submit(tx);
+  console.log(`Claimed rewards! https://tronscan.org/#/transaction/${txHash}`);
+  return txHash;
+}
 
-  const claimRewardsFee = await sdk.estimateFee(claimRewards);
-  const claimRewardsNonce = await sdk.getNonce(tronMainnet, ADDRESS);
-  const claimRewardsSignArgs: SigningWithPrivateKey = {
-    transaction: claimRewards,
-    fee: claimRewardsFee,
-    nonce: claimRewardsNonce,
-    privateKey: PRIVATE_KEY,
-  };
-  const claimRewardsRawTx = await sdk.sign(claimRewardsSignArgs);
-  const claimRewardsTxHash = await sdk.broadcast(tronMainnet, claimRewardsRawTx);
-  console.log(`Claimed rewards! https://tronscan.org/#/transaction/${claimRewardsTxHash}`);
+// ── READS: validators & delegations ───────────────────────────────────────────────────────────
+export async function showValidators(): Promise<void> {
+  const { data } = await sdk.getValidators(tronMainnet, { page: 1, pageSize: 5 });
+  console.log(
+    "Top validators:",
+    data.map((v) => ({ id: v.id, name: v.name, apy: v.apy, status: v.status }))
+  );
+}
+
+export async function showDelegations(label: string): Promise<void> {
+  const { delegations } = await sdk.getDelegations(tronMainnet, ADDRESS);
+  console.log(
+    `${label}:`,
+    delegations.map((d) => ({
+      status: d.status,
+      amount: d.amount,
+      validator: d.validator.id,
+      pendingUntil: d.pendingUntil,
+    }))
+  );
+}
+
+// ── ORCHESTRATION ─────────────────────────────────────────────────────────────────────────────
+// Full lifecycle: freeze → vote → partial unstake → claim principal + claim rewards.
+// Run against a real FullNode + funded testnet/mainnet account to see it end to end.
+export async function runFullLifecycle(): Promise<void> {
+  await showValidators();
+
+  await freeze(100_000_000n, "BANDWIDTH"); // stake 100 TRX for BANDWIDTH
+  await showDelegations("After freeze"); // → [{ status: "Frozen", amount: 100_000_000n }]
+
+  await vote(SR_ADDRESS, 100_000_000n); // vote all 100 TRX of Tron Power
+  await showDelegations("After vote"); // → [{ status: "Active", amount: 100_000_000n }]
+
+  await unstake(40_000_000n, "BANDWIDTH"); // partial unstake of 40 TRX; 60 TRX stays Active
+  await showDelegations("After unfreeze"); // → Active 60 TRX + Pending 40 TRX
+
+  // The two withdrawals below are independent and only succeed once their balances are ready:
+  // `withdrawPrincipal` after the 14-day bond matures; `withdrawRewards` once rewards have accrued.
+  await withdrawPrincipal();
+  await withdrawRewards();
 }
 
 // For hardware wallets, MPC setups, or HSMs where you can't expose raw private keys:
 // preHash() builds the unsigned tx (serializedTransaction === the txID, SHA256(raw_data)),
 // compile() reassembles the final tx from an external secp256k1 signature.
-async function sample_mpc_vote() {
+export async function sampleMpcVote(): Promise<void> {
   const vote: VoteTransaction = {
     type: "Vote",
     chain: tronMainnet,
@@ -205,4 +190,4 @@ async function sample_mpc_vote() {
   console.log(`Submitted: https://tronscan.org/#/transaction/${txHash}`);
 }
 
-sample_full_lifecycle();
+runFullLifecycle();

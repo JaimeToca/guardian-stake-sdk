@@ -77,8 +77,9 @@ export interface ClaimRewardsTransaction extends BaseTransaction {
 }
 
 /**
- * Vote staked Tron Power to a Super Representative. Tron-only.
- * `amount` is in SUN and must be a whole number of TRX (votes = amount / 1_000_000).
+ * Allocate staked voting power to a validator, for protocols where staking and voting are
+ * separate actions (e.g. Tron, where `amount` is in SUN and must be a whole number of TRX —
+ * votes = amount / 1_000_000). The staked principal must already exist; this only directs it.
  *
  * Supported by: Tron
  */
