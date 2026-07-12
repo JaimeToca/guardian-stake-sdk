@@ -337,31 +337,42 @@ import { tron, type TronDelegateTransaction, type TronUndelegateTransaction } fr
 import type { VoteTransaction, ClaimDelegateTransaction, ClaimRewardsTransaction } from "@guardian-sdk/sdk";
 
 const sdk = new GuardianSDK([tron({ rpcUrl: "https://<your-tron-fullnode>" })]);
+const ADDRESS = "TYourTronBase58Address..."; // owner address
 const privateKey = process.env.TRON_PRIVATE_KEY!;
 
 // FREEZE — stake 100 TRX for BANDWIDTH. Gains resource + Tron Power. Earns NOTHING yet.
 const freeze: TronDelegateTransaction = {
   type: "Delegate", chain: chains.tronMainnet, amount: 100_000_000n, isMaxAmount: false, resource: "BANDWIDTH", account: ADDRESS,
 };
-await sdk.broadcast(chains.tronMainnet, await sdk.sign({ transaction: freeze, fee: await sdk.estimateFee(freeze), nonce: 0, privateKey }));
+const freezeFee = await sdk.estimateFee(freeze);
+const freezeSigned = await sdk.sign({ transaction: freeze, fee: freezeFee, nonce: 0, privateKey }); // Tron has no account nonce
+await sdk.broadcast(chains.tronMainnet, freezeSigned);
 
 // VOTE — allocate 100 votes (100 TRX of Tron Power) to a Super Representative. NOW earning rewards.
 const vote: VoteTransaction = { type: "Vote", chain: chains.tronMainnet, validator: "T<SR-address>", amount: 100_000_000n, account: ADDRESS };
-await sdk.broadcast(chains.tronMainnet, await sdk.sign({ transaction: vote, fee: await sdk.estimateFee(vote), nonce: 0, privateKey }));
+const voteFee = await sdk.estimateFee(vote);
+const voteSigned = await sdk.sign({ transaction: vote, fee: voteFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, voteSigned);
 
 // UNFREEZE — partial unstake of 40 TRX. Starts the 14-day unbonding clock.
 const unfreeze: TronUndelegateTransaction = {
   type: "Undelegate", chain: chains.tronMainnet, amount: 40_000_000n, isMaxAmount: false, resource: "BANDWIDTH", account: ADDRESS,
 };
-await sdk.broadcast(chains.tronMainnet, await sdk.sign({ transaction: unfreeze, fee: await sdk.estimateFee(unfreeze), nonce: 0, privateKey }));
+const unfreezeFee = await sdk.estimateFee(unfreeze);
+const unfreezeSigned = await sdk.sign({ transaction: unfreeze, fee: unfreezeFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, unfreezeSigned);
 
 // CLAIM PRINCIPAL — after 14 days, withdraw the matured unfrozen TRX.
 const claimPrincipal: ClaimDelegateTransaction = { type: "ClaimDelegate", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", index: 0n, account: ADDRESS };
-await sdk.broadcast(chains.tronMainnet, await sdk.sign({ transaction: claimPrincipal, fee: await sdk.estimateFee(claimPrincipal), nonce: 0, privateKey }));
+const claimPrincipalFee = await sdk.estimateFee(claimPrincipal);
+const claimPrincipalSigned = await sdk.sign({ transaction: claimPrincipal, fee: claimPrincipalFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, claimPrincipalSigned);
 
 // CLAIM REWARDS — independent, anytime rewards accrued (24h cooldown).
 const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", account: ADDRESS };
-await sdk.broadcast(chains.tronMainnet, await sdk.sign({ transaction: claimRewards, fee: await sdk.estimateFee(claimRewards), nonce: 0, privateKey }));
+const claimRewardsFee = await sdk.estimateFee(claimRewards);
+const claimRewardsSigned = await sdk.sign({ transaction: claimRewards, fee: claimRewardsFee, nonce: 0, privateKey });
+await sdk.broadcast(chains.tronMainnet, claimRewardsSigned);
 ```
 
 See the full runnable flow with logging and delegation-state assertions in [`examples/tron-native-staking-sample.ts`](../../examples/tron-native-staking-sample.ts).
