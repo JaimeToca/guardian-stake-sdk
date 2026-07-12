@@ -48,6 +48,8 @@ export async function buildUnsignedTx(
           "Tron does not support isMaxAmount; pass an exact amount (query getBalances/getDelegations for the max)."
         );
       assertResource(t.resource);
+      if (t.amount <= 0n)
+        throw new ValidationError("INVALID_AMOUNT", "Unfreeze amount must be greater than zero.");
       if (t.amount > Number.MAX_SAFE_INTEGER)
         throw new ValidationError(
           "INVALID_AMOUNT",

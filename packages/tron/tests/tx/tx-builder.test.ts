@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { buildUnsignedTx as build } from "../../src/tron-chain/tx/tx-builder";
 import type { GuardianChain, Transaction } from "@guardian-sdk/sdk";
 import { ValidationError } from "@guardian-sdk/sdk";
+import type { TronWeb } from "tronweb";
 
 const chain = { id: "tron-mainnet" } as GuardianChain;
 const OWNER = "TOwnerAddress";
@@ -15,7 +16,7 @@ function fakeTronWeb() {
       withdrawExpireUnfreeze: vi.fn().mockResolvedValue({ txID: "w" }),
       withdrawBlockRewards: vi.fn().mockResolvedValue({ txID: "r" }),
     },
-  } as any;
+  } as unknown as TronWeb;
 }
 
 describe("buildUnsignedTx", () => {
@@ -57,6 +58,19 @@ describe("buildUnsignedTx", () => {
       validator: "TSR",
     } as unknown as Transaction;
     await expect(build(tw, tx, OWNER)).rejects.toThrow();
+  });
+
+  it("rejects Delegate with amount below 1 TRX", async () => {
+    const tw = fakeTronWeb();
+    const tx = {
+      type: "Delegate",
+      chain,
+      amount: 500_000n,
+      isMaxAmount: false,
+      resource: "BANDWIDTH",
+    } as unknown as Transaction;
+    await expect(build(tw, tx, OWNER)).rejects.toThrow(ValidationError);
+    await expect(build(tw, tx, OWNER)).rejects.toMatchObject({ code: "INVALID_AMOUNT" });
   });
 
   it("maps Undelegate -> unfreezeBalanceV2(amount, resource, owner)", async () => {

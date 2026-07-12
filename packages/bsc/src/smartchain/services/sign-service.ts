@@ -61,11 +61,8 @@ export function createSignService(
   async function bnbToShares(
     transaction: UndelegateTransaction | RedelegateTransaction
   ): Promise<bigint> {
-    if (transaction.type === "Undelegate") {
-      assertValidator(transaction);
-    }
     const validator =
-      transaction.type === "Undelegate" ? transaction.validator : transaction.fromValidator;
+      transaction.type === "Undelegate" ? transaction.validator! : transaction.fromValidator;
 
     if (typeof validator === "string") {
       throw new SigningError(

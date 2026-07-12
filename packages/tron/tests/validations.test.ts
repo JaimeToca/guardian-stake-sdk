@@ -24,6 +24,12 @@ describe("validations", () => {
   it("assertVote rejects over-voting past available Tron Power", () => {
     expect(() => assertVote(account, witnesses, "TSR", 50_000_000n)).toThrow();
   });
+  it("assertVote accepts a valid vote within available power", () => {
+    expect(() => assertVote(account, witnesses, "TSR", 40_000_000n)).not.toThrow();
+  });
+  it("assertVote rejects non-whole-TRX amounts", () => {
+    expect(() => assertVote(account, witnesses, "TSR", 1_500_000n)).toThrow();
+  });
   it("assertVote rejects an unknown SR", () => {
     expect(() => assertVote(account, witnesses, "TUNKNOWN", 10_000_000n)).toThrow();
   });
@@ -31,9 +37,15 @@ describe("validations", () => {
     expect(() => assertFreeze(10_000_000n, 500_000n)).toThrow();
     expect(() => assertFreeze(10_000_000n, 20_000_000n)).toThrow();
   });
+  it("assertFreeze accepts a valid freeze amount", () => {
+    expect(() => assertFreeze(10_000_000n, 5_000_000n)).not.toThrow();
+  });
   it("assertUnfreeze rejects amount above frozen for that resource", () => {
     expect(() => assertUnfreeze(account, "BANDWIDTH", 200_000_000n)).toThrow();
     expect(() => assertUnfreeze(account, "ENERGY", 1_000_000n)).toThrow();
+  });
+  it("assertUnfreeze accepts a valid unfreeze amount", () => {
+    expect(() => assertUnfreeze(account, "BANDWIDTH", 50_000_000n)).not.toThrow();
   });
   it("assertResource accepts BANDWIDTH and ENERGY", () => {
     expect(() => assertResource("BANDWIDTH")).not.toThrow();

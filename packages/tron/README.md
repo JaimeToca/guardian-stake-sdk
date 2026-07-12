@@ -53,7 +53,7 @@ Regardless of which resource is chosen, freezing grants **Tron Power 1:1 with th
 
 ### Lifecycle of a Stake
 
-```
+```text
 Freeze (Delegate)      stake TRX for a resource → gain resource + Tron Power   → delegation: Frozen
   │                     (earning the RESOURCE only — NO TRX rewards yet)
 Vote (Vote)             allocate Tron Power to a Super Representative           → delegation: Active
