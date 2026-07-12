@@ -64,6 +64,31 @@ describe("getDelegations", () => {
     expect(active[0].validator.operatorAddress).toBe("TSR");
   });
 
+  it("partial unfreeze leaves votes lingering above frozen -> Active is capped to totalFrozen, no Frozen remainder", async () => {
+    const future = Date.now() + 1_000_000;
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [{ resource: "BANDWIDTH", amount: 60_000_000n }],
+          unfreezing: [{ amount: 40_000_000n, expireTime: future }],
+          votes: [{ srAddress: "TSR", votes: 100n }], // 100 * SUN_PER_TRX = 100_000_000n voted
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+
+    const active = delegations.filter((d) => d.status === "Active");
+    const activeTotal = active.reduce((s, d) => s + d.amount, 0n);
+    expect(activeTotal).toBe(60_000_000n);
+
+    expect(delegations.find((d) => d.status === "Frozen")).toBeUndefined();
+
+    const pending = delegations.find((d) => d.status === "Pending");
+    expect(pending?.amount).toBe(40_000_000n);
+  });
+
   it("unbonding -> Pending, matured -> Claimable", async () => {
     const future = Date.now() + 1_000_000;
     const past = Date.now() - 1_000_000;

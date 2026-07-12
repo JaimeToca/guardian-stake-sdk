@@ -29,4 +29,39 @@ describe("computeApr", () => {
       })
     ).toBe(0);
   });
+
+  it("brokeragePercent > 100 clamps to 100 -> zero share -> apr is 0", () => {
+    const apr = computeApr({
+      validatorVotes: 1_000_000_000n,
+      totalVotes: 40_000_000_000n,
+      isSr: false,
+      witness127PayPerBlock: 16,
+      witnessPayPerBlock: 16,
+      brokeragePercent: 120,
+    });
+    expect(apr).toBe(0);
+  });
+
+  it("brokeragePercent < 0 clamps to 0 -> full share -> matches the share-1 result, finite and >= 0", () => {
+    const apr = computeApr({
+      validatorVotes: 1_000_000_000n,
+      totalVotes: 40_000_000_000n,
+      isSr: false,
+      witness127PayPerBlock: 16,
+      witnessPayPerBlock: 16,
+      brokeragePercent: -10,
+    });
+    // clamped to 0 -> brokerageShare = 1, same as computing with brokeragePercent: 0
+    const expected = computeApr({
+      validatorVotes: 1_000_000_000n,
+      totalVotes: 40_000_000_000n,
+      isSr: false,
+      witness127PayPerBlock: 16,
+      witnessPayPerBlock: 16,
+      brokeragePercent: 0,
+    });
+    expect(Number.isFinite(apr)).toBe(true);
+    expect(apr).toBeGreaterThanOrEqual(0);
+    expect(apr).toBe(expected);
+  });
 });

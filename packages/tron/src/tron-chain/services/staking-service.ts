@@ -111,21 +111,29 @@ export function createStakingService(
       let idx = 0;
       const totalFrozen = account.frozen.reduce((s, f) => s + f.amount, 0n);
       const totalVoted = account.votes.reduce((s, v) => s + v.votes * SUN_PER_TRX, 0n);
+      // A partial unfreeze can leave the votes record reporting more than is currently frozen.
+      // Cap the voted portion at totalFrozen so Σ Active never exceeds current stake.
+      const effectiveVoted = totalVoted <= totalFrozen ? totalVoted : totalFrozen;
 
       // Active: one per vote
       for (const vote of account.votes) {
         const validator = witnessMap.get(vote.srAddress) ?? placeholderValidator("BANDWIDTH");
+        const rawAmount = vote.votes * SUN_PER_TRX;
+        const scaledAmount =
+          totalVoted <= totalFrozen || totalVoted === 0n
+            ? rawAmount
+            : (rawAmount * totalFrozen) / totalVoted;
         delegations.push({
           id: `${address}:${vote.srAddress}`,
           validator,
-          amount: vote.votes * SUN_PER_TRX,
+          amount: scaledAmount,
           status: "Active",
           delegationIndex: BigInt(idx++),
           pendingUntil: 0,
         });
       }
       // Frozen: unvoted remainder (resource-granular; attribute to the largest frozen resource)
-      const remainder = totalFrozen - totalVoted;
+      const remainder = totalFrozen - effectiveVoted;
       if (remainder > 0n) {
         const resource: TronResource = account.frozen.reduce(
           (a, b) => (b.amount > a.amount ? b : a),

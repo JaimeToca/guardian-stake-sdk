@@ -26,7 +26,7 @@ export function createFeeService(rpc: TronRpcClientContract, staking: TronStakin
   return {
     async estimateFee(tx: Transaction): Promise<Fee> {
       const params = await rpc.getChainParameters();
-      const bandwidthPrice = BigInt(params.getTransactionFee ?? 1000); // SUN per bandwidth point
+      const bandwidthPrice = BigInt(Math.max(1, params.getTransactionFee ?? 1000)); // SUN per bandwidth point
 
       switch (tx.type) {
         case "Delegate": {

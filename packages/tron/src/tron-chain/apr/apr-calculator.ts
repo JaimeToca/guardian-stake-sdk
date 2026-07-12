@@ -26,6 +26,9 @@ export function computeApr(input: AprInput): number {
   const srBlockRewards = input.isSr ? input.witnessPayPerBlock * DAYS_PER_YEAR * SR_COUNT : 0;
   const totalAnnualRewards = annualVotingRewards + srBlockRewards;
 
-  const brokerageShare = 1 - input.brokeragePercent / 100;
-  return ((totalAnnualRewards * brokerageShare) / validatorVotes) * 100;
+  const clampedBrokeragePercent = Math.min(100, Math.max(0, input.brokeragePercent));
+  const brokerageShare = 1 - clampedBrokeragePercent / 100;
+  const apr = ((totalAnnualRewards * brokerageShare) / validatorVotes) * 100;
+  if (!Number.isFinite(apr) || apr < 0) return 0;
+  return apr;
 }

@@ -288,4 +288,20 @@ describe("createFeeService — resource-aware fee", () => {
     expect(result.total).toBe(350n * 1000n);
     expect(getAccountResources).not.toHaveBeenCalled();
   });
+
+  it("Delegate with insufficient bandwidth AND getTransactionFee: 0 still burns a positive fee (not 0n)", async () => {
+    const rpc = makeRpc(baseAccount, { freeBandwidth: 100n, stakedBandwidth: 0n });
+    (rpc.getChainParameters as Mock).mockResolvedValue({ getTransactionFee: 0 });
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "Delegate",
+      chain: {} as Transaction["chain"],
+      amount: 50_000_000n,
+      account: "TOwner",
+      isMaxAmount: false,
+    };
+    const result = await fee.estimateFee(tx);
+    expect(result.type).toBe("ResourceFee");
+    expect(result.total > 0n).toBe(true);
+  });
 });
