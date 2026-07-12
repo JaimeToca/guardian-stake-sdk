@@ -390,7 +390,11 @@ const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain, amo
 
 ## 16. Open Decisions (confirm before implementation)
 
-1. **Release channel** — publish `@guardian-sdk/tron` under the `alpha` dist-tag and add it to the
-   changeset `ignore` array (mirrors Cardano's rollout)? **Recommended: yes.**
+1. **Release channel** — ~~publish `@guardian-sdk/tron` under the `alpha` dist-tag and add it to the
+   changeset `ignore` array (mirrors Cardano's rollout)~~. **Resolved (2026-07-12):** Tron ships as
+   a normal, non-prerelease package on the `latest` dist-tag, participating in the standard
+   `changesets` release flow alongside `sdk`/`bsc` — not alpha, not `ignore`d. See
+   `docs/superpowers/specs/2026-07-10-cardano-release-graduation-design.md` for the playbook this
+   followed.
 2. **`sr_block_rewards` APR term** — accept the `apr_tron.txt` formula as-is and correct during
    testing against real numbers (per the `[VERIFY]` note)? **Recommended: yes.**

@@ -4,9 +4,6 @@ Native staking support for Tron (TRX Stake 2.0), part of the [Guardian SDK](../.
 
 Abstracts TronWeb transaction construction and FullNode REST calls behind a clean, type-safe API so you can freeze TRX for a resource, vote for Super Representatives, unstake, and claim rewards without dealing with TronWeb internals directly.
 
-> **⚠️ Alpha release — not production-ready.**
-> APIs may change between alpha versions without a major version bump. This package has not been audited for production use. Do not use it with real funds or in production environments until a stable release is declared.
-
 > **FullNode only — no TronGrid.** `tron({ rpcUrl })` talks directly to a configurable FullNode HTTP endpoint. Point it at your own node or a FullNode-compatible provider.
 
 ## Table of Contents
@@ -91,10 +88,8 @@ Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Repr
 
 ## Installation
 
-This package is in alpha and published under the `alpha` dist-tag. Install it with the `@alpha` suffix — `npm install @guardian-sdk/tron` will not find it.
-
 ```bash
-npm install @guardian-sdk/tron@alpha @guardian-sdk/sdk tronweb@6.1.0
+npm install @guardian-sdk/tron @guardian-sdk/sdk tronweb@6.1.0
 ```
 
 | Package | Version | Role |

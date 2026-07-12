@@ -96,5 +96,4 @@ This is guidance, not a hard router: match the model to the work, and reserve Op
 Facts that don't live in code but matter for day-to-day decisions:
 
 - **Cardano is alpha** — `@guardian-sdk/cardano` is published under the `alpha` dist-tag and is in the `ignore` array in `.changeset/config.json`. It does not participate in automated semantic-release. When ready to cut a Cardano release, follow `docs/cardano-release-draft.md` manually.
-- **Tron is alpha** — `@guardian-sdk/tron` is published under the `alpha` dist-tag and is in the `ignore` array in `.changeset/config.json`, mirroring Cardano's rollout. It does not participate in automated semantic-release.
 - **`examples/` has its own tsconfig** — `examples/tsconfig.json` uses path aliases pointing to package source. The root `pnpm run typecheck` does **not** cover it. Type-check examples separately with `npx tsc --noEmit -p examples/tsconfig.json`.
