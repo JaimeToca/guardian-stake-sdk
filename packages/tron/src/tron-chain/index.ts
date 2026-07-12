@@ -28,7 +28,7 @@ export function tron(config: TronConfig): GuardianServiceContract {
   const tronWebFactory = createTronWebFactory(config.rpcUrl);
   const staking = createStakingService(rpc, tronWebFactory.create);
   const balance = createBalanceService(rpc);
-  const fee = createFeeService(rpc);
+  const fee = createFeeService(rpc, staking);
   const sign = createSignService(tronWebFactory);
   const broadcast = createBroadcastService(rpc);
 

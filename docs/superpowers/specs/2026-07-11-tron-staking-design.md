@@ -253,7 +253,12 @@ Same interface as BSC/Cardano; TronWeb does the crypto.
 
 `_rawTx` and the Tron sign-arg extensions are defined in `tron-types.ts`.
 
-## 11. Validations (`validations.ts`, enforced in `estimateFee` + `sign`)
+## 11. Validations (`validations.ts`)
+
+Balance-aware checks (`assertFreeze`/`assertVote`/`assertUnfreeze`) are enforced in
+`estimateFee`, which fetches the account (and, for `Vote`, the base58 witness set) before
+returning a fee. The tx-builder/`sign` path only performs lightweight structural checks
+(min-1-TRX freeze, whole-TRX vote, votes > 0) — it does not re-fetch account/witness state.
 
 - **Freeze (`Delegate`)**: `amount ≥ 1 TRX (1_000_000 SUN)`; `amount ≤ Available`;
   `resource ∈ {ENERGY, BANDWIDTH}`.
