@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { buildUnsignedTx as build } from "../../src/tron-chain/tx/tx-builder";
 import type { GuardianChain, Transaction } from "@guardian-sdk/sdk";
+import { ValidationError } from "@guardian-sdk/sdk";
 
 const chain = { id: "tron-mainnet" } as GuardianChain;
 const OWNER = "TOwnerAddress";
@@ -56,5 +57,93 @@ describe("buildUnsignedTx", () => {
       validator: "TSR",
     } as unknown as Transaction;
     await expect(build(tw, tx, OWNER)).rejects.toThrow();
+  });
+
+  it("maps Undelegate -> unfreezeBalanceV2(amount, resource, owner)", async () => {
+    const tw = fakeTronWeb();
+    const tx = {
+      type: "Undelegate",
+      chain,
+      amount: 100_000_000n,
+      isMaxAmount: false,
+      resource: "ENERGY",
+    } as unknown as Transaction;
+    await build(tw, tx, OWNER);
+    expect(tw.transactionBuilder.unfreezeBalanceV2).toHaveBeenCalledWith(
+      100_000_000,
+      "ENERGY",
+      OWNER
+    );
+  });
+
+  it.each(["Delegate", "Undelegate"])(
+    "%s: throws ValidationError(INVALID_RESOURCE) when resource is missing",
+    async (type) => {
+      const tw = fakeTronWeb();
+      const tx = {
+        type,
+        chain,
+        amount: 100_000_000n,
+        isMaxAmount: false,
+      } as unknown as Transaction;
+      await expect(build(tw, tx, OWNER)).rejects.toThrow(ValidationError);
+      await expect(build(tw, tx, OWNER)).rejects.toMatchObject({ code: "INVALID_RESOURCE" });
+    }
+  );
+
+  it.each(["Delegate", "Undelegate"])(
+    "%s: throws ValidationError(INVALID_RESOURCE) when resource is invalid",
+    async (type) => {
+      const tw = fakeTronWeb();
+      const tx = {
+        type,
+        chain,
+        amount: 100_000_000n,
+        isMaxAmount: false,
+        resource: "NOT_A_RESOURCE",
+      } as unknown as Transaction;
+      await expect(build(tw, tx, OWNER)).rejects.toThrow(ValidationError);
+      await expect(build(tw, tx, OWNER)).rejects.toMatchObject({ code: "INVALID_RESOURCE" });
+    }
+  );
+
+  it.each(["Delegate", "Undelegate"])(
+    "%s: throws ValidationError when isMaxAmount is true",
+    async (type) => {
+      const tw = fakeTronWeb();
+      const tx = {
+        type,
+        chain,
+        amount: 100_000_000n,
+        isMaxAmount: true,
+        resource: "BANDWIDTH",
+      } as unknown as Transaction;
+      await expect(build(tw, tx, OWNER)).rejects.toThrow(ValidationError);
+      await expect(build(tw, tx, OWNER)).rejects.toMatchObject({ code: "INVALID_AMOUNT" });
+    }
+  );
+
+  it("ClaimDelegate builds via withdrawExpireUnfreeze without validator/index", async () => {
+    const tw = fakeTronWeb();
+    const tx = {
+      type: "ClaimDelegate",
+      chain,
+      amount: 0n,
+    } as unknown as Transaction;
+    const result = await build(tw, tx, OWNER);
+    expect(tw.transactionBuilder.withdrawExpireUnfreeze).toHaveBeenCalledWith(OWNER);
+    expect(result).toEqual({ txID: "w" });
+  });
+
+  it("ClaimRewards builds via withdrawBlockRewards without validator", async () => {
+    const tw = fakeTronWeb();
+    const tx = {
+      type: "ClaimRewards",
+      chain,
+      amount: 0n,
+    } as unknown as Transaction;
+    const result = await build(tw, tx, OWNER);
+    expect(tw.transactionBuilder.withdrawBlockRewards).toHaveBeenCalledWith(OWNER);
+    expect(result).toEqual({ txID: "r" });
   });
 });

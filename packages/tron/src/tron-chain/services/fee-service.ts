@@ -4,7 +4,7 @@ import type { TronRpcClientContract } from "../rpc/tron-rpc-client-contract";
 import type { TronWitness } from "../rpc/tron-rpc-types";
 import type { TronUndelegateTransaction } from "../tx/tron-types";
 import type { TronStakingServiceContract } from "./staking-service-contract";
-import { assertFreeze, assertUnfreeze, assertVote } from "../validations";
+import { assertFreeze, assertResource, assertUnfreeze, assertVote } from "../validations";
 
 function requireAccount(tx: Transaction): string {
   if (!tx.account)
@@ -39,6 +39,7 @@ export function createFeeService(rpc: TronRpcClientContract, staking: TronStakin
           const address = requireAccount(tx);
           const account = await rpc.getAccount(address);
           const { resource } = tx as TronUndelegateTransaction;
+          assertResource(resource);
           assertUnfreeze(account, resource, tx.amount);
           break;
         }

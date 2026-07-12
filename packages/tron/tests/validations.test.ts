@@ -4,8 +4,10 @@ import {
   assertVote,
   assertFreeze,
   assertUnfreeze,
+  assertResource,
 } from "../src/tron-chain/validations";
 import type { TronAccount, TronWitness } from "../src/tron-chain/rpc/tron-rpc-types";
+import { ValidationError } from "@guardian-sdk/sdk";
 
 const account: TronAccount = {
   balance: 10_000_000n,
@@ -32,5 +34,21 @@ describe("validations", () => {
   it("assertUnfreeze rejects amount above frozen for that resource", () => {
     expect(() => assertUnfreeze(account, "BANDWIDTH", 200_000_000n)).toThrow();
     expect(() => assertUnfreeze(account, "ENERGY", 1_000_000n)).toThrow();
+  });
+  it("assertResource accepts BANDWIDTH and ENERGY", () => {
+    expect(() => assertResource("BANDWIDTH")).not.toThrow();
+    expect(() => assertResource("ENERGY")).not.toThrow();
+  });
+  it("assertResource rejects missing/invalid resource with INVALID_RESOURCE", () => {
+    expect(() => assertResource(undefined)).toThrow(ValidationError);
+    expect(() => assertResource("")).toThrow(ValidationError);
+    expect(() => assertResource("STAKED")).toThrow(ValidationError);
+    try {
+      assertResource(undefined);
+      throw new Error("expected assertResource to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ValidationError);
+      expect((err as ValidationError).code).toBe("INVALID_RESOURCE");
+    }
   });
 });

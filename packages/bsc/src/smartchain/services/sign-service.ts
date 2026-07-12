@@ -127,6 +127,9 @@ export function createSignService(
       }
       case "ClaimDelegate":
         assertValidator(transaction);
+        if (transaction.index === undefined) {
+          throw new ValidationError("INVALID_AMOUNT", "ClaimDelegate on BSC requires an index.");
+        }
         return {
           data: encodeClaim(getValidatorAddress(transaction.validator), transaction.index),
           amount: 0n,

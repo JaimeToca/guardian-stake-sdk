@@ -95,6 +95,33 @@ describe("createFeeService — balance-aware validation", () => {
     expect(result.type).toBe("ResourceFee");
   });
 
+  it("Undelegate: missing resource throws ValidationError(INVALID_RESOURCE)", async () => {
+    const rpc = makeRpc(baseAccount);
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "Undelegate",
+      chain: {} as Transaction["chain"],
+      amount: 10_000_000n,
+      account: "TOwner",
+      isMaxAmount: false,
+    };
+    await expect(fee.estimateFee(tx)).rejects.toMatchObject({ code: "INVALID_RESOURCE" });
+  });
+
+  it("Undelegate: invalid resource throws ValidationError(INVALID_RESOURCE)", async () => {
+    const rpc = makeRpc(baseAccount);
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction & { resource: string } = {
+      type: "Undelegate",
+      chain: {} as Transaction["chain"],
+      amount: 10_000_000n,
+      account: "TOwner",
+      isMaxAmount: false,
+      resource: "STAKED",
+    };
+    await expect(fee.estimateFee(tx)).rejects.toMatchObject({ code: "INVALID_RESOURCE" });
+  });
+
   it("Undelegate: unfreeze more than frozen for that resource throws", async () => {
     const rpc = makeRpc(baseAccount);
     const fee = createFeeService(rpc, makeStaking());

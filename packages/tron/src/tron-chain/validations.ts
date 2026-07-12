@@ -40,6 +40,16 @@ export function assertVote(
   }
 }
 
+/** Runtime guard: TronWeb freeze/unfreeze calls require a valid resource string. */
+export function assertResource(resource: unknown): asserts resource is TronResource {
+  if (resource !== "BANDWIDTH" && resource !== "ENERGY") {
+    throw new ValidationError(
+      "INVALID_RESOURCE",
+      'Tron freeze/unfreeze requires resource "BANDWIDTH" or "ENERGY".'
+    );
+  }
+}
+
 export function assertUnfreeze(
   account: TronAccount,
   resource: TronResource,

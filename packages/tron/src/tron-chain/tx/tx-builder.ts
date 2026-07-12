@@ -7,6 +7,7 @@ import {
   type TronUndelegateTransaction,
   type UnsignedTronTx,
 } from "./tron-types";
+import { assertResource } from "../validations";
 
 const srAddress = (v: Validator | OperatorAddress): string =>
   typeof v === "string" ? v : v.operatorAddress;
@@ -24,12 +25,24 @@ export async function buildUnsignedTx(
   switch (tx.type) {
     case "Delegate": {
       const t = tx as TronDelegateTransaction;
+      if (t.isMaxAmount)
+        throw new ValidationError(
+          "INVALID_AMOUNT",
+          "Tron does not support isMaxAmount; pass an exact amount (query getBalances/getDelegations for the max)."
+        );
+      assertResource(t.resource);
       if (t.amount < SUN_PER_TRX)
         throw new ValidationError("INVALID_AMOUNT", "Freeze amount must be at least 1 TRX.");
       return asUnsignedTx(await tb.freezeBalanceV2(Number(t.amount), t.resource, ownerAddress));
     }
     case "Undelegate": {
       const t = tx as TronUndelegateTransaction;
+      if (t.isMaxAmount)
+        throw new ValidationError(
+          "INVALID_AMOUNT",
+          "Tron does not support isMaxAmount; pass an exact amount (query getBalances/getDelegations for the max)."
+        );
+      assertResource(t.resource);
       return asUnsignedTx(await tb.unfreezeBalanceV2(Number(t.amount), t.resource, ownerAddress));
     }
     case "Vote": {

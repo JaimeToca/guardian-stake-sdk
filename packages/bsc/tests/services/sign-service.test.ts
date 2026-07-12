@@ -146,6 +146,26 @@ describe("SignService", () => {
         return true;
       });
     });
+
+    it("throws on ClaimDelegate without an index", async () => {
+      await expect(
+        service.sign({
+          transaction: {
+            type: "ClaimDelegate" as const,
+            chain: bscMainnet,
+            amount: 0n,
+            validator: VALIDATOR,
+          },
+          fee: mockFee,
+          nonce: 1,
+          privateKey: TEST_PRIVATE_KEY,
+        })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_AMOUNT");
+        return true;
+      });
+    });
   });
 
   describe("prehash", () => {
