@@ -75,9 +75,15 @@ Tron has **two separate withdrawal transactions** that do not trigger each other
 
 Claiming one never claims the other. A wallet UI must offer both actions separately whenever their respective balances (`Claimable`, `Rewards`) are non-zero.
 
-## Partial unstaking is allowed (contrast Cardano)
+**`validator`/`index` are optional and IGNORED on Tron claims.** `tx-builder.ts` calls `tb.withdrawExpireUnfreeze(ownerAddress)` / `tb.withdrawBlockRewards(ownerAddress)` — neither reads `transaction.validator` or `transaction.index`. Those fields exist on `ClaimDelegateTransaction`/`ClaimRewardsTransaction` only because BSC (`validator`+`index`) and Cardano (`validator`) require them; don't pass dummy values for Tron, and don't add validation that requires them here.
 
-Unlike Cardano — which rejects partial reward withdrawals and forces a full-balance sweep — Tron's `Undelegate` (`unfreezeBalanceV2`) **allows partial amounts**: `amount ≤ frozen for that resource`, or set `isMaxAmount` to unfreeze the whole position. **Each unfreeze starts its own independent 14-day clock** (`unfreezeDelayDays` chain parameter) and produces its own `unfrozenV2` entry — so a wallet can have several `Pending`/`Claimable` positions in flight simultaneously for the same resource. Tron caps concurrent pending unfreezes at ~32; `assertUnfreeze` validates against the frozen balance for the resource but does not currently special-case the 32-slot cap (surfaces as an on-chain rejection if hit).
+## Fee estimation is resource-aware, floored at 1 SUN/point
+
+`createFeeService.estimateFee` computes bandwidth price as `BigInt(Math.max(1, params.getTransactionFee ?? 1000))` — floored at 1 SUN/point so a chain returning `getTransactionFee: 0` (or omitting it) never produces a free-but-wrong estimate. When `getAccountResources(account).freeBandwidth + stakedBandwidth` already covers `ESTIMATED_TX_BANDWIDTH` (350 points), the op is genuinely free (`total: 0n`); otherwise the shortfall is burned at the floored price. `ClaimDelegate`/`ClaimRewards` without an `account` fall back to a conservative full burn (no resources to check).
+
+## Partial unstaking is allowed (contrast Cardano) — but `isMaxAmount` is NOT
+
+Unlike Cardano — which rejects partial reward withdrawals and forces a full-balance sweep — Tron's `Undelegate` (`unfreezeBalanceV2`) **allows partial amounts**: `amount ≤ frozen for that resource`. **`isMaxAmount: true` is rejected** on both `Delegate` and `Undelegate` — `tx-builder.ts` throws `ValidationError("INVALID_AMOUNT", ...)` before ever calling TronWeb. Tron requires an exact SUN amount on every freeze/unfreeze; consumers must query `getBalances`/`getDelegations` to determine the max freezable/unfreezable amount and pass it explicitly. Don't reintroduce an `isMaxAmount: true` code path for Tron. **Each unfreeze starts its own independent 14-day clock** (`unfreezeDelayDays` chain parameter) and produces its own `unfrozenV2` entry — so a wallet can have several `Pending`/`Claimable` positions in flight simultaneously for the same resource. Tron caps concurrent pending unfreezes at ~32; `assertUnfreeze` validates against the frozen balance for the resource but does not currently special-case the 32-slot cap (surfaces as an on-chain rejection if hit).
 
 ## `getDelegations` is resource-granular
 
@@ -112,6 +118,8 @@ APR                    = (totalAnnualRewards × brokerage_share / validatorVotes
 ```
 
 > **[VERIFY]** The `sr_block_rewards` term (per `apr_tron.txt`) omits a blocks/day factor and looks dimensionally suspect. It is accepted as-is for now; validate the computed APR against real on-chain numbers for a known SR before relying on it, and correct the term if the reference doc's formula turns out to be wrong. See `apr-calculator.ts` for the isolated, pure implementation.
+
+`computeApr` clamps its output to a sane, finite `[0, …)` range — invalid inputs (`validatorVotes <= 0`, `totalVotes <= 0`) and any non-finite or negative result short-circuit to `0` rather than propagating `NaN`/`Infinity`/negative APR to consumers.
 
 ## Signing (`sign` / `prehash` / `compile`)
 
@@ -163,13 +171,15 @@ await sdk.broadcast(chains.tronMainnet, unfreezeRawTx);
 // getDelegations() → Active 60 TRX + Pending 40 TRX (pendingUntil = now + 14d)
 
 // 4a. CLAIM PRINCIPAL — after 14 days, withdraw the matured unfrozen TRX (WithdrawExpireUnfreeze).
-const claimPrincipal: ClaimDelegateTransaction = { type: "ClaimDelegate", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", index: 0n, account: ADDRESS };
+// validator/index are optional on ClaimDelegateTransaction and IGNORED by Tron — omit them.
+const claimPrincipal: ClaimDelegateTransaction = { type: "ClaimDelegate", chain: chains.tronMainnet, amount: 0n, account: ADDRESS };
 const claimPrincipalFee = await sdk.estimateFee(claimPrincipal);
 const claimPrincipalRawTx = await sdk.sign({ transaction: claimPrincipal, fee: claimPrincipalFee, nonce: 0, privateKey });
 await sdk.broadcast(chains.tronMainnet, claimPrincipalRawTx);
 
 // 4b. CLAIM REWARDS — independent, anytime rewards accrued (24h cooldown) (WithdrawBalance).
-const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", account: ADDRESS };
+// validator is optional on ClaimRewardsTransaction and IGNORED by Tron — omit it.
+const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain: chains.tronMainnet, amount: 0n, account: ADDRESS };
 const claimRewardsFee = await sdk.estimateFee(claimRewards);
 const claimRewardsRawTx = await sdk.sign({ transaction: claimRewards, fee: claimRewardsFee, nonce: 0, privateKey });
 await sdk.broadcast(chains.tronMainnet, claimRewardsRawTx);

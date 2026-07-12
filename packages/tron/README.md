@@ -79,11 +79,11 @@ Tron has two separate withdrawal transactions that never trigger each other:
 
 ### Partial Unstaking
 
-Unlike Cardano — which forces a full-balance reward withdrawal — Tron's `Undelegate` allows **partial amounts**: unfreeze less than the full frozen balance for a resource, or set `isMaxAmount: true` to unfreeze everything. Each unfreeze starts its own independent 14-day unbonding clock and produces its own claimable position (up to a ~32 concurrent-pending cap enforced on-chain).
+Unlike Cardano — which forces a full-balance reward withdrawal — Tron's `Undelegate` allows **partial amounts**: unfreeze less than the full frozen balance for a resource. **`isMaxAmount: true` is rejected** on both `Delegate` and `Undelegate` — Tron requires an exact SUN amount; query `getBalances`/`getDelegations` to determine the max freezable/unfreezable amount before building the transaction. Each unfreeze starts its own independent 14-day unbonding clock and produces its own claimable position (up to a ~32 concurrent-pending cap enforced on-chain).
 
 ### APR
 
-Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Representative from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes.
+Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Representative from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes. The computed value is clamped to a sane, finite `[0, …)` range — it never returns negative, `NaN`, or `Infinity`.
 
 > **[VERIFY]** The SR block-reward term in the APR formula follows a reference calculation that looks dimensionally suspect (missing a blocks/day factor). Treat computed APR as an estimate until validated against real on-chain numbers for a known SR. See `.claude/rules/tron.md` for the full formula.
 
@@ -272,7 +272,7 @@ const nonce = await sdk.getNonce(chains.tronMainnet, ADDRESS); // always 0
 
 ### `estimateFee`
 
-Tron fees are **resource-based**, not gas: a transaction consumes bandwidth (∝ serialized size) and, for contract calls, energy (≈0 for pure staking ops). Shortfalls against free/available resources are burned as TRX.
+Tron fees are **resource-based**, not gas: a transaction consumes bandwidth (∝ serialized size) and, for contract calls, energy (≈0 for pure staking ops). When the account's free + staked bandwidth already covers the estimated transaction size, the operation is genuinely free (`total: 0n`); otherwise the shortfall is burned as TRX at the chain's per-point price (`getTransactionFee`), floored at 1 SUN/point so a misreported `0` from the chain parameters never produces a free fee.
 
 ```typescript
 const fee = await sdk.estimateFee(transaction);
@@ -363,13 +363,17 @@ const unfreezeSigned = await sdk.sign({ transaction: unfreeze, fee: unfreezeFee,
 await sdk.broadcast(chains.tronMainnet, unfreezeSigned);
 
 // CLAIM PRINCIPAL — after 14 days, withdraw the matured unfrozen TRX.
-const claimPrincipal: ClaimDelegateTransaction = { type: "ClaimDelegate", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", index: 0n, account: ADDRESS };
+// validator/index are optional on ClaimDelegateTransaction and IGNORED by Tron
+// (withdrawExpireUnfreeze withdraws whatever has matured for this account) — omit them.
+const claimPrincipal: ClaimDelegateTransaction = { type: "ClaimDelegate", chain: chains.tronMainnet, amount: 0n, account: ADDRESS };
 const claimPrincipalFee = await sdk.estimateFee(claimPrincipal);
 const claimPrincipalSigned = await sdk.sign({ transaction: claimPrincipal, fee: claimPrincipalFee, nonce: 0, privateKey });
 await sdk.broadcast(chains.tronMainnet, claimPrincipalSigned);
 
 // CLAIM REWARDS — independent, anytime rewards accrued (24h cooldown).
-const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain: chains.tronMainnet, amount: 0n, validator: "T<SR-address>", account: ADDRESS };
+// validator is optional on ClaimRewardsTransaction and IGNORED by Tron
+// (withdrawBlockRewards withdraws the whole account reward balance) — omit it.
+const claimRewards: ClaimRewardsTransaction = { type: "ClaimRewards", chain: chains.tronMainnet, amount: 0n, account: ADDRESS };
 const claimRewardsFee = await sdk.estimateFee(claimRewards);
 const claimRewardsSigned = await sdk.sign({ transaction: claimRewards, fee: claimRewardsFee, nonce: 0, privateKey });
 await sdk.broadcast(chains.tronMainnet, claimRewardsSigned);
@@ -415,7 +419,8 @@ Every error thrown by the SDK extends `GuardianError`. See the [main README Erro
 
 | Code | Thrown when |
 |---|---|
-| `INVALID_AMOUNT` | Freeze below 1 TRX, vote not a whole number of TRX, over-voting, or unfreeze exceeding frozen balance |
+| `INVALID_AMOUNT` | Freeze below 1 TRX, `isMaxAmount: true` on `Delegate`/`Undelegate` (unsupported — pass an exact amount), vote not a whole number of TRX, over-voting, or unfreeze exceeding frozen balance |
+| `INVALID_RESOURCE` | `Undelegate`/fee estimation with a missing or invalid `resource` (must be `"BANDWIDTH"` or `"ENERGY"`) |
 | `UNSUPPORTED_OPERATION` | Voting for an unknown Super Representative |
 | `INVALID_SIGNING_ARGS` | Missing `privateKey`/`account`, or `compile()` called without `signArgs._rawTx` from `prehash()` |
 

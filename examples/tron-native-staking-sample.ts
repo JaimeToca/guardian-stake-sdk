@@ -125,13 +125,13 @@ async function sample_full_lifecycle() {
 
   // ── 4a. CLAIM PRINCIPAL — after 14 days, withdraw the matured unfrozen TRX. ──
   // Independent transaction — WithdrawExpireUnfreeze. Only succeeds once `pendingUntil` has passed.
+  // validator/index are optional on ClaimDelegateTransaction and IGNORED by Tron
+  // (withdrawExpireUnfreeze withdraws whatever has matured for this account) — omitted here.
   const claimPrincipal: ClaimDelegateTransaction = {
     type: "ClaimDelegate",
     chain: tronMainnet,
     amount: 0n, // Tron ignores this; the on-chain unfreeze queue determines the withdrawn amount
     account: ADDRESS,
-    validator: SR_ADDRESS,
-    index: 0n,
   };
 
   const claimPrincipalFee = await sdk.estimateFee(claimPrincipal);
@@ -156,12 +156,13 @@ async function sample_full_lifecycle() {
     return;
   }
 
+  // validator is optional on ClaimRewardsTransaction and IGNORED by Tron
+  // (withdrawBlockRewards withdraws the whole account reward balance) — omitted here.
   const claimRewards: ClaimRewardsTransaction = {
     type: "ClaimRewards",
     chain: tronMainnet,
     amount: rewards.amount,
     account: ADDRESS,
-    validator: SR_ADDRESS,
   };
 
   const claimRewardsFee = await sdk.estimateFee(claimRewards);
