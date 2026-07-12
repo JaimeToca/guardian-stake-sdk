@@ -2,9 +2,11 @@ import type {
   Delegation,
   Delegations,
   GetValidatorsParams,
+  Logger,
   Validator,
   ValidatorsPage,
 } from "@guardian-sdk/sdk";
+import { NoopLogger } from "@guardian-sdk/sdk";
 import type { TronRpcClientContract } from "../rpc/tron-rpc-client-contract";
 import type { TronResource } from "../rpc/tron-rpc-types";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
@@ -31,15 +33,17 @@ function placeholderValidator(resource: TronResource): Validator {
 
 export function createStakingService(
   rpc: TronRpcClientContract,
-  createTronWeb: TronWebFactory["create"]
+  createTronWeb: TronWebFactory["create"],
+  logger: Logger = new NoopLogger()
 ): TronStakingServiceContract {
   let cache: { at: number; witnesses: Validator[]; totalVotes: bigint } | undefined;
+  let inflight: Promise<{ witnesses: Validator[]; totalVotes: bigint }> | undefined;
   const tronWeb = createTronWeb();
   const toBase58 = (addr: string): string =>
     addr.startsWith("41") ? tronWeb.address.fromHex(addr) : addr;
 
-  async function load(): Promise<{ witnesses: Validator[]; totalVotes: bigint }> {
-    if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache;
+  async function doLoad(): Promise<{ witnesses: Validator[]; totalVotes: bigint }> {
+    logger.debug("StakingService: witness cache miss — fetching from RPC");
     const [raw, params] = await Promise.all([rpc.listWitnesses(), rpc.getChainParameters()]);
     const totalVotes = raw.reduce((s, w) => s + w.voteCount, 0n);
     const witnesses = await Promise.all(
@@ -68,7 +72,23 @@ export function createStakingService(
       })
     );
     cache = { at: Date.now(), witnesses, totalVotes };
+    logger.debug("StakingService: witness cache refreshed", { count: witnesses.length });
     return cache;
+  }
+
+  async function load(): Promise<{ witnesses: Validator[]; totalVotes: bigint }> {
+    if (cache && Date.now() - cache.at < CACHE_TTL_MS) {
+      logger.debug("StakingService: witness cache hit", { count: cache.witnesses.length });
+      return cache;
+    }
+    if (inflight) {
+      logger.debug("StakingService: witness load already in flight — awaiting it");
+      return inflight;
+    }
+    inflight = doLoad().finally(() => {
+      inflight = undefined;
+    });
+    return inflight;
   }
 
   async function getWitnessMap(): Promise<Map<string, Validator>> {

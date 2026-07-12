@@ -1,10 +1,11 @@
 import type {
   BaseSignArgs,
   CompileArgs,
+  Logger,
   PrehashResult,
   SigningWithPrivateKey,
 } from "@guardian-sdk/sdk";
-import { SigningError } from "@guardian-sdk/sdk";
+import { NoopLogger, SigningError } from "@guardian-sdk/sdk";
 import type { TronWeb } from "tronweb";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
 import { buildUnsignedTx } from "../tx/tx-builder";
@@ -18,9 +19,14 @@ type TronWebSignFn = TronWeb["trx"]["sign"];
 const asTronWebSignInput = (v: UnsignedTronTx): Parameters<TronWebSignFn>[0] =>
   v as unknown as Parameters<TronWebSignFn>[0];
 
-export function createSignService(tronWebFactory: TronWebFactory) {
+export function createSignService(
+  tronWebFactory: TronWebFactory,
+  logger: Logger = new NoopLogger()
+) {
   return {
     async sign(args: SigningWithPrivateKey): Promise<string> {
+      logger.info("SignService: signing transaction", { type: args.transaction.type });
+
       if (!args.privateKey)
         throw new SigningError("INVALID_SIGNING_ARGS", "Tron sign() requires a privateKey.");
       const tronWeb = tronWebFactory.create(args.privateKey);
@@ -32,10 +38,14 @@ export function createSignService(tronWebFactory: TronWebFactory) {
         );
       const unsigned = await buildUnsignedTx(tronWeb, args.transaction, owner);
       const signed = await tronWeb.trx.sign(asTronWebSignInput(unsigned));
+
+      logger.info("SignService: transaction signed");
       return JSON.stringify(signed);
     },
 
     async prehash(args: BaseSignArgs): Promise<PrehashResult> {
+      logger.info("SignService: prehashing transaction", { type: args.transaction.type });
+
       const tronWeb = tronWebFactory.create();
       const owner = (args.transaction.account ?? "") as string;
       if (!owner)
@@ -50,10 +60,14 @@ export function createSignService(tronWebFactory: TronWebFactory) {
         nonce: args.nonce,
         _rawTx: unsigned,
       };
+
+      logger.info("SignService: prehash complete — send serializedTransaction to external signer");
       return { serializedTransaction: unsigned.txID, signArgs };
     },
 
     async compile(args: CompileArgs): Promise<string> {
+      logger.info("SignService: compiling signed transaction");
+
       const rawTx = (args.signArgs as TronSignArgs)._rawTx as UnsignedTronTx | undefined;
       if (!rawTx)
         throw new SigningError(
@@ -63,6 +77,8 @@ export function createSignService(tronWebFactory: TronWebFactory) {
       if (!args.signature)
         throw new SigningError("INVALID_SIGNING_ARGS", "compile() requires a non-empty signature.");
       const signed: UnsignedTronTx = { ...rawTx, signature: [args.signature] };
+
+      logger.info("SignService: transaction compiled");
       return JSON.stringify(signed);
     },
   };

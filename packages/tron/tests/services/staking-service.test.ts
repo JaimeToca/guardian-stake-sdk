@@ -137,3 +137,38 @@ describe("getDelegations", () => {
     expect(delegations.find((d) => d.status === "Claimable")?.amount).toBe(10_000_000n);
   });
 });
+
+describe("concurrent witness cache loads", () => {
+  it("two concurrent getValidators() calls trigger listWitnesses only once", async () => {
+    const client = rpc({
+      getAccount: vi.fn().mockResolvedValue({
+        balance: 0n,
+        frozen: [],
+        unfreezing: [],
+        votes: [],
+      }),
+    });
+    const svc = createStakingService(client, () => tronWeb);
+
+    const [a, b] = await Promise.all([svc.getValidators(), svc.getValidators()]);
+
+    expect(client.listWitnesses).toHaveBeenCalledTimes(1);
+    expect(a.data).toEqual(b.data);
+  });
+
+  it("two concurrent getDelegations() calls trigger listWitnesses only once", async () => {
+    const client = rpc({
+      getAccount: vi.fn().mockResolvedValue({
+        balance: 0n,
+        frozen: [{ resource: "BANDWIDTH", amount: 100_000_000n }],
+        unfreezing: [],
+        votes: [{ srAddress: "TSR", votes: 100n }],
+      }),
+    });
+    const svc = createStakingService(client, () => tronWeb);
+
+    await Promise.all([svc.getDelegations("TWallet"), svc.getDelegations("TWallet")]);
+
+    expect(client.listWitnesses).toHaveBeenCalledTimes(1);
+  });
+});

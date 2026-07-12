@@ -1,5 +1,5 @@
-import type { Fee, Transaction } from "@guardian-sdk/sdk";
-import { ValidationError } from "@guardian-sdk/sdk";
+import type { Fee, Logger, Transaction } from "@guardian-sdk/sdk";
+import { NoopLogger, ValidationError } from "@guardian-sdk/sdk";
 import type { TronRpcClientContract } from "../rpc/tron-rpc-client-contract";
 import type { TronWitness } from "../rpc/tron-rpc-types";
 import type { TronUndelegateTransaction } from "../tx/tron-types";
@@ -20,11 +20,16 @@ function requireAccount(tx: Transaction): string {
  * staked bandwidth covers the estimated tx size, the op is genuinely free (total: 0n).
  * Otherwise the shortfall is burned as TRX.
  */
-export function createFeeService(rpc: TronRpcClientContract, staking: TronStakingServiceContract) {
+export function createFeeService(
+  rpc: TronRpcClientContract,
+  staking: TronStakingServiceContract,
+  logger: Logger = new NoopLogger()
+) {
   const ESTIMATED_TX_BANDWIDTH = 350n; // bandwidth points ≈ bytes for a signed staking tx
 
   return {
     async estimateFee(tx: Transaction): Promise<Fee> {
+      logger.debug("FeeService: estimating fee", { type: tx.type });
       const params = await rpc.getChainParameters();
       const bandwidthPrice = BigInt(Math.max(1, params.getTransactionFee ?? 1000)); // SUN per bandwidth point
 
@@ -78,6 +83,7 @@ export function createFeeService(rpc: TronRpcClientContract, staking: TronStakin
         total = ESTIMATED_TX_BANDWIDTH * bandwidthPrice;
       }
 
+      logger.debug("FeeService: fee estimated", { total: total.toString() });
       return {
         type: "ResourceFee",
         bandwidth: ESTIMATED_TX_BANDWIDTH,

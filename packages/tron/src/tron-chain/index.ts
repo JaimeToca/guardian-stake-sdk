@@ -26,11 +26,11 @@ export function tron(config: TronConfig): GuardianServiceContract {
 
   const rpc = createTronRpcClient(config.rpcUrl, logger);
   const tronWebFactory = createTronWebFactory(config.rpcUrl);
-  const staking = createStakingService(rpc, tronWebFactory.create);
-  const balance = createBalanceService(rpc);
-  const fee = createFeeService(rpc, staking);
-  const sign = createSignService(tronWebFactory);
-  const broadcast = createBroadcastService(rpc);
+  const staking = createStakingService(rpc, tronWebFactory.create, logger);
+  const balance = createBalanceService(rpc, logger);
+  const fee = createFeeService(rpc, staking, logger);
+  const sign = createSignService(tronWebFactory, logger);
+  const broadcast = createBroadcastService(rpc, logger);
 
   return {
     getChainInfo: () => tronMainnet,
