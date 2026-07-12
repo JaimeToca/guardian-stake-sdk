@@ -12,6 +12,9 @@
   <a href="https://www.npmjs.com/package/@guardian-sdk/cardano">
     <img src="https://img.shields.io/npm/v/@guardian-sdk/cardano?label=%40guardian-sdk%2Fcardano&color=0d9488" alt="npm @guardian-sdk/cardano" />
   </a>
+  <a href="https://www.npmjs.com/package/@guardian-sdk/tron">
+    <img src="https://img.shields.io/npm/v/@guardian-sdk/tron?label=%40guardian-sdk%2Ftron&color=0d9488" alt="npm @guardian-sdk/tron" />
+  </a>
 <a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
     <img src="https://img.shields.io/npm/dm/@guardian-sdk/bsc?color=0d9488" alt="npm downloads" />
   </a>
@@ -74,13 +77,15 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 |---|---|---|---|---|
 | [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) | None |
 | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Cardano | Available (alpha) | [README](./packages/cardano/README.md) | None |
-| `@guardian-sdk/tron` | Tron | Planned | — | — |
+| [`@guardian-sdk/tron`](./packages/tron/README.md) | Tron | Available (alpha) | [README](./packages/tron/README.md) | None |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — | — |
 | `@guardian-sdk/sui` | SUI | Planned | — | — |
 | `@guardian-sdk/solana` | Solana | Planned | — | — |
 
 
 > **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
+
+Tron staking has some meaningful differences from BSC/Cardano — freezing (`Delegate`) is separate from voting (`Vote`) and only voting earns rewards, `resource` (`ENERGY`/`BANDWIDTH`) is chosen per freeze/unfreeze, amounts are in SUN (1 TRX = 10⁶ SUN), unfreezes carry a 14-day unbonding period, principal and rewards are two independent claims, APR is computed rather than fetched, and delegations can carry a `Frozen` status. See [`packages/tron/README.md`](./packages/tron/README.md) for the full model.
 
 Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian-sdk/sdk` is included automatically as a dependency of each chain package.
 
@@ -112,11 +117,11 @@ Adding another chain later is just adding another entry to the array:
 ```typescript
 import { GuardianSDK } from "@guardian-sdk/sdk";
 import { bsc, chains } from "@guardian-sdk/bsc";
-import { tron, TRON_CHAIN } from "@guardian-sdk/tron"; // when available
+import { tron, chains as tronChains } from "@guardian-sdk/tron";
 
 const sdk = new GuardianSDK([
   bsc({ rpcUrl: "https://bsc-dataseed.bnbchain.org" }),
-  tron({ rpcUrl: "https://api.trongrid.io" }),
+  tron({ rpcUrl: "https://<your-tron-fullnode>" }),
 ]);
 ```
 
@@ -245,6 +250,7 @@ Returns the balance categories for an address. Each `Balance` has a `type` and a
 
 - [BNB Smart Chain — getBalances](./packages/bsc/README.md#getbalances)
 - [Cardano — getBalances](./packages/cardano/README.md#getbalances)
+- [Tron — getBalances](./packages/tron/README.md#getbalances)
 
 **Returns:** `Promise<Balance[]>`
 
@@ -315,7 +321,7 @@ const fee = await sdk.estimateFee({
 console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
-Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `ClaimDelegate` (BSC), `ClaimRewards` (Cardano). See the [BSC README](./packages/bsc/README.md#estimatefee) or [Cardano README](./packages/cardano/README.md#estimatefee) for the full shape of each.
+Transaction types: `Delegate`, `Undelegate`, `Redelegate`, `ClaimDelegate` (BSC), `ClaimRewards` (Cardano, Tron), `Vote` (Tron). See the [BSC README](./packages/bsc/README.md#estimatefee), [Cardano README](./packages/cardano/README.md#estimatefee), or [Tron README](./packages/tron/README.md#estimatefee) for the full shape of each.
 
 ---
 
@@ -426,6 +432,9 @@ For chain-specific details (protocol parameters, transaction shapes, error codes
 
 - [BNB Smart Chain →](./packages/bsc/README.md)
 - [Cardano →](./packages/cardano/README.md)
+- [Tron →](./packages/tron/README.md)
+
+Tron's own worked flow (freeze → vote → unfreeze → claim) lives in [`examples/tron-native-staking-sample.ts`](./examples/tron-native-staking-sample.ts) and the [Cardano sample](./examples/cardano-native-staking-sample.ts) covers the UTXO-based flow — see [Sample — Delegate on BNB Smart Chain](#sample--delegate-on-bnb-smart-chain) above for the BSC walkthrough.
 
 ---
 
@@ -440,6 +449,8 @@ The MPC flow is designed for setups where the private key is managed externally 
 ## Logging
 
 The SDK is **silent by default** — no logs are emitted unless you opt in. Pass a logger to the chain factory to enable it.
+
+> The examples below use `bsc()`, but the pattern is identical across chains — pass `logger` to `cardano()` or `tron()` the same way. See each package README ([BSC](./packages/bsc/README.md#logging), [Cardano](./packages/cardano/README.md#logging), [Tron](./packages/tron/README.md#logging)) for chain-specific log messages.
 
 ### Built-in console logger
 
@@ -503,6 +514,8 @@ const sdk = new GuardianSDK([
 ## Testing
 
 `@guardian-sdk/sdk` ships test utilities so you can unit-test your own code without hitting real RPC nodes.
+
+> These utilities are chain-agnostic — `createMockService` and the fixture helpers below work the same whether you're testing BSC, Cardano, or Tron integrations.
 
 ### `createMockService(overrides?, chain?)`
 
@@ -615,6 +628,8 @@ const sdk = new GuardianSDK([bsc({ rpcUrl: "...", logger: testLogger })]);
 
 Every error thrown by the SDK extends `GuardianError`. Each subclass carries a `code` (machine-readable) and `message` (human-readable).
 
+> The example below imports from `@guardian-sdk/bsc`, but `ValidationError`/`ConfigError`/`SigningError` are re-exported from every chain package (`@guardian-sdk/cardano`, `@guardian-sdk/tron`) with the same catch pattern — see each package README for its chain-specific error codes ([Tron error codes](./packages/tron/README.md#error-handling)).
+
 ```typescript
 import { GuardianError, ValidationError, ConfigError, SigningError } from "@guardian-sdk/bsc";
 
@@ -707,9 +722,9 @@ Planned integrations follow the same architecture — each chain is an independe
 |---|---|---|
 | BNB Smart Chain | [`@guardian-sdk/bsc`](./packages/bsc/README.md) | Available |
 | SUI | `@guardian-sdk/sui` | Planned |
-| Tron | `@guardian-sdk/tron` | Planned |
+| Tron | [`@guardian-sdk/tron`](./packages/tron/README.md) | Available (alpha) |
 | Solana | `@guardian-sdk/solana` | Planned |
-| Cardano | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Available |
+| Cardano | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Available (alpha) |
 | Ethereum | `@guardian-sdk/ethereum` | Planned |
 
 ### SDK improvements
