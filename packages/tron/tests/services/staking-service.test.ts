@@ -89,6 +89,32 @@ describe("getDelegations", () => {
     expect(pending?.amount).toBe(40_000_000n);
   });
 
+  it("multiple votes with uneven scaling -> Active amounts sum exactly to effectiveVoted (no dust loss)", async () => {
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [{ resource: "BANDWIDTH", amount: 100_000_000n }],
+          unfreezing: [],
+          votes: [
+            { srAddress: "TSR", votes: 100n },
+            { srAddress: "TSR2", votes: 101n },
+            { srAddress: "TSR3", votes: 103n },
+          ], // total voted = 304 * SUN_PER_TRX = 304_000_000n, totalFrozen = 100_000_000n
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+
+    const active = delegations.filter((d) => d.status === "Active");
+    expect(active).toHaveLength(3);
+    const activeTotal = active.reduce((s, d) => s + d.amount, 0n);
+    expect(activeTotal).toBe(100_000_000n);
+
+    expect(delegations.find((d) => d.status === "Frozen")).toBeUndefined();
+  });
+
   it("unbonding -> Pending, matured -> Claimable", async () => {
     const future = Date.now() + 1_000_000;
     const past = Date.now() - 1_000_000;

@@ -116,13 +116,20 @@ export function createStakingService(
       const effectiveVoted = totalVoted <= totalFrozen ? totalVoted : totalFrozen;
 
       // Active: one per vote
-      for (const vote of account.votes) {
+      const needsScaling = totalVoted > totalFrozen && totalVoted !== 0n;
+      let scaledSoFar = 0n;
+      for (const [voteIdx, vote] of account.votes.entries()) {
         const validator = witnessMap.get(vote.srAddress) ?? placeholderValidator("BANDWIDTH");
         const rawAmount = vote.votes * SUN_PER_TRX;
-        const scaledAmount =
-          totalVoted <= totalFrozen || totalVoted === 0n
-            ? rawAmount
+        const isLastVote = voteIdx === account.votes.length - 1;
+        // Floor division on each vote independently loses "dust" across multiple votes.
+        // Assign the residual to the last vote so Σ Active === effectiveVoted exactly.
+        const scaledAmount = !needsScaling
+          ? rawAmount
+          : isLastVote
+            ? effectiveVoted - scaledSoFar
             : (rawAmount * totalFrozen) / totalVoted;
+        scaledSoFar += scaledAmount;
         delegations.push({
           id: `${address}:${vote.srAddress}`,
           validator,
