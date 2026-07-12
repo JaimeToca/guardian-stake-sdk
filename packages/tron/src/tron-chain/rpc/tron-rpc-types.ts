@@ -13,3 +13,8 @@ export interface TronWitness {
   url: string;
   isSr: boolean;
 }
+
+export interface TronAccountResources {
+  freeBandwidth: bigint;
+  stakedBandwidth: bigint;
+}

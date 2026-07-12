@@ -40,3 +40,40 @@ describe("createTronRpcClient.getReward", () => {
     expect(await rpc.getReward("TWallet")).toBe(0n);
   });
 });
+
+describe("createTronRpcClient.getAccountResources", () => {
+  it("computes freeBandwidth/stakedBandwidth from limit-used pairs", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        freeNetLimit: 5000,
+        freeNetUsed: 1200,
+        NetLimit: 2000,
+        NetUsed: 500,
+      })
+    );
+    const rpc = createTronRpcClient("https://node.example");
+    const res = await rpc.getAccountResources("TWallet");
+    expect(res).toEqual({ freeBandwidth: 3800n, stakedBandwidth: 1500n });
+  });
+
+  it("clamps to 0 when used exceeds limit, and defaults missing fields to 0", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        freeNetLimit: 100,
+        freeNetUsed: 500,
+      })
+    );
+    const rpc = createTronRpcClient("https://node.example");
+    const res = await rpc.getAccountResources("TWallet");
+    expect(res).toEqual({ freeBandwidth: 0n, stakedBandwidth: 0n });
+  });
+
+  it("defaults everything to 0 when the response is empty", async () => {
+    vi.stubGlobal("fetch", mockFetch({}));
+    const rpc = createTronRpcClient("https://node.example");
+    const res = await rpc.getAccountResources("TWallet");
+    expect(res).toEqual({ freeBandwidth: 0n, stakedBandwidth: 0n });
+  });
+});

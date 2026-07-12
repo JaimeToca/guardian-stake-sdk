@@ -14,6 +14,7 @@ const params = {
 function rpc(over: Partial<TronRpcClientContract> = {}): TronRpcClientContract {
   return {
     getAccount: vi.fn(),
+    getAccountResources: vi.fn().mockResolvedValue({ freeBandwidth: 0n, stakedBandwidth: 0n }),
     getReward: vi.fn().mockResolvedValue(0n),
     listWitnesses: vi.fn().mockResolvedValue(witnesses),
     getChainParameters: vi.fn().mockResolvedValue(params),

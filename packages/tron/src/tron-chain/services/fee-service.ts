@@ -16,12 +16,13 @@ function requireAccount(tx: Transaction): string {
 }
 
 /**
- * Tron staking ops consume bandwidth (∝ tx size); energy ≈ 0. When free/available bandwidth
- * doesn't cover it, the shortfall is burned as TRX. This returns a conservative ResourceFee;
- * pure staking ops are typically free when the account holds staked bandwidth.
+ * Tron staking ops consume bandwidth (∝ tx size); energy ≈ 0. When the account's free +
+ * staked bandwidth covers the estimated tx size, the op is genuinely free (total: 0n).
+ * Otherwise the shortfall is burned as TRX.
  */
 export function createFeeService(rpc: TronRpcClientContract, staking: TronStakingServiceContract) {
-  const APPROX_STAKING_TX_BANDWIDTH = 300n; // bytes; freeze/vote/withdraw are small, fixed-shape txs
+  const ESTIMATED_TX_BANDWIDTH = 350n; // bandwidth points ≈ bytes for a signed staking tx
+
   return {
     async estimateFee(tx: Transaction): Promise<Fee> {
       const params = await rpc.getChainParameters();
@@ -63,11 +64,24 @@ export function createFeeService(rpc: TronRpcClientContract, staking: TronStakin
           break;
       }
 
+      let total: bigint;
+      if (tx.account) {
+        const res = await rpc.getAccountResources(tx.account);
+        const available = res.freeBandwidth + res.stakedBandwidth;
+        total =
+          available >= ESTIMATED_TX_BANDWIDTH
+            ? 0n
+            : (ESTIMATED_TX_BANDWIDTH - available) * bandwidthPrice;
+      } else {
+        // No account to check resources against (e.g. ClaimDelegate/ClaimRewards) — conservative full burn.
+        total = ESTIMATED_TX_BANDWIDTH * bandwidthPrice;
+      }
+
       return {
         type: "ResourceFee",
-        bandwidth: APPROX_STAKING_TX_BANDWIDTH,
+        bandwidth: ESTIMATED_TX_BANDWIDTH,
         energy: 0n,
-        total: APPROX_STAKING_TX_BANDWIDTH * bandwidthPrice, // worst-case TRX burn if no free bandwidth
+        total,
       };
     },
   };

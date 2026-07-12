@@ -5,6 +5,7 @@ import type { TronRpcClientContract } from "../../src/tron-chain/rpc/tron-rpc-cl
 import type { TronAccount } from "../../src/tron-chain/rpc/tron-rpc-types";
 import type { TronStakingServiceContract } from "../../src/tron-chain/services/staking-service-contract";
 import type { Transaction, Validator } from "@guardian-sdk/sdk";
+import type { TronAccountResources } from "../../src/tron-chain/rpc/tron-rpc-types";
 
 const SR: Validator = {
   id: "TSR",
@@ -18,9 +19,18 @@ const SR: Validator = {
   creditAddress: "",
 };
 
-function makeRpc(account: TronAccount): TronRpcClientContract {
+const ampleResources: TronAccountResources = {
+  freeBandwidth: 200n,
+  stakedBandwidth: 200n,
+}; // available = 400 >= 350
+
+function makeRpc(
+  account: TronAccount,
+  resources: TronAccountResources = ampleResources
+): TronRpcClientContract {
   return {
     getAccount: vi.fn().mockResolvedValue(account),
+    getAccountResources: vi.fn().mockResolvedValue(resources),
     getReward: vi.fn().mockResolvedValue(0n),
     listWitnesses: vi.fn().mockResolvedValue([]),
     getChainParameters: vi.fn().mockResolvedValue({ getTransactionFee: 1000 }),
@@ -168,7 +178,7 @@ describe("createFeeService — balance-aware validation", () => {
     expect(result.type).toBe("ResourceFee");
   });
 
-  it("ClaimRewards: returns a ResourceFee without needing account/witnesses", async () => {
+  it("ClaimRewards: returns a ResourceFee without needing account/witnesses validation", async () => {
     const rpc = makeRpc(baseAccount);
     const getAccount = rpc.getAccount as Mock;
     const staking = makeStaking();
@@ -197,5 +207,85 @@ describe("createFeeService — balance-aware validation", () => {
       isMaxAmount: false,
     };
     await expect(fee.estimateFee(tx)).rejects.toThrow();
+  });
+});
+
+describe("createFeeService — resource-aware fee", () => {
+  it("account with ample bandwidth (available >= 350) returns total 0n", async () => {
+    const rpc = makeRpc(baseAccount, { freeBandwidth: 200n, stakedBandwidth: 200n });
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "Delegate",
+      chain: {} as Transaction["chain"],
+      amount: 50_000_000n,
+      account: "TOwner",
+      isMaxAmount: false,
+    };
+    const result = await fee.estimateFee(tx);
+    expect(result.type).toBe("ResourceFee");
+    expect(result.total).toBe(0n);
+  });
+
+  it("account with insufficient bandwidth (available 100) burns the shortfall", async () => {
+    const rpc = makeRpc(baseAccount, { freeBandwidth: 100n, stakedBandwidth: 0n });
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "Delegate",
+      chain: {} as Transaction["chain"],
+      amount: 50_000_000n,
+      account: "TOwner",
+      isMaxAmount: false,
+    };
+    const result = await fee.estimateFee(tx);
+    expect(result.type).toBe("ResourceFee");
+    expect(result.total).toBe((350n - 100n) * 1000n);
+  });
+
+  it("account with zero resources burns the full estimated bandwidth", async () => {
+    const rpc = makeRpc(baseAccount, { freeBandwidth: 0n, stakedBandwidth: 0n });
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "Delegate",
+      chain: {} as Transaction["chain"],
+      amount: 50_000_000n,
+      account: "TOwner",
+      isMaxAmount: false,
+    };
+    const result = await fee.estimateFee(tx);
+    expect(result.type).toBe("ResourceFee");
+    expect(result.total).toBe(350n * 1000n);
+  });
+
+  it("ClaimRewards WITH account is resource-aware (ample bandwidth -> 0n)", async () => {
+    const rpc = makeRpc(baseAccount, { freeBandwidth: 200n, stakedBandwidth: 200n });
+    const getAccountResources = rpc.getAccountResources as Mock;
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "ClaimRewards",
+      chain: {} as Transaction["chain"],
+      amount: 0n,
+      account: "TOwner",
+      validator: "TSR",
+    };
+    const result = await fee.estimateFee(tx);
+    expect(result.type).toBe("ResourceFee");
+    expect(result.total).toBe(0n);
+    expect(getAccountResources).toHaveBeenCalledWith("TOwner");
+  });
+
+  it("ClaimRewards WITHOUT account falls back to conservative full burn", async () => {
+    const rpc = makeRpc(baseAccount, { freeBandwidth: 200n, stakedBandwidth: 200n });
+    const getAccountResources = rpc.getAccountResources as Mock;
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "ClaimRewards",
+      chain: {} as Transaction["chain"],
+      amount: 0n,
+      validator: "TSR",
+    };
+    const result = await fee.estimateFee(tx);
+    expect(result.type).toBe("ResourceFee");
+    expect(result.total).toBe(350n * 1000n);
+    expect(getAccountResources).not.toHaveBeenCalled();
   });
 });

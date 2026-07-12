@@ -1,7 +1,12 @@
 import type { Logger } from "@guardian-sdk/sdk";
 import { NoopLogger, ApiError } from "@guardian-sdk/sdk";
 import type { TronRpcClientContract } from "./tron-rpc-client-contract";
-import type { TronAccount, TronResource, TronWitness } from "./tron-rpc-types";
+import type {
+  TronAccount,
+  TronAccountResources,
+  TronResource,
+  TronWitness,
+} from "./tron-rpc-types";
 
 const num = (v: unknown): number => (typeof v === "number" ? v : 0);
 const big = (v: unknown): bigint => BigInt(num(v));
@@ -48,6 +53,18 @@ export function createTronRpcClient(
         })),
       };
       return account;
+    },
+    async getAccountResources(address) {
+      const raw = (await post("/wallet/getaccountresource", { address, visible: true })) as {
+        freeNetLimit?: number;
+        freeNetUsed?: number;
+        NetLimit?: number;
+        NetUsed?: number;
+      };
+      const freeBandwidth = big(Math.max(0, num(raw.freeNetLimit) - num(raw.freeNetUsed)));
+      const stakedBandwidth = big(Math.max(0, num(raw.NetLimit) - num(raw.NetUsed)));
+      const resources: TronAccountResources = { freeBandwidth, stakedBandwidth };
+      return resources;
     },
     async getReward(address) {
       const raw = (await post("/wallet/getReward", { address, visible: true })) as {
