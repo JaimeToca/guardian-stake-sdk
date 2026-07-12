@@ -33,6 +33,11 @@ export async function buildUnsignedTx(
       assertResource(t.resource);
       if (t.amount < SUN_PER_TRX)
         throw new ValidationError("INVALID_AMOUNT", "Freeze amount must be at least 1 TRX.");
+      if (t.amount > Number.MAX_SAFE_INTEGER)
+        throw new ValidationError(
+          "INVALID_AMOUNT",
+          "Freeze amount exceeds JavaScript safe integer limit for TronWeb."
+        );
       return asUnsignedTx(await tb.freezeBalanceV2(Number(t.amount), t.resource, ownerAddress));
     }
     case "Undelegate": {
@@ -43,6 +48,11 @@ export async function buildUnsignedTx(
           "Tron does not support isMaxAmount; pass an exact amount (query getBalances/getDelegations for the max)."
         );
       assertResource(t.resource);
+      if (t.amount > Number.MAX_SAFE_INTEGER)
+        throw new ValidationError(
+          "INVALID_AMOUNT",
+          "Unfreeze amount exceeds JavaScript safe integer limit for TronWeb."
+        );
       return asUnsignedTx(await tb.unfreezeBalanceV2(Number(t.amount), t.resource, ownerAddress));
     }
     case "Vote": {

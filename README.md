@@ -327,7 +327,7 @@ const fee = await sdk.estimateFee({
 console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
-Transaction types: `Delegate`, `Undelegate`, `Redelegate` (BSC, Cardano), `ClaimDelegate` (BSC, Tron), `ClaimRewards` (Cardano, Tron), `Vote` (Tron). See the [BSC README](./packages/bsc/README.md#estimatefee), [Cardano README](./packages/cardano/README.md#estimatefee), or [Tron README](./packages/tron/README.md#estimatefee) for the full shape of each.
+Transaction types: `Delegate` (BSC, Tron), `Undelegate` (BSC, Tron), `Redelegate` (BSC, Cardano), `ClaimDelegate` (BSC, Tron), `ClaimRewards` (Cardano, Tron), `Vote` (Tron). See the [BSC README](./packages/bsc/README.md#estimatefee), [Cardano README](./packages/cardano/README.md#estimatefee), or [Tron README](./packages/tron/README.md#estimatefee) for the full shape of each.
 
 ---
 

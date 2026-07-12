@@ -145,6 +145,12 @@ export function createTronRpcClient(
       return num(raw.brokerage);
     },
     async broadcast(signedTxJson) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(signedTxJson);
+      } catch {
+        throw new ApiError("Invalid signed transaction JSON", { type: "ServerResponseError" });
+      }
       const raw = await fetchOrError<{
         result?: boolean;
         txid?: string;
@@ -153,7 +159,7 @@ export function createTronRpcClient(
       }>({
         url: `${rpcUrl}/wallet/broadcasttransaction`,
         method: "POST",
-        data: JSON.parse(signedTxJson),
+        data: parsed,
         transformResponse: [parseBigIntResponse],
       });
       // The FullNode returns HTTP 200 even for a rejected broadcast, so fetchOrError won't throw.
@@ -166,7 +172,12 @@ export function createTronRpcClient(
           { type: "ServerResponseError" }
         );
       }
-      return raw.txid ?? "";
+      if (!raw.txid) {
+        throw new ApiError("Broadcast succeeded but no txid returned", {
+          type: "ServerResponseError",
+        });
+      }
+      return raw.txid;
     },
   };
 }

@@ -41,7 +41,9 @@ export function computeApr(input: AprInput): number {
 
   const annualVoteRewardsPool = input.witness127PayPerBlock * BLOCKS_PER_DAY * DAYS_PER_YEAR;
   const annualVotingRewards = (validatorVotes * annualVoteRewardsPool) / totalVotes;
-  const srBlockRewards = input.isSr ? input.witnessPayPerBlock * DAYS_PER_YEAR * SR_COUNT : 0;
+  const srBlockRewards = input.isSr
+    ? (input.witnessPayPerBlock * BLOCKS_PER_DAY * DAYS_PER_YEAR) / SR_COUNT
+    : 0;
   const totalAnnualRewards = annualVotingRewards + srBlockRewards;
 
   const clampedBrokeragePercent = Math.min(100, Math.max(0, input.brokeragePercent));
