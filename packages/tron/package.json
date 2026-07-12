@@ -11,8 +11,8 @@
   "publishConfig": { "access": "public", "tag": "alpha" },
   "scripts": { "build": "tsup", "typecheck": "tsc --noEmit", "test": "vitest run", "test:watch": "vitest" },
   "peerDependencies": { "@guardian-sdk/sdk": "workspace:^" },
-  "dependencies": { "tronweb": "6.1.0" },
-  "devDependencies": { "@guardian-sdk/sdk": "workspace:^", "tsup": "^8.5.1", "vitest": "^4.1.3" },
+  "dependencies": { "tronweb": "6.1.0", "json-bigint": "1.0.0" },
+  "devDependencies": { "@guardian-sdk/sdk": "workspace:^", "@types/json-bigint": "^1.0.4", "tsup": "^8.5.1", "vitest": "^4.1.3" },
   "engines": { "node": ">=22" },
   "license": "MIT"
 }

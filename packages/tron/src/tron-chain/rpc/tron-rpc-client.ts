@@ -1,5 +1,6 @@
 import type { Logger } from "@guardian-sdk/sdk";
 import { NoopLogger, ApiError } from "@guardian-sdk/sdk";
+import JSONbig from "json-bigint";
 import type { TronRpcClientContract } from "./tron-rpc-client-contract";
 import type {
   TronAccount,
@@ -8,8 +9,12 @@ import type {
   TronWitness,
 } from "./tron-rpc-types";
 
-const num = (v: unknown): number => (typeof v === "number" ? v : 0);
-const big = (v: unknown): bigint => BigInt(num(v));
+const jsonBig = JSONbig({ useNativeBigInt: true });
+
+const num = (v: bigint | number | undefined): number =>
+  typeof v === "number" ? v : typeof v === "bigint" ? Number(v) : 0;
+const big = (v: bigint | number | undefined): bigint =>
+  typeof v === "bigint" ? v : typeof v === "number" ? BigInt(Math.trunc(v)) : 0n;
 
 export function createTronRpcClient(
   rpcUrl: string,
@@ -23,19 +28,23 @@ export function createTronRpcClient(
     });
     if (!res.ok)
       throw new ApiError("Tron RPC error", { status: res.status, type: "ServerResponseError" });
-    return res.json();
+    const text = await res.text();
+    return jsonBig.parse(text) as unknown;
   }
 
   return {
     async getAccount(address) {
       const raw = (await post("/wallet/getaccount", { address, visible: true })) as {
-        balance?: number;
-        frozenV2?: { type?: string; amount?: number }[];
-        unfrozenV2?: { unfreeze_amount?: number; unfreeze_expire_time?: number }[];
-        votes?: { vote_address: string; vote_count: number }[];
+        balance?: bigint | number;
+        frozenV2?: { type?: string; amount?: bigint | number }[];
+        unfrozenV2?: {
+          unfreeze_amount?: bigint | number;
+          unfreeze_expire_time?: bigint | number;
+        }[];
+        votes?: { vote_address: string; vote_count: bigint | number }[];
       };
       const frozen = (raw.frozenV2 ?? [])
-        .filter((f) => f.type !== "TRON_POWER" && (f.amount ?? 0) > 0)
+        .filter((f) => f.type !== "TRON_POWER" && big(f.amount) > 0n)
         .map((f) => ({
           resource: (f.type === "ENERGY" ? "ENERGY" : "BANDWIDTH") as TronResource,
           amount: big(f.amount),
@@ -43,10 +52,12 @@ export function createTronRpcClient(
       const account: TronAccount = {
         balance: big(raw.balance),
         frozen,
-        unfreezing: (raw.unfrozenV2 ?? []).map((u) => ({
-          amount: big(u.unfreeze_amount),
-          expireTime: num(u.unfreeze_expire_time),
-        })),
+        unfreezing: (raw.unfrozenV2 ?? []).map((u) => {
+          const rawExpiry = u.unfreeze_expire_time;
+          const expireTime =
+            rawExpiry == null || num(rawExpiry) <= 0 ? Number.MAX_SAFE_INTEGER : num(rawExpiry);
+          return { amount: big(u.unfreeze_amount), expireTime };
+        }),
         votes: (raw.votes ?? []).map((v) => ({
           srAddress: v.vote_address,
           votes: big(v.vote_count),
@@ -56,10 +67,10 @@ export function createTronRpcClient(
     },
     async getAccountResources(address) {
       const raw = (await post("/wallet/getaccountresource", { address, visible: true })) as {
-        freeNetLimit?: number;
-        freeNetUsed?: number;
-        NetLimit?: number;
-        NetUsed?: number;
+        freeNetLimit?: bigint | number;
+        freeNetUsed?: bigint | number;
+        NetLimit?: bigint | number;
+        NetUsed?: bigint | number;
       };
       const freeBandwidth = big(Math.max(0, num(raw.freeNetLimit) - num(raw.freeNetUsed)));
       const stakedBandwidth = big(Math.max(0, num(raw.NetLimit) - num(raw.NetUsed)));
@@ -68,13 +79,18 @@ export function createTronRpcClient(
     },
     async getReward(address) {
       const raw = (await post("/wallet/getReward", { address, visible: true })) as {
-        reward?: number;
+        reward?: bigint | number;
       };
       return big(raw.reward);
     },
     async listWitnesses() {
       const raw = (await post("/wallet/listwitnesses")) as {
-        witnesses?: { address: string; voteCount?: number; url?: string; isJobs?: boolean }[];
+        witnesses?: {
+          address: string;
+          voteCount?: bigint | number;
+          url?: string;
+          isJobs?: boolean;
+        }[];
       };
       return (raw.witnesses ?? []).map<TronWitness>((w) => ({
         address: w.address,
@@ -85,13 +101,13 @@ export function createTronRpcClient(
     },
     async getChainParameters() {
       const raw = (await post("/wallet/getchainparameters")) as {
-        chainParameter?: { key: string; value?: number }[];
+        chainParameter?: { key: string; value?: bigint | number }[];
       };
       return Object.fromEntries((raw.chainParameter ?? []).map((p) => [p.key, num(p.value)]));
     },
     async getBrokerage(address) {
       const raw = (await post("/wallet/getbrokerage", { address, visible: true })) as {
-        brokerage?: number;
+        brokerage?: bigint | number;
       };
       return num(raw.brokerage);
     },

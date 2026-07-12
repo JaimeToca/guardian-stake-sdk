@@ -102,6 +102,9 @@ importers:
 
   packages/tron:
     dependencies:
+      json-bigint:
+        specifier: 1.0.0
+        version: 1.0.0
       tronweb:
         specifier: 6.1.0
         version: 6.1.0
@@ -109,6 +112,9 @@ importers:
       '@guardian-sdk/sdk':
         specifier: workspace:^
         version: link:../sdk
+      '@types/json-bigint':
+        specifier: ^1.0.4
+        version: 1.0.4
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.13)(tsx@4.22.3)(typescript@6.0.2)(yaml@2.8.3)
@@ -1698,6 +1704,9 @@ packages:
 
   jsbn@1.1.0:
     resolution: {integrity: sha512-4bYVV3aAMtDTTu4+xsDYa6sy9GyJ69/amsu9sYF2zqjiEoZA5xJi3BrfX3uY+/IekIu7MwdObdbDWpoZdBv3/A==}
+
+  json-bigint@1.0.0:
+    resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
 
   json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
@@ -4127,6 +4136,10 @@ snapshots:
       argparse: 2.0.1
 
   jsbn@1.1.0: {}
+
+  json-bigint@1.0.0:
+    dependencies:
+      bignumber.js: 9.1.2
 
   json-buffer@3.0.1: {}
 

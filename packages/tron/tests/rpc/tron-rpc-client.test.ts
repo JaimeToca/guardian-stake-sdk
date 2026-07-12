@@ -2,9 +2,14 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { createTronRpcClient } from "../../src/tron-chain/rpc/tron-rpc-client";
 
 function mockFetch(json: unknown) {
-  return vi.fn().mockResolvedValue({ ok: true, json: async () => json });
+  const body = JSON.stringify(json);
+  return vi.fn().mockResolvedValue({ ok: true, text: async () => body });
 }
 afterEach(() => vi.unstubAllGlobals());
+
+function mockFetchRaw(text: string) {
+  return vi.fn().mockResolvedValue({ ok: true, text: async () => text });
+}
 
 describe("createTronRpcClient.getAccount", () => {
   it("maps balance, frozenV2, unfrozenV2, votes into SUN bigints", async () => {
@@ -30,6 +35,49 @@ describe("createTronRpcClient.getAccount", () => {
     ]);
     expect(acct.unfreezing).toEqual([{ amount: 40_000_000n, expireTime: 1893456000000 }]);
     expect(acct.votes).toEqual([{ srAddress: "TSRxxx", votes: 100n }]);
+  });
+
+  it("preserves int64 precision beyond Number.MAX_SAFE_INTEGER for balance and frozen amounts", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchRaw(
+        `{"balance":9007199254740993,"frozenV2":[{"amount":9007199254740995}],"unfrozenV2":[],"votes":[]}`
+      )
+    );
+    const rpc = createTronRpcClient("https://node.example");
+    const acct = await rpc.getAccount("TWallet");
+    expect(acct.balance).toBe(9007199254740993n);
+    expect(acct.frozen).toEqual([{ resource: "BANDWIDTH", amount: 9007199254740995n }]);
+  });
+
+  it("maps a missing unfreeze_expire_time to the far-future Pending sentinel", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        balance: 0,
+        frozenV2: [],
+        unfrozenV2: [{ unfreeze_amount: 40_000_000 }],
+        votes: [],
+      })
+    );
+    const rpc = createTronRpcClient("https://node.example");
+    const acct = await rpc.getAccount("TWallet");
+    expect(acct.unfreezing).toEqual([{ amount: 40_000_000n, expireTime: Number.MAX_SAFE_INTEGER }]);
+  });
+
+  it("maps a non-positive unfreeze_expire_time to the far-future Pending sentinel", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch({
+        balance: 0,
+        frozenV2: [],
+        unfrozenV2: [{ unfreeze_amount: 40_000_000, unfreeze_expire_time: 0 }],
+        votes: [],
+      })
+    );
+    const rpc = createTronRpcClient("https://node.example");
+    const acct = await rpc.getAccount("TWallet");
+    expect(acct.unfreezing).toEqual([{ amount: 40_000_000n, expireTime: Number.MAX_SAFE_INTEGER }]);
   });
 });
 
