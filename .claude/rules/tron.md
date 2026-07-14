@@ -65,6 +65,8 @@ Smallest unit is **SUN**: `1 TRX = 1_000_000 SUN` (`SUN_PER_TRX`, `decimals: 6`)
 
 `Staked` and the `Pending`/`Claimable` split are mutually exclusive partitions of `frozenV2`/`unfrozenV2` — an amount that has started unfreezing is no longer counted in `Staked`. Rewards come only from votes: freezing without voting keeps `Rewards` at `0` for that stake.
 
+**Only Stake 2.0 is supported** — legacy Stake 1.0 (`freezeBalance`/`frozen`) is not reflected in `getBalances`/`getDelegations`.
+
 ## Two independent claims — never conflate them
 
 Tron has **two separate withdrawal transactions** that do not trigger each other:
@@ -104,7 +106,7 @@ A Tron "delegation" in the SDK sense is really **one entry per `frozenV2`/`unfro
 
 ## APR is computed, not fetched — and has a `[VERIFY]` caveat
 
-Tron has no APY REST endpoint (unlike BSC). `getValidators()` computes APR per SR from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes per `page+pageSize` (same pattern as BSC):
+Tron has no APY REST endpoint (unlike BSC). `getValidators()` computes APR per SR from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 15 minutes per `page+pageSize` (same pattern as BSC). `getchainparameters` is cached separately for 10 minutes and `getbrokerage` per-SR for 30 minutes, with the brokerage fan-out bounded to 8 concurrent requests, to avoid rate-limiting a real FullNode on cold loads:
 
 ```
 block_vote_reward      = getWitness127PayPerBlock          (chain parameter)

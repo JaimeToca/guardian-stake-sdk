@@ -13,12 +13,39 @@ import type { TronWebFactory } from "../tronweb/tronweb-factory";
 import type { TronStakingServiceContract } from "./staking-service-contract";
 import { SUN_PER_TRX } from "../tx/tron-types";
 
-const CACHE_TTL_MS = 3 * 60 * 1000;
+const CACHE_TTL_MS = 15 * 60 * 1000;
+const PARAMS_TTL_MS = 10 * 60 * 1000;
+const BROKERAGE_TTL_MS = 30 * 60 * 1000;
+const BROKERAGE_CONCURRENCY = 8;
 const MS_PER_DAY = 86_400_000;
 
 const BLOCKS_PER_DAY = 28_800;
 const DAYS_PER_YEAR = 365;
 const SR_COUNT = 27;
+
+/**
+ * Runs `fn` over `items` with at most `limit` in-flight calls at a time,
+ * preserving input order in the returned array.
+ */
+export function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i] as T);
+    }
+  }
+
+  const workerCount = Math.max(1, Math.min(limit, items.length));
+  return Promise.all(Array.from({ length: workerCount }, worker)).then(() => results);
+}
 
 export interface AprInput {
   validatorVotes: bigint;
@@ -74,18 +101,52 @@ export function createStakingService(
 ): TronStakingServiceContract {
   let cache: { at: number; witnesses: Validator[]; totalVotes: bigint } | undefined;
   let inflight: Promise<{ witnesses: Validator[]; totalVotes: bigint }> | undefined;
+  let paramsCache: { at: number; value: Record<string, number> } | undefined;
+  let paramsInflight: Promise<Record<string, number>> | undefined;
+  const brokerageCache = new Map<string, { at: number; value: number }>();
   const tronWeb = createTronWeb();
   const toBase58 = (addr: string): string =>
     addr.startsWith("41") ? tronWeb.address.fromHex(addr) : addr;
 
+  async function getParams(): Promise<Record<string, number>> {
+    if (paramsCache && Date.now() - paramsCache.at < PARAMS_TTL_MS) {
+      return paramsCache.value;
+    }
+    if (paramsInflight) {
+      return paramsInflight;
+    }
+    paramsInflight = rpc
+      .getChainParameters()
+      .then((value) => {
+        paramsCache = { at: Date.now(), value };
+        return value;
+      })
+      .finally(() => {
+        paramsInflight = undefined;
+      });
+    return paramsInflight;
+  }
+
+  async function getBrokerageCached(address: string): Promise<number> {
+    const cached = brokerageCache.get(address);
+    if (cached && Date.now() - cached.at < BROKERAGE_TTL_MS) {
+      return cached.value;
+    }
+    const value = await rpc.getBrokerage(address).catch(() => 20);
+    brokerageCache.set(address, { at: Date.now(), value });
+    return value;
+  }
+
   async function doLoad(): Promise<{ witnesses: Validator[]; totalVotes: bigint }> {
     logger.debug("StakingService: witness cache miss — fetching from RPC");
-    const [raw, params] = await Promise.all([rpc.listWitnesses(), rpc.getChainParameters()]);
+    const [raw, params] = await Promise.all([rpc.listWitnesses(), getParams()]);
     const totalVotes = raw.reduce((s, w) => s + w.voteCount, 0n);
-    const witnesses = await Promise.all(
-      raw.map(async (w): Promise<Validator> => {
+    const witnesses = await mapWithConcurrency(
+      raw,
+      BROKERAGE_CONCURRENCY,
+      async (w): Promise<Validator> => {
         const address = toBase58(w.address);
-        const brokeragePercent = await rpc.getBrokerage(address).catch(() => 20);
+        const brokeragePercent = await getBrokerageCached(address);
         const apy = computeApr({
           validatorVotes: w.voteCount,
           totalVotes,
@@ -105,7 +166,7 @@ export function createStakingService(
           operatorAddress: address,
           creditAddress: "",
         };
-      })
+      }
     );
     cache = { at: Date.now(), witnesses, totalVotes };
     logger.debug("StakingService: witness cache refreshed", { count: witnesses.length });
@@ -161,7 +222,7 @@ export function createStakingService(
       const [account, witnessMap, params] = await Promise.all([
         rpc.getAccount(address),
         getWitnessMap(),
-        rpc.getChainParameters(),
+        getParams(),
       ]);
       const delegations: Delegation[] = [];
       let idx = 0;

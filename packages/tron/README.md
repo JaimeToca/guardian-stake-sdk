@@ -80,7 +80,7 @@ Unlike Cardano — which forces a full-balance reward withdrawal — Tron's `Und
 
 ### APR
 
-Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Representative from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes. The computed value is clamped to a sane, finite `[0, …)` range — it never returns negative, `NaN`, or `Infinity`.
+Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Representative from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes. The computed value is clamped to a sane, finite `[0, …)` range — it never returns negative, `NaN`, or `Infinity`. `getchainparameters` is cached separately for 10 minutes and `getbrokerage` per-SR for 30 minutes, with the fan-out bounded to 8 concurrent requests, to avoid rate-limiting a real FullNode on cold loads.
 
 APR values are in percent (e.g. `2.48` means 2.48%). The formula accounts for the vote reward pool plus (for actual top-27 SRs) the block production reward, scaled by the SR's brokerage rate.
 
@@ -160,7 +160,7 @@ interface TronConfig {
 
 ### `getValidators`
 
-Returns Super Representatives from `/wallet/listwitnesses`, each with a **computed** APR. Cached per `page+pageSize` for 3 minutes.
+Returns Super Representatives from `/wallet/listwitnesses`, each with a **computed** APR. Cached per `page+pageSize` for 15 minutes.
 
 ```typescript
 const { data, pagination } = await sdk.getValidators(chains.tronMainnet);
@@ -252,6 +252,8 @@ const balances = await sdk.getBalances(chains.tronMainnet, ADDRESS);
 | `Rewards` | Unclaimed voting rewards (`getReward`) — withdrawable via `ClaimRewards` |
 
 No double-counting: an amount that has started unfreezing is no longer counted in `Staked`, and rewards come only from votes (freezing without voting keeps `Rewards` at `0` for that stake).
+
+> Only **Stake 2.0** is supported — legacy Stake 1.0 (`freezeBalance`/`frozen`) is not reflected in `getBalances`/`getDelegations`.
 
 ---
 
