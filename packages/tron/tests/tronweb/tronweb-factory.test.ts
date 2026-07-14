@@ -18,6 +18,18 @@ describe("createTronWebFactory", () => {
     expect(tw.defaultAddress.base58).toBe(TEST_ADDRESS);
   });
 
+  it("accepts private key with 0x prefix (strips it for TronWeb)", () => {
+    const factory = createTronWebFactory("https://node.example");
+    const tw = factory.create("0x" + TEST_PRIVATE_KEY);
+    expect(tw.defaultAddress.base58).toBe(TEST_ADDRESS);
+  });
+
+  it("accepts private key with 0X uppercase prefix", () => {
+    const factory = createTronWebFactory("https://node.example");
+    const tw = factory.create("0X" + TEST_PRIVATE_KEY);
+    expect(tw.defaultAddress.base58).toBe(TEST_ADDRESS);
+  });
+
   describe("MPC / hardware wallet (no private key)", () => {
     it("creates a usable client with no default signing address", () => {
       const factory = createTronWebFactory("https://node.example");

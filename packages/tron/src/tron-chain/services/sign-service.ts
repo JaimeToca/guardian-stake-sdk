@@ -5,7 +5,7 @@ import type {
   PrehashResult,
   SigningWithPrivateKey,
 } from "@guardian-sdk/sdk";
-import { NoopLogger, SigningError } from "@guardian-sdk/sdk";
+import { NoopLogger, SigningError, privateKey as validatePrivateKey } from "@guardian-sdk/sdk";
 import type { TronWeb } from "tronweb";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
 import { buildUnsignedTx } from "../tx/tx-builder";
@@ -27,9 +27,17 @@ export function createSignService(
     async sign(args: SigningWithPrivateKey): Promise<string> {
       logger.info("SignService: signing transaction", { type: args.transaction.type });
 
-      if (!args.privateKey)
+      if (typeof args.privateKey !== "string" || !args.privateKey)
         throw new SigningError("INVALID_SIGNING_ARGS", "Tron sign() requires a privateKey.");
-      const tronWeb = tronWebFactory.create(args.privateKey);
+
+      // Normalize using the shared validator (same as BSC):
+      // - accepts with or without 0x prefix
+      // - validates 64 hex chars + valid secp256k1 range
+      // Then strip the 0x because TronWeb rejects prefixed keys.
+      const validated = validatePrivateKey(args.privateKey);
+      const tronPrivateKey = validated.slice(2);
+
+      const tronWeb = tronWebFactory.create(tronPrivateKey);
       const owner = tronWeb.defaultAddress.base58 as string;
       if (!owner)
         throw new SigningError(
@@ -54,6 +62,9 @@ export function createSignService(
           "Tron prehash() requires transaction.account (the owner address)."
         );
       const unsigned = await buildUnsignedTx(tronWeb, args.transaction, owner);
+      // Thread the fully-built unsigned tx through `_rawTx` (a Tron-only extension) so compile()
+      // can reattach the external signature without rebuilding or re-hitting the FullNode — mirrors
+      // Cardano's `_txBodyCbor`.
       const signArgs: TronSignArgs = {
         transaction: args.transaction,
         fee: args.fee,
@@ -62,6 +73,8 @@ export function createSignService(
       };
 
       logger.info("SignService: prehash complete — send serializedTransaction to external signer");
+      // `serializedTransaction` is the txID itself — SHA256(raw_data), the exact secp256k1 digest
+      // (NOT Ed25519) the external signer must sign. It is not the serialized tx.
       return { serializedTransaction: unsigned.txID, signArgs };
     },
 
@@ -74,8 +87,10 @@ export function createSignService(
           "INVALID_SIGNING_ARGS",
           "compile() requires signArgs._rawTx from prehash()."
         );
-      if (!args.signature)
+      if (typeof args.signature !== "string" || args.signature.length === 0)
         throw new SigningError("INVALID_SIGNING_ARGS", "compile() requires a non-empty signature.");
+      // Attach the external signature onto the prehash-built raw tx. Tron carries signatures in a
+      // `signature[]` array; a single freeze/vote/unfreeze/withdraw tx has exactly one signer.
       const signed: UnsignedTronTx = { ...rawTx, signature: [args.signature] };
 
       logger.info("SignService: transaction compiled");

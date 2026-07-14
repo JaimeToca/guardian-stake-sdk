@@ -51,6 +51,9 @@ export function createFeeService(
         case "Vote": {
           const address = requireAccount(tx);
           const account = await rpc.getAccount(address);
+          // Rebuild TronWitness[] from the cheap witness map purely so assertVote can confirm the
+          // target SR exists and is votable. voteCount is set to 0n because assertVote validates
+          // membership + available Tron Power, not vote tallies — the map carries no counts.
           const witnessMap = await staking.getWitnessMap();
           const srAddress =
             typeof tx.validator === "string" ? tx.validator : tx.validator.operatorAddress;

@@ -5,6 +5,13 @@ import type { TronRpcClientContract } from "./tron-rpc-client-contract";
 import type {
   TronAccount,
   TronAccountResources,
+  TronBroadcastResponse,
+  TronGetAccountResourceResponse,
+  TronGetAccountResponse,
+  TronGetBrokerageResponse,
+  TronGetChainParametersResponse,
+  TronGetRewardResponse,
+  TronListWitnessesResponse,
   TronResource,
   TronWitness,
 } from "./tron-rpc-types";
@@ -41,15 +48,7 @@ export function createTronRpcClient(
 ): TronRpcClientContract {
   return {
     async getAccount(address) {
-      const raw = await fetchOrError<{
-        balance?: bigint | number;
-        frozenV2?: { type?: string; amount?: bigint | number }[];
-        unfrozenV2?: {
-          unfreeze_amount?: bigint | number;
-          unfreeze_expire_time?: bigint | number;
-        }[];
-        votes?: { vote_address: string; vote_count: bigint | number }[];
-      }>({
+      const raw = await fetchOrError<TronGetAccountResponse>({
         url: `${rpcUrl}/wallet/getaccount`,
         method: "POST",
         data: { address, visible: true },
@@ -78,12 +77,7 @@ export function createTronRpcClient(
       return account;
     },
     async getAccountResources(address) {
-      const raw = await fetchOrError<{
-        freeNetLimit?: bigint | number;
-        freeNetUsed?: bigint | number;
-        NetLimit?: bigint | number;
-        NetUsed?: bigint | number;
-      }>({
+      const raw = await fetchOrError<TronGetAccountResourceResponse>({
         url: `${rpcUrl}/wallet/getaccountresource`,
         method: "POST",
         data: { address, visible: true },
@@ -98,7 +92,7 @@ export function createTronRpcClient(
       return resources;
     },
     async getReward(address) {
-      const raw = await fetchOrError<{ reward?: bigint | number }>({
+      const raw = await fetchOrError<TronGetRewardResponse>({
         url: `${rpcUrl}/wallet/getReward`,
         method: "POST",
         data: { address, visible: true },
@@ -107,14 +101,7 @@ export function createTronRpcClient(
       return big(raw.reward);
     },
     async listWitnesses() {
-      const raw = await fetchOrError<{
-        witnesses?: {
-          address: string;
-          voteCount?: bigint | number;
-          url?: string;
-          isJobs?: boolean;
-        }[];
-      }>({
+      const raw = await fetchOrError<TronListWitnessesResponse>({
         url: `${rpcUrl}/wallet/listwitnesses`,
         method: "POST",
         transformResponse: [parseBigIntResponse],
@@ -127,9 +114,7 @@ export function createTronRpcClient(
       }));
     },
     async getChainParameters() {
-      const raw = await fetchOrError<{
-        chainParameter?: { key: string; value?: bigint | number }[];
-      }>({
+      const raw = await fetchOrError<TronGetChainParametersResponse>({
         url: `${rpcUrl}/wallet/getchainparameters`,
         method: "POST",
         transformResponse: [parseBigIntResponse],
@@ -137,7 +122,7 @@ export function createTronRpcClient(
       return Object.fromEntries((raw.chainParameter ?? []).map((p) => [p.key, num(p.value)]));
     },
     async getBrokerage(address) {
-      const raw = await fetchOrError<{ brokerage?: bigint | number }>({
+      const raw = await fetchOrError<TronGetBrokerageResponse>({
         url: `${rpcUrl}/wallet/getbrokerage`,
         method: "POST",
         data: { address, visible: true },
@@ -152,12 +137,7 @@ export function createTronRpcClient(
       } catch {
         throw new ApiError("Invalid signed transaction JSON", { type: "ServerResponseError" });
       }
-      const raw = await fetchOrError<{
-        result?: boolean;
-        txid?: string;
-        code?: string;
-        message?: string;
-      }>({
+      const raw = await fetchOrError<TronBroadcastResponse>({
         url: `${rpcUrl}/wallet/broadcasttransaction`,
         method: "POST",
         data: parsed,

@@ -297,7 +297,7 @@ const rawTx = await sdk.sign({
   transaction,
   fee,
   nonce: 0,          // unused; Tron has no account nonce
-  privateKey,         // raw secp256k1 private key hex
+  privateKey,         // raw secp256k1 private key hex (with or without 0x prefix — same as BSC)
 });
 ```
 

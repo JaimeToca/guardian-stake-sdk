@@ -25,3 +25,50 @@ export interface TronAccountResources {
   netLimit: bigint;
   netUsed: bigint;
 }
+
+// --- Raw FullNode API response shapes (used with fetchOrError) ---
+
+export interface TronGetAccountResponse {
+  balance?: bigint | number;
+  frozenV2?: { type?: string; amount?: bigint | number }[];
+  unfrozenV2?: {
+    unfreeze_amount?: bigint | number;
+    unfreeze_expire_time?: bigint | number;
+  }[];
+  votes?: { vote_address: string; vote_count: bigint | number }[];
+}
+
+export interface TronGetAccountResourceResponse {
+  freeNetLimit?: bigint | number;
+  freeNetUsed?: bigint | number;
+  NetLimit?: bigint | number;
+  NetUsed?: bigint | number;
+}
+
+export interface TronGetRewardResponse {
+  reward?: bigint | number;
+}
+
+export interface TronListWitnessesResponse {
+  witnesses?: {
+    address: string;
+    voteCount?: bigint | number;
+    url?: string;
+    isJobs?: boolean;
+  }[];
+}
+
+export interface TronGetChainParametersResponse {
+  chainParameter?: { key: string; value?: bigint | number }[];
+}
+
+export interface TronGetBrokerageResponse {
+  brokerage?: bigint | number;
+}
+
+export interface TronBroadcastResponse {
+  result?: boolean;
+  txid?: string;
+  code?: string;
+  message?: string;
+}
