@@ -80,7 +80,7 @@ Unlike Cardano — which forces a full-balance reward withdrawal — Tron's `Und
 
 ### APR
 
-Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Representative from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes. The computed value is clamped to a sane, finite `[0, …)` range — it never returns negative, `NaN`, or `Infinity`. `getchainparameters` is cached separately for 10 minutes and `getbrokerage` per-SR for 30 minutes, with the fan-out bounded to 8 concurrent requests, to avoid rate-limiting a real FullNode on cold loads.
+Tron has no APY REST endpoint. `getValidators()` **computes** APR per Super Representative from `listwitnesses` + `getchainparameters` + `getbrokerage`, cached 3 minutes. The computed value is clamped to a sane, finite `[0, …)` range — it never returns negative, `NaN`, or `Infinity`. `getchainparameters` is cached separately for 10 minutes and `getbrokerage` per-SR for 30 minutes, with the fan-out bounded to 8 concurrent requests, to avoid rate-limiting a real FullNode on cold loads. Real per-SR brokerage/APR is fetched only for the witnesses actually returned — the requested page in `getValidators()`, or the distinct SRs an account voted for in `getDelegations()` — not for all ~439 Super Representatives on every load; `stakingSummary.maxApy` is an approximation computed across all witnesses using a default brokerage of 20%.
 
 APR values are in percent (e.g. `2.48` means 2.48%). The formula accounts for the vote reward pool plus (for actual top-27 SRs) the block production reward, scaled by the SR's brokerage rate.
 

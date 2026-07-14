@@ -22,6 +22,9 @@ const MS_PER_DAY = 86_400_000;
 const BLOCKS_PER_DAY = 28_800;
 const DAYS_PER_YEAR = 365;
 const SR_COUNT = 27;
+/** Used only for `stakingSummary.maxApy`, an approximation across all witnesses that avoids
+ * a per-SR `getBrokerage` fan-out. Matches the fallback `getBrokerageCached` uses on RPC failure. */
+const DEFAULT_BROKERAGE_PERCENT = 20;
 
 /**
  * Runs `fn` over `items` with at most `limit` in-flight calls at a time,
@@ -80,6 +83,14 @@ export function computeApr(input: AprInput): number {
   return apr;
 }
 
+/** Cheap, per-witness data cached at load time — no per-SR brokerage/APR. */
+export interface RawWitness {
+  address: string; // base58
+  voteCount: bigint;
+  name: string;
+  isSr: boolean;
+}
+
 function placeholderValidator(resource: TronResource): Validator {
   return {
     id: `tron-frozen-${resource.toLowerCase()}`,
@@ -99,8 +110,12 @@ export function createStakingService(
   createTronWeb: TronWebFactory["create"],
   logger: Logger = new NoopLogger()
 ): TronStakingServiceContract {
-  let cache: { at: number; witnesses: Validator[]; totalVotes: bigint } | undefined;
-  let inflight: Promise<{ witnesses: Validator[]; totalVotes: bigint }> | undefined;
+  let cache:
+    | { at: number; raw: RawWitness[]; totalVotes: bigint; params: Record<string, number> }
+    | undefined;
+  let inflight:
+    | Promise<{ raw: RawWitness[]; totalVotes: bigint; params: Record<string, number> }>
+    | undefined;
   let paramsCache: { at: number; value: Record<string, number> } | undefined;
   let paramsInflight: Promise<Record<string, number>> | undefined;
   const brokerageCache = new Map<string, { at: number; value: number }>();
@@ -137,45 +152,40 @@ export function createStakingService(
     return value;
   }
 
-  async function doLoad(): Promise<{ witnesses: Validator[]; totalVotes: bigint }> {
+  /**
+   * Cheap load: 1 `listWitnesses` + params. No per-SR `getBrokerage` calls here —
+   * brokerage/APR enrichment is deferred to `enrichApr`, called only for the
+   * witnesses a caller actually needs (a page, or the SRs an account voted for).
+   */
+  async function doLoad(): Promise<{
+    raw: RawWitness[];
+    totalVotes: bigint;
+    params: Record<string, number>;
+  }> {
     logger.debug("StakingService: witness cache miss — fetching from RPC");
-    const [raw, params] = await Promise.all([rpc.listWitnesses(), getParams()]);
-    const totalVotes = raw.reduce((s, w) => s + w.voteCount, 0n);
-    const witnesses = await mapWithConcurrency(
-      raw,
-      BROKERAGE_CONCURRENCY,
-      async (w): Promise<Validator> => {
-        const address = toBase58(w.address);
-        const brokeragePercent = await getBrokerageCached(address);
-        const apy = computeApr({
-          validatorVotes: w.voteCount,
-          totalVotes,
-          isSr: w.isSr,
-          witness127PayPerBlock: params.getWitness127PayPerBlock ?? 0,
-          witnessPayPerBlock: params.getWitnessPayPerBlock ?? 0,
-          brokeragePercent,
-        });
-        return {
-          id: address,
-          status: w.isSr ? "Active" : "Inactive",
-          name: w.url || address,
-          description: "",
-          image: undefined,
-          apy,
-          delegators: undefined,
-          operatorAddress: address,
-          creditAddress: "",
-        };
-      }
-    );
-    cache = { at: Date.now(), witnesses, totalVotes };
-    logger.debug("StakingService: witness cache refreshed", { count: witnesses.length });
+    const [rawWitnesses, params] = await Promise.all([rpc.listWitnesses(), getParams()]);
+    const totalVotes = rawWitnesses.reduce((s, w) => s + w.voteCount, 0n);
+    const raw: RawWitness[] = rawWitnesses.map((w) => {
+      const address = toBase58(w.address);
+      return {
+        address,
+        voteCount: w.voteCount,
+        name: w.url || address,
+        isSr: w.isSr,
+      };
+    });
+    cache = { at: Date.now(), raw, totalVotes, params };
+    logger.debug("StakingService: witness cache refreshed", { count: raw.length });
     return cache;
   }
 
-  async function load(): Promise<{ witnesses: Validator[]; totalVotes: bigint }> {
+  async function load(): Promise<{
+    raw: RawWitness[];
+    totalVotes: bigint;
+    params: Record<string, number>;
+  }> {
     if (cache && Date.now() - cache.at < CACHE_TTL_MS) {
-      logger.debug("StakingService: witness cache hit", { count: cache.witnesses.length });
+      logger.debug("StakingService: witness cache hit", { count: cache.raw.length });
       return cache;
     }
     if (inflight) {
@@ -188,9 +198,53 @@ export function createStakingService(
     return inflight;
   }
 
+  /** Fetches real brokerage for `raw.address` and computes the actual APR — the only place brokerage is fetched. */
+  async function enrichApr(
+    raw: RawWitness,
+    totalVotes: bigint,
+    params: Record<string, number>
+  ): Promise<Validator> {
+    const brokeragePercent = await getBrokerageCached(raw.address);
+    const apy = computeApr({
+      validatorVotes: raw.voteCount,
+      totalVotes,
+      isSr: raw.isSr,
+      witness127PayPerBlock: params.getWitness127PayPerBlock ?? 0,
+      witnessPayPerBlock: params.getWitnessPayPerBlock ?? 0,
+      brokeragePercent,
+    });
+    return {
+      id: raw.address,
+      status: raw.isSr ? "Active" : "Inactive",
+      name: raw.name,
+      description: "",
+      image: undefined,
+      apy,
+      delegators: undefined,
+      operatorAddress: raw.address,
+      creditAddress: "",
+    };
+  }
+
+  /** Cheap map for callers (fee-service's `assertVote`) that only need address/name/status — no brokerage fetch. */
   async function getWitnessMap(): Promise<Map<string, Validator>> {
-    const { witnesses } = await load();
-    return new Map(witnesses.map((v) => [v.operatorAddress, v]));
+    const { raw } = await load();
+    return new Map(
+      raw.map((w) => [
+        w.address,
+        {
+          id: w.address,
+          status: w.isSr ? "Active" : "Inactive",
+          name: w.name,
+          description: "",
+          image: undefined,
+          apy: 0,
+          delegators: undefined,
+          operatorAddress: w.address,
+          creditAddress: "",
+        } satisfies Validator,
+      ])
+    );
   }
 
   function unbondPeriodMs(days: number): number {
@@ -201,29 +255,46 @@ export function createStakingService(
     getWitnessMap,
 
     async getValidators(params?: GetValidatorsParams): Promise<ValidatorsPage> {
-      const { witnesses } = await load();
+      const { raw, totalVotes, params: chainParams } = await load();
       const page = params?.page ?? 1;
-      const pageSize = params?.pageSize ?? witnesses.length;
+      const pageSize = params?.pageSize ?? raw.length;
       const start = (page - 1) * pageSize;
-      const data = witnesses.slice(start, start + pageSize);
+      const rawPage = raw.slice(start, start + pageSize);
+      // Enrich (fetch brokerage + compute APR) ONLY the requested page — not all witnesses.
+      const data = await mapWithConcurrency(rawPage, BROKERAGE_CONCURRENCY, (w) =>
+        enrichApr(w, totalVotes, chainParams)
+      );
       return {
         data,
         pagination: {
           page,
           pageSize,
-          total: witnesses.length,
-          totalPages: Math.max(1, Math.ceil(witnesses.length / pageSize)),
-          hasNextPage: start + pageSize < witnesses.length,
+          total: raw.length,
+          totalPages: Math.max(1, Math.ceil(raw.length / pageSize)),
+          hasNextPage: start + pageSize < raw.length,
         },
       };
     },
 
     async getDelegations(address: string): Promise<Delegations> {
-      const [account, witnessMap, params] = await Promise.all([
+      const [account, { raw, totalVotes, params }] = await Promise.all([
         rpc.getAccount(address),
-        getWitnessMap(),
-        getParams(),
+        load(),
       ]);
+      const rawByAddress = new Map(raw.map((w) => [w.address, w]));
+
+      // Enrich (fetch brokerage + compute real APR) ONLY the distinct SRs this account voted for.
+      const distinctVotedAddresses = Array.from(new Set(account.votes.map((v) => v.srAddress)));
+      const enrichedByAddress = new Map<string, Validator>(
+        (
+          await mapWithConcurrency(distinctVotedAddresses, BROKERAGE_CONCURRENCY, async (addr) => {
+            const rawWitness = rawByAddress.get(addr);
+            if (!rawWitness) return undefined;
+            return [addr, await enrichApr(rawWitness, totalVotes, params)] as const;
+          })
+        ).filter((entry): entry is readonly [string, Validator] => entry !== undefined)
+      );
+      const witnessMap = enrichedByAddress;
       const delegations: Delegation[] = [];
       let idx = 0;
       const totalFrozen = account.frozen.reduce((s, f) => s + f.amount, 0n);
@@ -286,8 +357,23 @@ export function createStakingService(
         });
       }
 
-      const { witnesses, totalVotes } = await load();
-      const maxApy = witnesses.reduce((m, v) => Math.max(m, v.apy), 0);
+      // maxApy is an approximation across ALL witnesses using the DEFAULT brokerage (20%),
+      // so it needs only cached voteCount + params — no per-SR getBrokerage fan-out.
+      const maxApy = raw.reduce(
+        (m, w) =>
+          Math.max(
+            m,
+            computeApr({
+              validatorVotes: w.voteCount,
+              totalVotes,
+              isSr: w.isSr,
+              witness127PayPerBlock: params.getWitness127PayPerBlock ?? 0,
+              witnessPayPerBlock: params.getWitnessPayPerBlock ?? 0,
+              brokeragePercent: DEFAULT_BROKERAGE_PERCENT,
+            })
+          ),
+        0
+      );
       return {
         delegations,
         stakingSummary: {
@@ -296,8 +382,8 @@ export function createStakingService(
           minAmountToStake: SUN_PER_TRX,
           unboundPeriodInMillis: unbondPeriodMs(params.getUnfreezeDelayDays ?? 14),
           redelegateFeeRate: 0,
-          activeValidators: witnesses.filter((v) => v.status === "Active").length,
-          totalValidators: witnesses.length,
+          activeValidators: raw.filter((w) => w.isSr).length,
+          totalValidators: raw.length,
         },
       };
     },

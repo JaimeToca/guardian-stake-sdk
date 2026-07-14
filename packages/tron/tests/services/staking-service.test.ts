@@ -203,20 +203,6 @@ describe("per-SR brokerage caching", () => {
     vi.useRealTimers();
   });
 
-  it("calls getBrokerage exactly once per distinct SR on a cold load", async () => {
-    const many = [
-      { address: "TSR1", voteCount: 1_000_000_000n, url: "https://sr1.example", isSr: true },
-      { address: "TSR2", voteCount: 2_000_000_000n, url: "https://sr2.example", isSr: true },
-      { address: "TSR3", voteCount: 3_000_000_000n, url: "https://sr3.example", isSr: false },
-    ];
-    const client = rpc({ listWitnesses: vi.fn().mockResolvedValue(many) });
-    const svc = createStakingService(client, () => tronWeb);
-
-    await svc.getValidators();
-
-    expect(client.getBrokerage).toHaveBeenCalledTimes(many.length);
-  });
-
   it("a second getValidators() after the 15-min witness TTL (but within the 30-min brokerage TTL) does not re-fetch brokerage", async () => {
     const client = rpc();
     const svc = createStakingService(client, () => tronWeb);
@@ -248,6 +234,119 @@ describe("per-SR brokerage caching", () => {
     await svc.getValidators();
 
     expect(client.getBrokerage).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("scoped APR fetching", () => {
+  function manyWitnesses(count: number): Array<{
+    address: string;
+    voteCount: bigint;
+    url: string;
+    isSr: boolean;
+  }> {
+    return Array.from({ length: count }, (_, i) => ({
+      address: `TSR${i}`,
+      voteCount: BigInt(i + 1) * 1_000_000_000n,
+      url: `https://sr${i}.example`,
+      isSr: true,
+    }));
+  }
+
+  it("getValidators({page:1,pageSize:5}) on a 20-witness list calls getBrokerage at most 5 times and returns real apy", async () => {
+    const witnessList = manyWitnesses(20);
+    const client = rpc({ listWitnesses: vi.fn().mockResolvedValue(witnessList) });
+    const svc = createStakingService(client, () => tronWeb);
+
+    const page = await svc.getValidators({ page: 1, pageSize: 5 });
+
+    expect(client.getBrokerage).toHaveBeenCalledTimes(5);
+    expect(page.data).toHaveLength(5);
+    expect(page.pagination.total).toBe(20);
+    expect(page.pagination.totalPages).toBe(4);
+    for (const v of page.data) {
+      expect(v.apy).toBeGreaterThan(0);
+    }
+  });
+
+  it("cold load itself (before any getValidators/getDelegations call) does NOT call getBrokerage", async () => {
+    const witnessList = manyWitnesses(20);
+    const client = rpc({ listWitnesses: vi.fn().mockResolvedValue(witnessList) });
+    createStakingService(client, () => tronWeb);
+
+    // Constructing the service must not eagerly load anything.
+    expect(client.listWitnesses).not.toHaveBeenCalled();
+    expect(client.getBrokerage).not.toHaveBeenCalled();
+  });
+
+  it("getDelegations enriches only the distinct voted SRs (<=3 brokerage calls for 3 distinct votes) out of 20 witnesses", async () => {
+    const witnessList = manyWitnesses(20);
+    const client = rpc({
+      listWitnesses: vi.fn().mockResolvedValue(witnessList),
+      getAccount: vi.fn().mockResolvedValue({
+        balance: 0n,
+        frozen: [{ resource: "BANDWIDTH", amount: 600_000_000n }],
+        unfreezing: [],
+        votes: [
+          { srAddress: "TSR0", votes: 100n },
+          { srAddress: "TSR1", votes: 200n },
+          { srAddress: "TSR2", votes: 300n },
+        ],
+      }),
+    });
+    const svc = createStakingService(client, () => tronWeb);
+
+    const { delegations } = await svc.getDelegations("TWallet");
+
+    expect(client.getBrokerage).toHaveBeenCalledTimes(3);
+    const active = delegations.filter((d) => d.status === "Active");
+    expect(active).toHaveLength(3);
+    expect(active.map((d) => d.validator.operatorAddress).sort()).toEqual(["TSR0", "TSR1", "TSR2"]);
+    for (const d of active) {
+      expect(d.validator.apy).toBeGreaterThan(0);
+    }
+  });
+
+  it("getDelegations dedupes repeated votes for the same SR (1 brokerage call, not N)", async () => {
+    const witnessList = manyWitnesses(5);
+    const client = rpc({
+      listWitnesses: vi.fn().mockResolvedValue(witnessList),
+      getAccount: vi.fn().mockResolvedValue({
+        balance: 0n,
+        frozen: [{ resource: "BANDWIDTH", amount: 900_000_000n }],
+        unfreezing: [],
+        votes: [
+          { srAddress: "TSR0", votes: 100n },
+          { srAddress: "TSR0", votes: 200n },
+        ],
+      }),
+    });
+    const svc = createStakingService(client, () => tronWeb);
+
+    await svc.getDelegations("TWallet");
+
+    expect(client.getBrokerage).toHaveBeenCalledTimes(1);
+  });
+
+  it("stakingSummary.maxApy is a finite number >= 0 computed with the default brokerage — no extra getBrokerage calls", async () => {
+    const witnessList = manyWitnesses(20);
+    const client = rpc({
+      listWitnesses: vi.fn().mockResolvedValue(witnessList),
+      getAccount: vi.fn().mockResolvedValue({
+        balance: 0n,
+        frozen: [{ resource: "BANDWIDTH", amount: 100_000_000n }],
+        unfreezing: [],
+        votes: [{ srAddress: "TSR0", votes: 100n }],
+      }),
+    });
+    const svc = createStakingService(client, () => tronWeb);
+
+    const { stakingSummary } = await svc.getDelegations("TWallet");
+
+    expect(Number.isFinite(stakingSummary.maxApy)).toBe(true);
+    expect(stakingSummary.maxApy).toBeGreaterThanOrEqual(0);
+    expect(stakingSummary.totalValidators).toBe(20);
+    // Only the 1 distinct voted SR should have triggered brokerage enrichment.
+    expect(client.getBrokerage).toHaveBeenCalledTimes(1);
   });
 });
 

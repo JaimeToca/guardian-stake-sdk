@@ -122,6 +122,8 @@ The SR block-reward term now uses the corrected formula `(witnessPayPerBlock * B
 
 `computeApr` clamps its output to a sane, finite `[0, …)` range — invalid inputs (`validatorVotes <= 0`, `totalVotes <= 0`) and any non-finite or negative result short-circuit to `0` rather than propagating `NaN`/`Infinity`/negative APR to consumers.
 
+**Real per-SR `getBrokerage` is fetched only for the witnesses actually returned** — the requested page in `getValidators()` (via `enrichApr`), or the distinct voted SRs in `getDelegations()` (deduped) — never all ~439 SRs on a cold load; the cached raw witness list (`RawWitness[]`) carries no brokerage/APR. `stakingSummary.maxApy` is the one exception: it scans every cached witness but uses the DEFAULT brokerage (20%) instead of a real fetch, so it's an approximation.
+
 ## Signing (`sign` / `prehash` / `compile`)
 
 TronWeb does the crypto; the interface matches BSC/Cardano.
