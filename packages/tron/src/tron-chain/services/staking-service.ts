@@ -6,7 +6,7 @@ import type {
   Validator,
   ValidatorsPage,
 } from "@guardian-sdk/sdk";
-import { NoopLogger, validatePageParams } from "@guardian-sdk/sdk";
+import { NoopLogger, validatePageParams, createInMemoryCache } from "@guardian-sdk/sdk";
 import type { TronRpcClientContract } from "../rpc/tron-rpc-client-contract";
 import type { TronResource } from "../rpc/tron-rpc-types";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
@@ -91,6 +91,17 @@ export interface RawWitness {
   isSr: boolean;
 }
 
+/** Cached witness-list load: the raw witnesses, their vote total, and chain params. */
+interface LoadResult {
+  raw: RawWitness[];
+  totalVotes: bigint;
+  params: Record<string, number>;
+}
+
+/** Single-entry cache keys (these caches hold one value each; per-SR brokerage keys by address). */
+const WITNESS_KEY = "witnesses";
+const PARAMS_KEY = "params";
+
 function placeholderValidator(resource: TronResource): Validator {
   return {
     id: `tron-frozen-${resource.toLowerCase()}`,
@@ -110,23 +121,23 @@ export function createStakingService(
   createTronWeb: TronWebFactory["create"],
   logger: Logger = new NoopLogger()
 ): TronStakingServiceContract {
-  let cache:
-    | { at: number; raw: RawWitness[]; totalVotes: bigint; params: Record<string, number> }
-    | undefined;
-  let inflight:
-    | Promise<{ raw: RawWitness[]; totalVotes: bigint; params: Record<string, number> }>
-    | undefined;
-  let paramsCache: { at: number; value: Record<string, number> } | undefined;
+  // Value storage uses the SDK's TTL cache (shared with BSC); the in-flight maps layered on
+  // top provide single-flight dedup — the SDK cache is TTL-only and does NOT dedup concurrent
+  // misses, which is exactly what prevents the getBrokerage thundering herd.
+  const witnessCache = createInMemoryCache<string, LoadResult>();
+  let inflight: Promise<LoadResult> | undefined;
+  const paramsCache = createInMemoryCache<string, Record<string, number>>();
   let paramsInflight: Promise<Record<string, number>> | undefined;
-  const brokerageCache = new Map<string, { at: number; value: number }>();
+  const brokerageCache = createInMemoryCache<string, number>();
   const brokerageInflight = new Map<string, Promise<number>>();
   const tronWeb = createTronWeb();
   const toBase58 = (addr: string): string =>
     addr.startsWith("41") ? tronWeb.address.fromHex(addr) : addr;
 
   async function getParams(): Promise<Record<string, number>> {
-    if (paramsCache && Date.now() - paramsCache.at < PARAMS_TTL_MS) {
-      return paramsCache.value;
+    const cached = paramsCache.get(PARAMS_KEY);
+    if (cached) {
+      return cached;
     }
     if (paramsInflight) {
       return paramsInflight;
@@ -134,7 +145,7 @@ export function createStakingService(
     paramsInflight = rpc
       .getChainParameters()
       .then((value) => {
-        paramsCache = { at: Date.now(), value };
+        paramsCache.set(PARAMS_KEY, value, PARAMS_TTL_MS);
         return value;
       })
       .finally(() => {
@@ -145,8 +156,8 @@ export function createStakingService(
 
   async function getBrokerageCached(address: string): Promise<number> {
     const cached = brokerageCache.get(address);
-    if (cached && Date.now() - cached.at < BROKERAGE_TTL_MS) {
-      return cached.value;
+    if (cached !== undefined) {
+      return cached;
     }
     const existingInflight = brokerageInflight.get(address);
     if (existingInflight) {
@@ -157,7 +168,7 @@ export function createStakingService(
       .then((value) => {
         // Only cache successful fetches — caching the fallback would poison a
         // transiently-failed SR for the full TTL. Let the next call retry instead.
-        brokerageCache.set(address, { at: Date.now(), value });
+        brokerageCache.set(address, value, BROKERAGE_TTL_MS);
         return value;
       })
       .catch(() => DEFAULT_BROKERAGE_PERCENT)
@@ -173,11 +184,7 @@ export function createStakingService(
    * brokerage/APR enrichment is deferred to `enrichApr`, called only for the
    * witnesses a caller actually needs (a page, or the SRs an account voted for).
    */
-  async function doLoad(): Promise<{
-    raw: RawWitness[];
-    totalVotes: bigint;
-    params: Record<string, number>;
-  }> {
+  async function doLoad(): Promise<LoadResult> {
     logger.debug("StakingService: witness cache miss — fetching from RPC");
     const [rawWitnesses, params] = await Promise.all([rpc.listWitnesses(), getParams()]);
     const totalVotes = rawWitnesses.reduce((s, w) => s + w.voteCount, 0n);
@@ -190,19 +197,17 @@ export function createStakingService(
         isSr: w.isSr,
       };
     });
-    cache = { at: Date.now(), raw, totalVotes, params };
+    const result: LoadResult = { raw, totalVotes, params };
+    witnessCache.set(WITNESS_KEY, result, CACHE_TTL_MS);
     logger.debug("StakingService: witness cache refreshed", { count: raw.length });
-    return cache;
+    return result;
   }
 
-  async function load(): Promise<{
-    raw: RawWitness[];
-    totalVotes: bigint;
-    params: Record<string, number>;
-  }> {
-    if (cache && Date.now() - cache.at < CACHE_TTL_MS) {
-      logger.debug("StakingService: witness cache hit", { count: cache.raw.length });
-      return cache;
+  async function load(): Promise<LoadResult> {
+    const cached = witnessCache.get(WITNESS_KEY);
+    if (cached) {
+      logger.debug("StakingService: witness cache hit", { count: cached.raw.length });
+      return cached;
     }
     if (inflight) {
       logger.debug("StakingService: witness load already in flight — awaiting it");
