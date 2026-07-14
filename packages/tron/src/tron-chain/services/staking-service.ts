@@ -6,7 +6,7 @@ import type {
   Validator,
   ValidatorsPage,
 } from "@guardian-sdk/sdk";
-import { NoopLogger } from "@guardian-sdk/sdk";
+import { NoopLogger, validatePageParams } from "@guardian-sdk/sdk";
 import type { TronRpcClientContract } from "../rpc/tron-rpc-client-contract";
 import type { TronResource } from "../rpc/tron-rpc-types";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
@@ -119,6 +119,7 @@ export function createStakingService(
   let paramsCache: { at: number; value: Record<string, number> } | undefined;
   let paramsInflight: Promise<Record<string, number>> | undefined;
   const brokerageCache = new Map<string, { at: number; value: number }>();
+  const brokerageInflight = new Map<string, Promise<number>>();
   const tronWeb = createTronWeb();
   const toBase58 = (addr: string): string =>
     addr.startsWith("41") ? tronWeb.address.fromHex(addr) : addr;
@@ -147,9 +148,24 @@ export function createStakingService(
     if (cached && Date.now() - cached.at < BROKERAGE_TTL_MS) {
       return cached.value;
     }
-    const value = await rpc.getBrokerage(address).catch(() => 20);
-    brokerageCache.set(address, { at: Date.now(), value });
-    return value;
+    const existingInflight = brokerageInflight.get(address);
+    if (existingInflight) {
+      return existingInflight;
+    }
+    const fetchPromise = rpc
+      .getBrokerage(address)
+      .then((value) => {
+        // Only cache successful fetches — caching the fallback would poison a
+        // transiently-failed SR for the full TTL. Let the next call retry instead.
+        brokerageCache.set(address, { at: Date.now(), value });
+        return value;
+      })
+      .catch(() => DEFAULT_BROKERAGE_PERCENT)
+      .finally(() => {
+        brokerageInflight.delete(address);
+      });
+    brokerageInflight.set(address, fetchPromise);
+    return fetchPromise;
   }
 
   /**
@@ -255,6 +271,7 @@ export function createStakingService(
     getWitnessMap,
 
     async getValidators(params?: GetValidatorsParams): Promise<ValidatorsPage> {
+      validatePageParams(params ?? {});
       const { raw, totalVotes, params: chainParams } = await load();
       const page = params?.page ?? 1;
       const pageSize = params?.pageSize ?? raw.length;

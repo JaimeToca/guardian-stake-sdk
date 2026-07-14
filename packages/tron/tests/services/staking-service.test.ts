@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { ValidationError } from "@guardian-sdk/sdk";
 import {
   createStakingService,
   mapWithConcurrency,
@@ -347,6 +348,97 @@ describe("scoped APR fetching", () => {
     expect(stakingSummary.totalValidators).toBe(20);
     // Only the 1 distinct voted SR should have triggered brokerage enrichment.
     expect(client.getBrokerage).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("brokerage cache: only cache successes (Fix 1)", () => {
+  it("a failed getBrokerage falls back to 20 and is NOT cached — the next call retries and caches the real value", async () => {
+    const getBrokerage = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("rpc down"))
+      .mockResolvedValueOnce(35);
+    const client = rpc({ getBrokerage });
+    const svc = createStakingService(client, () => tronWeb);
+
+    const first = await svc.getValidators();
+    expect(getBrokerage).toHaveBeenCalledTimes(1);
+    // Fallback DEFAULT_BROKERAGE_PERCENT (20) used on error -> apy computed with 20% brokerage.
+    expect(first.data[0].apy).toBeGreaterThan(0);
+
+    // Second call must re-invoke getBrokerage since the failed fetch was never cached.
+    const second = await svc.getValidators();
+    expect(getBrokerage).toHaveBeenCalledTimes(2);
+    // Real value (35) is now cached, so a third call does not re-fetch.
+    const third = await svc.getValidators();
+    expect(getBrokerage).toHaveBeenCalledTimes(2);
+    expect(second.data[0].apy).toBe(third.data[0].apy);
+  });
+});
+
+describe("per-SR brokerage in-flight dedup (Fix 2)", () => {
+  it("concurrent enrichment of the SAME SR (getValidators + getDelegations) shares one getBrokerage call", async () => {
+    let resolveBrokerage: ((value: number) => void) | undefined;
+    const getBrokerage = vi.fn().mockImplementation(
+      () =>
+        new Promise<number>((resolve) => {
+          resolveBrokerage = resolve;
+        })
+    );
+    const client = rpc({
+      getBrokerage,
+      getAccount: vi.fn().mockResolvedValue({
+        balance: 0n,
+        frozen: [{ resource: "BANDWIDTH", amount: 100_000_000n }],
+        unfreezing: [],
+        votes: [{ srAddress: "TSR", votes: 100n }],
+      }),
+    });
+    const svc = createStakingService(client, () => tronWeb);
+
+    const validatorsPromise = svc.getValidators();
+    const delegationsPromise = svc.getDelegations("TWallet");
+
+    // Let both operations reach the getBrokerage call before resolving it.
+    await vi.waitFor(() => {
+      expect(getBrokerage).toHaveBeenCalled();
+    });
+    expect(getBrokerage).toHaveBeenCalledTimes(1);
+    resolveBrokerage?.(20);
+
+    await Promise.all([validatorsPromise, delegationsPromise]);
+    expect(getBrokerage).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getValidators page-param validation (Fix 3)", () => {
+  it("throws ValidationError for page: 0", async () => {
+    const svc = createStakingService(rpc(), () => tronWeb);
+    await expect(svc.getValidators({ page: 0 })).rejects.toThrow(ValidationError);
+  });
+
+  it("throws ValidationError for pageSize: 0", async () => {
+    const svc = createStakingService(rpc(), () => tronWeb);
+    await expect(svc.getValidators({ pageSize: 0 })).rejects.toThrow(ValidationError);
+  });
+
+  it("throws ValidationError for page: -1", async () => {
+    const svc = createStakingService(rpc(), () => tronWeb);
+    await expect(svc.getValidators({ page: -1 })).rejects.toThrow(ValidationError);
+  });
+
+  it("a valid {page:1,pageSize:5} still works", async () => {
+    const witnessList = Array.from({ length: 10 }, (_, i) => ({
+      address: `TSR${i}`,
+      voteCount: BigInt(i + 1) * 1_000_000_000n,
+      url: `https://sr${i}.example`,
+      isSr: true,
+    }));
+    const svc = createStakingService(
+      rpc({ listWitnesses: vi.fn().mockResolvedValue(witnessList) }),
+      () => tronWeb
+    );
+    const page = await svc.getValidators({ page: 1, pageSize: 5 });
+    expect(page.data).toHaveLength(5);
   });
 });
 
