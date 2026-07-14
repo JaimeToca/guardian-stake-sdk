@@ -190,4 +190,7 @@ export async function sampleMpcVote(): Promise<void> {
   console.log(`Submitted: https://tronscan.org/#/transaction/${txHash}`);
 }
 
-runFullLifecycle();
+runFullLifecycle().catch((err) => {
+  console.error("Lifecycle failed:", err);
+  process.exitCode = 1;
+});

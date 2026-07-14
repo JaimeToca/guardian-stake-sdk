@@ -27,6 +27,7 @@ const big = (v: bigint | number | undefined): bigint =>
 /** Tron encodes on-chain failure reasons as a hex string in `message`; decode to a readable error. */
 const decodeHexMessage = (message: string | undefined): string | undefined => {
   if (!message) return undefined;
+  if (!/^[0-9a-fA-F]+$/.test(message) || message.length % 2 !== 0) return message;
   try {
     return Buffer.from(message, "hex").toString("utf8") || undefined;
   } catch {
