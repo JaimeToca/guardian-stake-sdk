@@ -85,8 +85,6 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 
 > **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
 
-Tron staking has some meaningful differences from BSC/Cardano — freezing (`Delegate`) is separate from voting (`Vote`) and only voting earns rewards, `resource` (`ENERGY`/`BANDWIDTH`) is chosen per freeze/unfreeze, amounts are in SUN (1 TRX = 10⁶ SUN), unfreezes carry a 14-day unbonding period, principal and rewards are two independent claims, APR is computed rather than fetched, and delegations can carry a `Frozen` status. See [`packages/tron/README.md`](./packages/tron/README.md) for the full model.
-
 Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian-sdk/sdk` is included automatically as a dependency of each chain package.
 
 ---
