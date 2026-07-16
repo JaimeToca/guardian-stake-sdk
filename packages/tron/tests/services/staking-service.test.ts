@@ -264,6 +264,95 @@ describe("getDelegations", () => {
     expect(pending?.id).toBe("TWallet:unfreeze-ENERGY-" + future);
     expect(claimable?.id).toBe("TWallet:unfreeze-BANDWIDTH-" + past);
   });
+
+  // README scenario 3: froze + voted the full amount across several SRs (clean, no scaling).
+  it("voted across several SRs, votes == frozen -> N clean Active entries, no Frozen remainder", async () => {
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [{ resource: "BANDWIDTH", amount: 45_051_000_000n }],
+          unfreezing: [],
+          votes: [
+            { srAddress: "TSR", votes: 15_017n },
+            { srAddress: "TSR2", votes: 15_017n },
+            { srAddress: "TSR3", votes: 15_017n },
+          ], // Σ voted = 45,051 TRX == totalFrozen -> no scaling
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+    const active = delegations.filter((d) => d.status === "Active");
+    expect(active).toHaveLength(3);
+    expect(active.every((d) => d.amount === 15_017_000_000n)).toBe(true);
+    expect(delegations.find((d) => d.status === "Frozen")).toBeUndefined();
+  });
+
+  // README scenario 4: partial vote (voted < frozen) -> Active + one Frozen remainder.
+  it("partial vote -> Active for the voted portion + Frozen remainder for the rest", async () => {
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [{ resource: "ENERGY", amount: 100_000_000n }],
+          unfreezing: [],
+          votes: [{ srAddress: "TSR", votes: 40n }], // 40 of 100 voted
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+    const active = delegations.find((d) => d.status === "Active");
+    const frozen = delegations.find((d) => d.status === "Frozen");
+    expect(active?.amount).toBe(40_000_000n);
+    expect(frozen?.amount).toBe(60_000_000n);
+    expect(frozen?.validator.id).toBe("tron-frozen-energy");
+  });
+
+  // README scenario 10: rich real wallet — freeze (2 resources) + partial vote + several unfreezes.
+  it("rich mixed wallet -> Active(x3) + Frozen remainder + Pending(x4), invariants hold", async () => {
+    const future = Date.now() + 5 * 86_400_000;
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [
+            { resource: "BANDWIDTH", amount: 1_200_000_000n },
+            { resource: "ENERGY", amount: 2_000_000_000n },
+          ], // total 3,200 TRX
+          votes: [
+            { srAddress: "TSR", votes: 1_066n },
+            { srAddress: "TSR2", votes: 1_066n },
+            { srAddress: "TSR3", votes: 1_066n },
+          ], // total 3,198 TRX -> remainder 2 TRX
+          unfreezing: [
+            { resource: "ENERGY", amount: 7_750_000_000n, expireTime: future },
+            { resource: "ENERGY", amount: 7_000_000_000n, expireTime: future },
+            { resource: "ENERGY", amount: 6_250_000_000n, expireTime: future },
+            { resource: "ENERGY", amount: 8_000_000_000n, expireTime: future },
+          ],
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+    const sum = (st: string) =>
+      delegations.filter((d) => d.status === st).reduce((s, d) => s + d.amount, 0n);
+
+    expect(delegations.filter((d) => d.status === "Active")).toHaveLength(3);
+    expect(sum("Active")).toBe(3_198_000_000n);
+    // Remainder = 3,200 − 3,198 = 2 TRX, attributed to the larger frozen resource (ENERGY).
+    const frozen = delegations.filter((d) => d.status === "Frozen");
+    expect(frozen).toHaveLength(1);
+    expect(frozen[0]?.amount).toBe(2_000_000n);
+    expect(frozen[0]?.validator.id).toBe("tron-frozen-energy");
+    expect(delegations.filter((d) => d.status === "Pending")).toHaveLength(4);
+    expect(sum("Pending")).toBe(29_000_000_000n);
+    // Invariants: Σ Active + Σ Frozen == total frozen; Σ Pending + Σ Claimable == total unfreezing.
+    expect(sum("Active") + sum("Frozen")).toBe(3_200_000_000n);
+    expect(sum("Pending") + sum("Claimable")).toBe(29_000_000_000n);
+  });
 });
 
 describe("scaleVotesToFrozen (pure)", () => {

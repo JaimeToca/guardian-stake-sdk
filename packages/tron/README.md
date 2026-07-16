@@ -223,6 +223,74 @@ type DelegationStatus = "Active" | "Pending" | "Claimable" | "Inactive" | "Froze
 
 > **Unknown SR** — an `Active` vote to an SR that's no longer in the witness list carries a fallback validator with the SR address (`status: "Inactive"`, `apy: 0`), not the Frozen placeholder.
 
+#### Every shape `getDelegations()` can return
+
+Amounts in TRX for readability (the SDK returns SUN — multiply by 1,000,000). "on-chain state" is the account's `frozenV2` / `votes` / `unfrozenV2`; the rows are the resulting `delegations[]`. Two invariants always hold: **Σ Active + Σ Frozen = total frozen** and **Σ Pending + Σ Claimable = total unfreezing**.
+
+**1. Froze, never voted** (earning the resource, no TRX rewards)
+```
+on-chain: frozen 100 BANDWIDTH · votes none · unfreezing none
+→ [ Frozen    100  validator=tron-frozen-bandwidth ]
+```
+
+**2. Froze + voted the full amount to one SR** (the clean, common case)
+```
+on-chain: frozen 100 BANDWIDTH · votes 100→SR_A · unfreezing none
+→ [ Active    100  validator=SR_A (real, apy>0) ]
+```
+
+**3. Froze + voted across several SRs**
+```
+on-chain: frozen 45,051 · votes 15,017→SR_A, 15,017→SR_B, 15,017→SR_C
+→ [ Active 15,017 SR_A ] [ Active 15,017 SR_B ] [ Active 15,017 SR_C ]
+```
+
+**4. Partial vote** (voted less than frozen → Active + one Frozen remainder)
+```
+on-chain: frozen 100 ENERGY · votes 40→SR_A · unfreezing none
+→ [ Active     40  SR_A ] [ Frozen     60  tron-frozen-energy ]
+```
+
+**5. Froze two resources, no votes** (one Frozen per resource — never a merged blob)
+```
+on-chain: frozen 100 BANDWIDTH + 80 ENERGY · votes none
+→ [ Frozen   100  tron-frozen-bandwidth ] [ Frozen    80  tron-frozen-energy ]
+```
+
+**6. Unfreezing in progress** (one entry per `unfreezeBalanceV2`, each its own 14-day clock)
+```
+on-chain: frozen none · unfreezing 40 (expires in 5d) + 20 (expired)
+→ [ Pending    40  pendingUntil=<future ms> ] [ Claimable  20  pendingUntil=<past ms> ]
+```
+
+**7. Over-voted** (unfroze after voting, so votes now exceed frozen → Active capped to frozen)
+```
+on-chain: frozen 109 · votes 114,657 across 3 SRs
+→ [ Active 36.33 SR_A ] [ Active 36.33 SR_B ] [ Active 36.34 SR_C ]   (Σ = 109, not 114,657)
+```
+
+**8. Fully unfrozen, votes not yet re-cast** (stale votes are dropped — no 0-amount Active)
+```
+on-chain: frozen none · votes 150 (linger on-chain) · unfreezing 150
+→ [ Pending   150  pendingUntil=<future ms> ]
+```
+
+**9. Voted an SR that got delisted** (Active with an address-only fallback validator)
+```
+on-chain: frozen 100 · votes 100→SR_X (not in current witness list)
+→ [ Active    100  validator={ id: "SR_X", status: "Inactive", apy: 0 } ]
+```
+
+**10. A rich real wallet** (freeze + partial vote + multiple unfreezes at once)
+```
+on-chain: frozen 3,200 (1,200 BW + 2,000 EN) · votes 1,066×3 SRs (=3,198) · unfreezing 7,750+7,000+6,250+8,000
+→ [ Active 1,066 SR_A ] [ Active 1,066 SR_B ] [ Active 1,066 SR_C ]
+  [ Frozen     2  tron-frozen-energy ]                          (3,200 frozen − 3,198 voted)
+  [ Pending 7,750 ] [ Pending 7,000 ] [ Pending 6,250 ] [ Pending 8,000 ]
+```
+
+An account with none of the above (never staked) returns `delegations: []`.
+
 ```typescript
 interface StakingSummary {
   totalProtocolStake: number;   // Σ SR voteCount
