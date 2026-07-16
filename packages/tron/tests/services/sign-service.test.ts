@@ -85,7 +85,7 @@ const voteTx = {
   type: "Vote",
   chain,
   amount: 1_000_000n,
-  validator: { operatorAddress: "TPL66VK2gCXNCD7EJg9pgJRfqcRazjhUZY" } as any,
+  validator: "TPL66VK2gCXNCD7EJg9pgJRfqcRazjhUZY",
   account: TEST_ADDRESS,
 } as unknown as Transaction;
 
@@ -120,7 +120,13 @@ function realSetup() {
   const factory: TronWebFactory = {
     create(privateKey?: string) {
       const tw = base.create(privateKey);
-      const tb = tw.transactionBuilder as any;
+      const tb = tw.transactionBuilder as unknown as {
+        freezeBalanceV2: typeof freezeBalanceV2;
+        unfreezeBalanceV2: typeof unfreezeBalanceV2;
+        vote: typeof vote;
+        withdrawExpireUnfreeze: typeof withdrawExpireUnfreeze;
+        withdrawBlockRewards: typeof withdrawBlockRewards;
+      };
       tb.freezeBalanceV2 = freezeBalanceV2;
       tb.unfreezeBalanceV2 = unfreezeBalanceV2;
       tb.vote = vote;
@@ -221,7 +227,7 @@ describe("sign", () => {
   it("throws SigningError on sign with unsupported transaction type", async () => {
     const { factory } = realSetup();
     const svc = createSignService(factory);
-    const badTx = { ...delegateTx, type: "FooBar" } as any;
+    const badTx = { ...delegateTx, type: "FooBar" } as unknown as Transaction;
     await expectSdkError(
       svc.sign({ transaction: badTx, fee, nonce: 0, privateKey: TEST_PRIVATE_KEY } as never),
       SigningError,
@@ -418,7 +424,7 @@ describe("prehash", () => {
   it("throws SigningError on prehash with invalid transaction type", async () => {
     const { factory } = realSetup();
     const svc = createSignService(factory);
-    const badTx = { ...delegateTx, type: "UnknownType" } as any;
+    const badTx = { ...delegateTx, type: "UnknownType" } as unknown as Transaction;
     await expectSdkError(
       svc.prehash({ transaction: badTx, fee, nonce: 0 } as never),
       SigningError,
@@ -476,7 +482,7 @@ describe("compile", () => {
     await expectSdkError(
       svc.compile({
         signArgs: { transaction: delegateTx, fee, nonce: 0, _rawTx: UNSIGNED_FIXTURE } as never,
-        signature: 123 as any,
+        signature: 123 as unknown as string,
       }),
       SigningError,
       "INVALID_SIGNING_ARGS"
