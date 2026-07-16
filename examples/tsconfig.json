@@ -9,6 +9,7 @@
     "paths": {
       "@guardian-sdk/bsc": ["../packages/bsc/src/index.ts"],
       "@guardian-sdk/cardano": ["../packages/cardano/src/index.ts"],
+      "@guardian-sdk/tron": ["../packages/tron/src/index.ts"],
       "@guardian-sdk/sdk": ["../packages/sdk/src/index.ts"]
     }
   },

@@ -6,7 +6,8 @@ export type Transaction =
   | UndelegateTransaction
   | RedelegateTransaction
   | ClaimDelegateTransaction
-  | ClaimRewardsTransaction;
+  | ClaimRewardsTransaction
+  | VoteTransaction;
 
 /**
  * Represents the on-chain address of a Validator Operator.
@@ -25,18 +26,21 @@ export type TransactionType =
   | "Undelegate"
   | "Redelegate"
   | "ClaimDelegate"
-  | "ClaimRewards";
+  | "ClaimRewards"
+  | "Vote";
 
 export interface DelegateTransaction extends BaseTransaction {
   type: "Delegate";
   isMaxAmount: boolean;
-  validator: Validator | OperatorAddress;
+  /** Optional: BSC/Cardano require it (enforced at runtime via assertValidator); Tron freeze omits it. */
+  validator?: Validator | OperatorAddress;
 }
 
 export interface UndelegateTransaction extends BaseTransaction {
   type: "Undelegate";
   isMaxAmount: boolean;
-  validator: Validator | OperatorAddress;
+  /** Optional: BSC/Cardano require it; Tron unfreeze omits it. */
+  validator?: Validator | OperatorAddress;
 }
 
 export interface RedelegateTransaction extends BaseTransaction {
@@ -50,21 +54,36 @@ export interface RedelegateTransaction extends BaseTransaction {
  * Claim unbonded funds after the unbonding period has completed.
  * The amount sits in the validator's contract until this transaction is submitted.
  *
- * Supported by: BSC
+ * Supported by: BSC, Tron
  */
 export interface ClaimDelegateTransaction extends BaseTransaction {
   type: "ClaimDelegate";
-  validator: Validator | OperatorAddress;
-  index: bigint;
+  /** Optional: BSC requires it (enforced at runtime via assertValidator); Tron ignores it. */
+  validator?: Validator | OperatorAddress;
+  /** Optional: BSC requires it; Tron ignores it. */
+  index?: bigint;
 }
 
 /**
  * Withdraw accumulated staking rewards from the reward account to the wallet.
  * Requires an explicit transaction — rewards are not automatically moved.
  *
- * Supported by: Cardano
+ * Supported by: Cardano, Tron
  */
 export interface ClaimRewardsTransaction extends BaseTransaction {
   type: "ClaimRewards";
+  /** Optional: Cardano requires it (enforced at runtime via assertValidator); Tron ignores it. */
+  validator?: Validator | OperatorAddress;
+}
+
+/**
+ * Allocate staked voting power to a validator, for protocols where staking and voting are
+ * separate actions (e.g. Tron, where `amount` is in SUN and must be a whole number of TRX —
+ * votes = amount / 1_000_000). The staked principal must already exist; this only directs it.
+ *
+ * Supported by: Tron
+ */
+export interface VoteTransaction extends BaseTransaction {
+  type: "Vote";
   validator: Validator | OperatorAddress;
 }

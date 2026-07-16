@@ -13,10 +13,13 @@ export default [
       parserOptions: {
         project: [
           "./packages/sdk/tsconfig.json",
+          "./packages/sdk/tsconfig.test.json",
           "./packages/bsc/tsconfig.json",
           "./packages/bsc/tsconfig.test.json",
           "./packages/cardano/tsconfig.json",
           "./packages/cardano/tsconfig.test.json",
+          "./packages/tron/tsconfig.json",
+          "./packages/tron/tsconfig.test.json",
         ],
         tsconfigRootDir: import.meta.dirname,
       },

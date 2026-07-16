@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "./src", "outDir": "./dist/cjs" },
+  "exclude": ["node_modules", "dist", "tests", "vitest.config.ts", "tsup.config.ts"]
+}

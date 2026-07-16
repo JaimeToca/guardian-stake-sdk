@@ -14,7 +14,7 @@ For routine file edits, reads, and command runs, keep replies short — state wh
 - **Test runner**: vitest
 - **Bundler**: tsup
 - **Linter / formatter**: ESLint + Prettier
-- **Key deps**: viem (BSC), `@cardano-sdk/core` · `crypto` · `util` (Cardano), axios (SDK)
+- **Key deps**: viem (BSC), `@cardano-sdk/core` · `crypto` · `util` (Cardano), `tronweb` (Tron), axios (SDK)
 
 ## Commands
 
@@ -22,7 +22,7 @@ For routine file edits, reads, and command runs, keep replies short — state wh
 # Install dependencies
 pnpm install
 
-# Build all packages (sdk first, then bsc, then cardano)
+# Build all packages (sdk first, then bsc, cardano, and tron)
 pnpm run build
 
 # Type-check all packages
@@ -43,7 +43,7 @@ pnpm run lint
 - **No classes** — all services are factory functions (`createXxxService()`); never use the `class` keyword
 - **No cross-package leaks** — never import `viem` or `@cardano-sdk/*` inside `packages/sdk`; never import `viem` inside `packages/cardano`
 - **No `any` types** — use `unknown` and narrow, or define a proper type
-- **No build-order skipping** — `packages/sdk` must build before `packages/bsc` or `packages/cardano`
+- **No build-order skipping** — `packages/sdk` must build before `packages/bsc`, `packages/cardano`, or `packages/tron`
 - **No native token logic** — BSC staking deals in BNB only; native token payloads must be rejected upstream
 
 ## Code Conventions
@@ -56,24 +56,27 @@ pnpm run lint
 
 ## Monorepo Structure
 
-This is a pnpm workspaces monorepo with three packages:
+This is a pnpm workspaces monorepo with four packages:
 
 - `packages/sdk` → published as `@guardian-sdk/sdk` — chain-agnostic core (no viem dependency)
 - `packages/bsc` → published as `@guardian-sdk/bsc` — BSC implementation (viem peer dep, depends on `@guardian-sdk/sdk`)
 - `packages/cardano` → published as `@guardian-sdk/cardano` — Cardano implementation (`@cardano-sdk/*` deps, depends on `@guardian-sdk/sdk`)
+- `packages/tron` → published as `@guardian-sdk/tron` — Tron implementation (`tronweb` dep, depends on `@guardian-sdk/sdk`)
 
-Consumers install only the chain package they need (`@guardian-sdk/bsc` or `@guardian-sdk/cardano`), which re-exports everything from `@guardian-sdk/sdk`.
+Consumers install only the chain package they need (`@guardian-sdk/bsc`, `@guardian-sdk/cardano`, or `@guardian-sdk/tron`), which re-exports everything from `@guardian-sdk/sdk`.
 
 ## Architecture
 
 **Entry points**:
 - `packages/bsc/src/smartchain/index.ts` exports `bsc()` — factory for BSC
 - `packages/cardano/src/cardano-chain/index.ts` exports `cardano()` — factory for Cardano
+- `packages/tron/src/tron-chain/index.ts` exports `tron()` — factory for Tron
 
 Both factory functions wire all services and return a plain object implementing `GuardianServiceContract` — no facade class. Chain-specific details load automatically when working inside a package:
 
 - `.claude/rules/bsc.md` — loaded when editing `packages/bsc/**`
 - `.claude/rules/cardano.md` — loaded when editing `packages/cardano/**`
+- `.claude/rules/tron.md` — loaded when editing `packages/tron/**`
 - `.claude/rules/sdk.md` — loaded when editing `packages/sdk/**`
 
 **Adding a new chain**: add a `.claude/rules/<chain>.md` file alongside a new `packages/<chain>/` directory.

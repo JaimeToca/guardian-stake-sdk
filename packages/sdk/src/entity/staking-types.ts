@@ -46,7 +46,8 @@ export interface Delegation {
   pendingUntil: number;
 }
 
-export type DelegationStatus = "Active" | "Pending" | "Claimable" | "Inactive";
+/** "Frozen" is Tron-only: staked (frozen) but not yet voted — earning the resource only, no TRX rewards. */
+export type DelegationStatus = "Active" | "Pending" | "Claimable" | "Inactive" | "Frozen";
 
 export function filterByStatus<S extends string, T extends { status: S }>(
   items: T[],
