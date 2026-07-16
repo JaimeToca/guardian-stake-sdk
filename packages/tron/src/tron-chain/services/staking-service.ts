@@ -370,8 +370,8 @@ export function createStakingService(
       for (const u of account.unfreezing) {
         const matured = u.expireTime <= now;
         delegations.push({
-          id: `${address}:unfreeze-${u.expireTime}`,
-          validator: placeholderValidator("BANDWIDTH"),
+          id: `${address}:unfreeze-${u.resource}-${u.expireTime}`,
+          validator: placeholderValidator(u.resource),
           amount: u.amount,
           status: matured ? "Claimable" : "Pending",
           delegationIndex: BigInt(idx++),

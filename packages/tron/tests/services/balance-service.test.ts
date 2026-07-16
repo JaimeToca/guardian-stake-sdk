@@ -12,8 +12,8 @@ describe("getBalances", () => {
           { resource: "ENERGY", amount: 50_000_000n },
         ],
         unfreezing: [
-          { amount: 40_000_000n, expireTime: now + 1_000_000 },
-          { amount: 10_000_000n, expireTime: now - 1_000_000 },
+          { resource: "BANDWIDTH", amount: 40_000_000n, expireTime: now + 1_000_000 },
+          { resource: "ENERGY", amount: 10_000_000n, expireTime: now - 1_000_000 },
         ],
         votes: [],
       }),

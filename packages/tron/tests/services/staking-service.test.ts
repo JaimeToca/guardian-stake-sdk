@@ -75,7 +75,7 @@ describe("getDelegations", () => {
         getAccount: vi.fn().mockResolvedValue({
           balance: 0n,
           frozen: [{ resource: "BANDWIDTH", amount: 60_000_000n }],
-          unfreezing: [{ amount: 40_000_000n, expireTime: future }],
+          unfreezing: [{ resource: "BANDWIDTH", amount: 40_000_000n, expireTime: future }],
           votes: [{ srAddress: "TSR", votes: 100n }], // 100 * SUN_PER_TRX = 100_000_000n voted
         }),
       }),
@@ -129,8 +129,8 @@ describe("getDelegations", () => {
           frozen: [],
           votes: [],
           unfreezing: [
-            { amount: 40_000_000n, expireTime: future },
-            { amount: 10_000_000n, expireTime: past },
+            { resource: "BANDWIDTH", amount: 40_000_000n, expireTime: future },
+            { resource: "ENERGY", amount: 10_000_000n, expireTime: past },
           ],
         }),
       }),
@@ -139,6 +139,34 @@ describe("getDelegations", () => {
     const { delegations } = await svc.getDelegations("TWallet");
     expect(delegations.find((d) => d.status === "Pending")?.amount).toBe(40_000_000n);
     expect(delegations.find((d) => d.status === "Claimable")?.amount).toBe(10_000_000n);
+  });
+
+  it("Pending/Claimable placeholder validator reflects the unfreeze resource (ENERGY vs BANDWIDTH)", async () => {
+    const future = Date.now() + 1_000_000;
+    const past = Date.now() - 1_000_000;
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [],
+          votes: [],
+          unfreezing: [
+            { resource: "ENERGY", amount: 40_000_000n, expireTime: future },
+            { resource: "BANDWIDTH", amount: 10_000_000n, expireTime: past },
+          ],
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+    const pending = delegations.find((d) => d.status === "Pending");
+    const claimable = delegations.find((d) => d.status === "Claimable");
+    // An ENERGY unfreeze must not be mislabeled as BANDWIDTH.
+    expect(pending?.validator.id).toBe("tron-frozen-energy");
+    expect(claimable?.validator.id).toBe("tron-frozen-bandwidth");
+    // Distinct ids per resource keep concurrent unfreezes from colliding.
+    expect(pending?.id).toBe("TWallet:unfreeze-ENERGY-" + future);
+    expect(claimable?.id).toBe("TWallet:unfreeze-BANDWIDTH-" + past);
   });
 });
 

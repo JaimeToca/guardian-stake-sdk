@@ -43,7 +43,10 @@ describe("createTronRpcClient.getAccount", () => {
         { type: "ENERGY", amount: 50_000_000 },
         { type: "TRON_POWER" },
       ],
-      unfrozenV2: [{ unfreeze_amount: 40_000_000, unfreeze_expire_time: 1893456000000 }],
+      unfrozenV2: [
+        { type: "ENERGY", unfreeze_amount: 40_000_000, unfreeze_expire_time: 1893456000000 },
+        { unfreeze_amount: 10_000_000, unfreeze_expire_time: 1893456000000 },
+      ],
       votes: [{ vote_address: "TSRxxx", vote_count: 100 }],
     });
     const rpc = createTronRpcClient("https://node.example");
@@ -53,7 +56,11 @@ describe("createTronRpcClient.getAccount", () => {
       { resource: "BANDWIDTH", amount: 100_000_000n },
       { resource: "ENERGY", amount: 50_000_000n },
     ]);
-    expect(acct.unfreezing).toEqual([{ amount: 40_000_000n, expireTime: 1893456000000 }]);
+    // Preserves the unfreeze resource type (ENERGY vs BANDWIDTH), defaulting to BANDWIDTH when absent.
+    expect(acct.unfreezing).toEqual([
+      { resource: "ENERGY", amount: 40_000_000n, expireTime: 1893456000000 },
+      { resource: "BANDWIDTH", amount: 10_000_000n, expireTime: 1893456000000 },
+    ]);
     expect(acct.votes).toEqual([{ srAddress: "TSRxxx", votes: 100n }]);
   });
 
@@ -76,7 +83,9 @@ describe("createTronRpcClient.getAccount", () => {
     });
     const rpc = createTronRpcClient("https://node.example");
     const acct = await rpc.getAccount("TWallet");
-    expect(acct.unfreezing).toEqual([{ amount: 40_000_000n, expireTime: Number.MAX_SAFE_INTEGER }]);
+    expect(acct.unfreezing).toEqual([
+      { resource: "BANDWIDTH", amount: 40_000_000n, expireTime: Number.MAX_SAFE_INTEGER },
+    ]);
   });
 
   it("maps a non-positive unfreeze_expire_time to the far-future Pending sentinel", async () => {
@@ -88,7 +97,9 @@ describe("createTronRpcClient.getAccount", () => {
     });
     const rpc = createTronRpcClient("https://node.example");
     const acct = await rpc.getAccount("TWallet");
-    expect(acct.unfreezing).toEqual([{ amount: 40_000_000n, expireTime: Number.MAX_SAFE_INTEGER }]);
+    expect(acct.unfreezing).toEqual([
+      { resource: "BANDWIDTH", amount: 40_000_000n, expireTime: Number.MAX_SAFE_INTEGER },
+    ]);
   });
 });
 

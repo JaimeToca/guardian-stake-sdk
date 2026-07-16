@@ -98,7 +98,7 @@ A Tron "delegation" in the SDK sense is really **one entry per `frozenV2`/`unfro
 | `unfrozenV2[]` entry, not yet expired | `Pending` | placeholder | `unfreeze_amount` | `unfreeze_expire_time` |
 | `unfrozenV2[]` entry, matured | `Claimable` | placeholder | `unfreeze_amount` | `unfreeze_expire_time` |
 
-**Placeholder validator** (used for every `Frozen`/`Pending`/`Claimable` entry, never `null`): `id: "tron-frozen-{resource}"`, `name: "Frozen — vote to earn rewards"`, `status: "Inactive"`, `apy: 0`, `operatorAddress: ""`. Kept non-null so BSC/Cardano-shaped consumers never have to null-check `delegation.validator`.
+**Placeholder validator** (used for every `Frozen`/`Pending`/`Claimable` entry, never `null`): `id: "tron-frozen-{resource}"`, `name: "Frozen — vote to earn rewards"`, `status: "Inactive"`, `apy: 0`, `operatorAddress: ""`. Kept non-null so BSC/Cardano-shaped consumers never have to null-check `delegation.validator`. The `{resource}` is the position's own resource: for `Frozen` it's the frozen resource; for `Pending`/`Claimable` it's the unfreeze's resource, carried through from `unfrozenV2[].type` (`ENERGY` vs `BANDWIDTH`) — an ENERGY unfreeze is never mislabeled as BANDWIDTH. The `Pending`/`Claimable` `id` is `{owner}:unfreeze-{resource}-{expireTime}`, so concurrent unfreezes of different resources never collide.
 
 **Partial-voting remainder rule**: a resource position is `Active` if the account has votes covering it, else `Frozen`. Any leftover unvoted Tron Power (`Σ frozen − Σ votes`) becomes **one extra `Frozen` entry**. In the common case where a user freezes and votes in lockstep for the full amount, there is no remainder and delegations are clean `Active` entries.
 

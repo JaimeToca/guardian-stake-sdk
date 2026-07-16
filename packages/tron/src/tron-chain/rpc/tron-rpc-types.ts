@@ -3,7 +3,7 @@ export type TronResource = "ENERGY" | "BANDWIDTH";
 export interface TronAccount {
   balance: bigint;
   frozen: { resource: TronResource; amount: bigint }[];
-  unfreezing: { amount: bigint; expireTime: number }[];
+  unfreezing: { resource: TronResource; amount: bigint; expireTime: number }[];
   votes: { srAddress: string; votes: bigint }[];
 }
 
@@ -32,6 +32,7 @@ export interface TronGetAccountResponse {
   balance?: bigint | number;
   frozenV2?: { type?: string; amount?: bigint | number }[];
   unfrozenV2?: {
+    type?: string;
     unfreeze_amount?: bigint | number;
     unfreeze_expire_time?: bigint | number;
   }[];

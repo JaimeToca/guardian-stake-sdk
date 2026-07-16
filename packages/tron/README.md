@@ -215,7 +215,7 @@ type DelegationStatus = "Active" | "Pending" | "Claimable" | "Inactive" | "Froze
 | `Pending` | Unfreeze submitted, still inside the 14-day unbonding period |
 | `Claimable` | Unfreeze matured — withdraw the principal with `ClaimDelegate` |
 
-> **Placeholder validator** — every `Frozen`/`Pending`/`Claimable` delegation carries a non-null placeholder validator (`id: "tron-frozen-{resource}"`, `name: "Frozen — vote to earn rewards"`, `apy: 0`, `status: "Inactive"`) so consumers never have to null-check `delegation.validator`.
+> **Placeholder validator** — every `Frozen`/`Pending`/`Claimable` delegation carries a non-null placeholder validator (`id: "tron-frozen-{resource}"`, `name: "Frozen — vote to earn rewards"`, `apy: 0`, `status: "Inactive"`) so consumers never have to null-check `delegation.validator`. `{resource}` reflects the position's own resource — for `Pending`/`Claimable` it is the unfreeze's resource (`ENERGY` vs `BANDWIDTH`), so an ENERGY unstake is never labeled BANDWIDTH.
 
 > **Partial-voting remainder** — if the account's total frozen Tron Power exceeds its total votes, the unvoted remainder appears as one extra `Frozen` delegation. Freezing and voting the full amount in lockstep produces no remainder.
 

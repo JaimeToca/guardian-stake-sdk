@@ -67,7 +67,11 @@ export function createTronRpcClient(
           const rawExpiry = u.unfreeze_expire_time;
           const expireTime =
             rawExpiry == null || num(rawExpiry) <= 0 ? Number.MAX_SAFE_INTEGER : num(rawExpiry);
-          return { amount: big(u.unfreeze_amount), expireTime };
+          return {
+            resource: (u.type === "ENERGY" ? "ENERGY" : "BANDWIDTH") as TronResource,
+            amount: big(u.unfreeze_amount),
+            expireTime,
+          };
         }),
         votes: (raw.votes ?? []).map((v) => ({
           srAddress: v.vote_address,
