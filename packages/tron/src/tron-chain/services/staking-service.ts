@@ -102,18 +102,111 @@ interface LoadResult {
 const WITNESS_KEY = "witnesses";
 const PARAMS_KEY = "params";
 
-function placeholderValidator(resource: TronResource): Validator {
+/** Whole-TRX vote count → SUN. Tron's `vote_count` is denominated in whole TRX (1 vote = 1 TRX). */
+const votesToSun = (votes: bigint): bigint => votes * SUN_PER_TRX;
+
+/**
+ * Builds a `Validator` from the fields that vary, filling the rest with the neutral defaults every
+ * Tron validator shares. Keeps the `Validator` shape defined in one place so a field added to the
+ * type doesn't have to be threaded through every construction site by hand.
+ */
+function buildValidator(
+  fields: Pick<Validator, "id" | "status" | "name"> & Partial<Validator>
+): Validator {
   return {
-    id: `tron-frozen-${resource.toLowerCase()}`,
-    status: "Inactive",
-    name: "Frozen — vote to earn rewards",
-    description: `Staked for ${resource}. Vote for a Super Representative to start earning TRX rewards.`,
+    description: "",
     image: undefined,
     apy: 0,
     delegators: undefined,
     operatorAddress: "",
     creditAddress: "",
+    ...fields,
   };
+}
+
+/** Non-null stand-in for `Frozen`/`Pending`/`Claimable` positions, which have no real SR. */
+function placeholderValidator(resource: TronResource): Validator {
+  return buildValidator({
+    id: `tron-frozen-${resource.toLowerCase()}`,
+    status: "Inactive",
+    name: "Frozen — vote to earn rewards",
+    description: `Staked for ${resource}. Vote for a Super Representative to start earning TRX rewards.`,
+  });
+}
+
+/**
+ * Stand-in for an `Active` vote whose SR isn't in the current witness list (e.g. a delisted SR).
+ * The position IS voted, so it must NOT reuse `placeholderValidator` ("vote to earn rewards" would
+ * be misleading) — carry the SR address through so consumers can still identify it.
+ */
+function unknownSrValidator(srAddress: string): Validator {
+  return buildValidator({
+    id: srAddress,
+    status: "Inactive",
+    name: srAddress,
+    description: "Super Representative not in the current witness list",
+    operatorAddress: srAddress,
+  });
+}
+
+/** One vote scaled to its share of currently-frozen Tron Power (SUN). `amount: 0n` means stale. */
+export interface ScaledVote {
+  srAddress: string;
+  amount: bigint;
+}
+
+/**
+ * Scales raw votes down to the currently-frozen total when a partial unfreeze has left `totalVoted`
+ * reporting more Tron Power than is actually frozen. Uses floor division per vote and assigns the
+ * lost dust to the last vote, so `Σ amount === effectiveVoted` exactly. When no scaling is needed
+ * each vote keeps its raw amount. A vote that scales to `0n` is stale (fully unfrozen, not re-cast).
+ */
+export function scaleVotesToFrozen(
+  votes: readonly { srAddress: string; votes: bigint }[],
+  totalFrozen: bigint,
+  totalVoted: bigint,
+  effectiveVoted: bigint
+): ScaledVote[] {
+  // totalVoted > totalFrozen already implies totalVoted > 0 (frozen is never negative).
+  const needsScaling = totalVoted > totalFrozen;
+  let scaledSoFar = 0n;
+  return votes.map((vote, i) => {
+    const rawAmount = votesToSun(vote.votes);
+    const isLastVote = i === votes.length - 1;
+    const amount = !needsScaling
+      ? rawAmount
+      : isLastVote
+        ? effectiveVoted - scaledSoFar
+        : (rawAmount * totalFrozen) / totalVoted;
+    scaledSoFar += amount;
+    return { srAddress: vote.srAddress, amount };
+  });
+}
+
+/**
+ * Splits the unvoted Tron-Power `remainder` across the frozen resources, largest-first, capping each
+ * chunk at that resource's own frozen amount. Votes aren't resource-tagged on-chain, so which
+ * resource is "unvoted" is ambiguous — but capping per resource guarantees each `Frozen` entry's
+ * amount never exceeds what's actually frozen for that resource, so it stays a valid `Undelegate`
+ * amount. With no votes at all, this yields exactly one entry per frozen resource (its full amount).
+ * `Σ chunks === remainder` because `remainder ≤ totalFrozen === Σ resource amounts`.
+ */
+export function splitRemainderByResource(
+  frozen: readonly { resource: TronResource; amount: bigint }[],
+  remainder: bigint
+): { resource: TronResource; amount: bigint }[] {
+  const largestFirst = [...frozen].sort((a, b) =>
+    b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0
+  );
+  const chunks: { resource: TronResource; amount: bigint }[] = [];
+  let left = remainder;
+  for (const f of largestFirst) {
+    if (left <= 0n) break;
+    const chunk = f.amount < left ? f.amount : left;
+    if (chunk > 0n) chunks.push({ resource: f.resource, amount: chunk });
+    left -= chunk;
+  }
+  return chunks;
 }
 
 export function createStakingService(
@@ -234,17 +327,13 @@ export function createStakingService(
       witnessPayPerBlock: params.getWitnessPayPerBlock ?? 0,
       brokeragePercent,
     });
-    return {
+    return buildValidator({
       id: raw.address,
       status: raw.isSr ? "Active" : "Inactive",
       name: raw.name,
-      description: "",
-      image: undefined,
       apy,
-      delegators: undefined,
       operatorAddress: raw.address,
-      creditAddress: "",
-    };
+    });
   }
 
   /** Cheap map for callers (fee-service's `assertVote`) that only need address/name/status — no brokerage fetch. */
@@ -253,17 +342,12 @@ export function createStakingService(
     return new Map(
       raw.map((w) => [
         w.address,
-        {
+        buildValidator({
           id: w.address,
           status: w.isSr ? "Active" : "Inactive",
           name: w.name,
-          description: "",
-          image: undefined,
-          apy: 0,
-          delegators: undefined,
           operatorAddress: w.address,
-          creditAddress: "",
-        } satisfies Validator,
+        }),
       ])
     );
   }
@@ -316,68 +400,61 @@ export function createStakingService(
           })
         ).filter((entry): entry is readonly [string, Validator] => entry !== undefined)
       );
-      const witnessMap = enrichedByAddress;
-      const delegations: Delegation[] = [];
-      let idx = 0;
+      // A resource-granular view is reconstructed from three independent on-chain sources, in a
+      // fixed order (delegationIndex is assigned once, at the end):
+      //   Active              — one per vote, scaled to currently-frozen Tron Power
+      //   Frozen              — the unvoted Tron-Power remainder, split per frozen resource
+      //   Pending / Claimable — one per unfreezing entry, split by whether the 14-day bond matured
+      // Sum invariants: Σ Active + Σ Frozen === Σ frozen (Staked); Σ Pending + Σ Claimable === Σ unfrozen.
+      // NOTE: an Active `amount` is voted Tron Power, NOT a per-resource unstake size — unfreeze
+      // amounts come from the Frozen/Pending/Claimable entries, which are capped per resource.
       const totalFrozen = account.frozen.reduce((s, f) => s + f.amount, 0n);
-      const totalVoted = account.votes.reduce((s, v) => s + v.votes * SUN_PER_TRX, 0n);
-      // A partial unfreeze can leave the votes record reporting more than is currently frozen.
-      // Cap the voted portion at totalFrozen so Σ Active never exceeds current stake.
+      const totalVoted = account.votes.reduce((s, v) => s + votesToSun(v.votes), 0n);
+      // A partial unfreeze can leave votes reporting more Tron Power than is currently frozen.
       const effectiveVoted = totalVoted <= totalFrozen ? totalVoted : totalFrozen;
 
-      // Active: one per vote
-      const needsScaling = totalVoted > totalFrozen && totalVoted !== 0n;
-      let scaledSoFar = 0n;
-      for (const [voteIdx, vote] of account.votes.entries()) {
-        const validator = witnessMap.get(vote.srAddress) ?? placeholderValidator("BANDWIDTH");
-        const rawAmount = vote.votes * SUN_PER_TRX;
-        const isLastVote = voteIdx === account.votes.length - 1;
-        // Floor division on each vote independently loses "dust" across multiple votes.
-        // Assign the residual to the last vote so Σ Active === effectiveVoted exactly.
-        const scaledAmount = !needsScaling
-          ? rawAmount
-          : isLastVote
-            ? effectiveVoted - scaledSoFar
-            : (rawAmount * totalFrozen) / totalVoted;
-        scaledSoFar += scaledAmount;
-        delegations.push({
-          id: `${address}:${vote.srAddress}`,
-          validator,
-          amount: scaledAmount,
+      const activeParts: Omit<Delegation, "delegationIndex">[] = scaleVotesToFrozen(
+        account.votes,
+        totalFrozen,
+        totalVoted,
+        effectiveVoted
+      )
+        // Drop stale votes (zero Tron Power backing) so we never surface a 0-amount Active entry.
+        .filter((v) => v.amount > 0n)
+        .map((v) => ({
+          id: `${address}:${v.srAddress}`,
+          validator: enrichedByAddress.get(v.srAddress) ?? unknownSrValidator(v.srAddress),
+          amount: v.amount,
           status: "Active",
-          delegationIndex: BigInt(idx++),
           pendingUntil: 0,
-        });
-      }
-      // Frozen: unvoted remainder (resource-granular; attribute to the largest frozen resource)
-      const remainder = totalFrozen - effectiveVoted;
-      if (remainder > 0n) {
-        const resource: TronResource = account.frozen.reduce(
-          (a, b) => (b.amount > a.amount ? b : a),
-          account.frozen[0] ?? { resource: "BANDWIDTH", amount: 0n }
-        ).resource;
-        delegations.push({
-          id: `${address}:frozen-${resource}`,
-          validator: placeholderValidator(resource),
-          amount: remainder,
-          status: "Frozen",
-          delegationIndex: BigInt(idx++),
-          pendingUntil: 0,
-        });
-      }
-      // Pending / Claimable: one per unfreezing entry
+        }));
+
+      const frozenParts: Omit<Delegation, "delegationIndex">[] = splitRemainderByResource(
+        account.frozen,
+        totalFrozen - effectiveVoted
+      ).map((r) => ({
+        id: `${address}:frozen-${r.resource}`,
+        validator: placeholderValidator(r.resource),
+        amount: r.amount,
+        status: "Frozen",
+        pendingUntil: 0,
+      }));
+
       const now = Date.now();
-      for (const u of account.unfreezing) {
-        const matured = u.expireTime <= now;
-        delegations.push({
+      const unfreezeParts: Omit<Delegation, "delegationIndex">[] = account.unfreezing
+        // Ignore zero-amount unfreeze rows (mirrors the RPC client's filter on frozen amounts).
+        .filter((u) => u.amount > 0n)
+        .map((u) => ({
           id: `${address}:unfreeze-${u.resource}-${u.expireTime}`,
           validator: placeholderValidator(u.resource),
           amount: u.amount,
-          status: matured ? "Claimable" : "Pending",
-          delegationIndex: BigInt(idx++),
+          status: u.expireTime <= now ? "Claimable" : "Pending",
           pendingUntil: u.expireTime,
-        });
-      }
+        }));
+
+      const delegations: Delegation[] = [...activeParts, ...frozenParts, ...unfreezeParts].map(
+        (part, i) => ({ ...part, delegationIndex: BigInt(i) })
+      );
 
       // maxApy is an approximation across ALL witnesses using the DEFAULT brokerage (20%),
       // so it needs only cached voteCount + params — no per-SR getBrokerage fan-out.

@@ -217,7 +217,11 @@ type DelegationStatus = "Active" | "Pending" | "Claimable" | "Inactive" | "Froze
 
 > **Placeholder validator** — every `Frozen`/`Pending`/`Claimable` delegation carries a non-null placeholder validator (`id: "tron-frozen-{resource}"`, `name: "Frozen — vote to earn rewards"`, `apy: 0`, `status: "Inactive"`) so consumers never have to null-check `delegation.validator`. `{resource}` reflects the position's own resource — for `Pending`/`Claimable` it is the unfreeze's resource (`ENERGY` vs `BANDWIDTH`), so an ENERGY unstake is never labeled BANDWIDTH.
 
-> **Partial-voting remainder** — if the account's total frozen Tron Power exceeds its total votes, the unvoted remainder appears as one extra `Frozen` delegation. Freezing and voting the full amount in lockstep produces no remainder.
+> **Partial-voting remainder** — if the account's total frozen Tron Power exceeds its total votes, the unvoted remainder is split across the frozen resources (largest-first, each capped at that resource's frozen amount), so with no votes you get one `Frozen` entry per resource. Freezing and voting the full amount in lockstep produces no remainder.
+
+> **`Active` amount = voted Tron Power, not a per-resource unstake size.** For a multi-resource position, size an `Undelegate` from the per-resource `Frozen`/`Pending`/`Claimable` amounts (capped per resource) or from `getBalances`/`frozenV2` — not from an `Active` `amount`.
+
+> **Unknown SR** — an `Active` vote to an SR that's no longer in the witness list carries a fallback validator with the SR address (`status: "Inactive"`, `apy: 0`), not the Frozen placeholder.
 
 ```typescript
 interface StakingSummary {

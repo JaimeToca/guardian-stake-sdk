@@ -3,6 +3,8 @@ import { ValidationError } from "@guardian-sdk/sdk";
 import {
   createStakingService,
   mapWithConcurrency,
+  scaleVotesToFrozen,
+  splitRemainderByResource,
 } from "../../src/tron-chain/services/staking-service";
 import type { TronRpcClientContract } from "../../src/tron-chain/rpc/tron-rpc-client-contract";
 
@@ -47,6 +49,73 @@ describe("getDelegations", () => {
     expect(delegations[0].status).toBe("Frozen");
     expect(delegations[0].amount).toBe(100_000_000n);
     expect(delegations[0].validator.name).toMatch(/vote/i);
+  });
+
+  it("freeze-only across TWO resources -> one Frozen per resource, each capped to its amount", async () => {
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [
+            { resource: "BANDWIDTH", amount: 100_000_000n },
+            { resource: "ENERGY", amount: 80_000_000n },
+          ],
+          unfreezing: [],
+          votes: [],
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+    // Must NOT collapse into one 180 TRX Frozen blob mislabeled as a single resource.
+    expect(delegations).toHaveLength(2);
+    const byResource = Object.fromEntries(delegations.map((d) => [d.validator.id, d.amount]));
+    expect(byResource["tron-frozen-bandwidth"]).toBe(100_000_000n);
+    expect(byResource["tron-frozen-energy"]).toBe(80_000_000n);
+    // Each Frozen amount is a valid Undelegate amount for its own resource.
+    expect(delegations.every((d) => d.status === "Frozen")).toBe(true);
+  });
+
+  it("Active vote to an SR missing from the witness list -> real fallback validator, not the Frozen placeholder", async () => {
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [{ resource: "BANDWIDTH", amount: 100_000_000n }],
+          unfreezing: [],
+          votes: [{ srAddress: "TDELISTED", votes: 100n }], // not in `witnesses`
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+    const active = delegations.find((d) => d.status === "Active");
+    expect(active?.amount).toBe(100_000_000n);
+    // Carries the SR address through — NOT the "vote to earn rewards" Frozen placeholder.
+    expect(active?.validator.id).toBe("TDELISTED");
+    expect(active?.validator.operatorAddress).toBe("TDELISTED");
+    expect(active?.validator.name).not.toMatch(/vote to earn/i);
+  });
+
+  it("zero-amount unfreeze entries are ignored", async () => {
+    const future = Date.now() + 1_000_000;
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [],
+          votes: [],
+          unfreezing: [
+            { resource: "BANDWIDTH", amount: 0n, expireTime: future },
+            { resource: "ENERGY", amount: 40_000_000n, expireTime: future },
+          ],
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+    expect(delegations).toHaveLength(1);
+    expect(delegations[0].amount).toBe(40_000_000n);
   });
 
   it("voted -> Active delegation with the real SR", async () => {
@@ -119,6 +188,33 @@ describe("getDelegations", () => {
     expect(delegations.find((d) => d.status === "Frozen")).toBeUndefined();
   });
 
+  it("fully unfrozen with lingering votes -> no 0-amount Active entries, funds show as Pending", async () => {
+    const future = Date.now() + 1_000_000;
+    const svc = createStakingService(
+      rpc({
+        getAccount: vi.fn().mockResolvedValue({
+          balance: 0n,
+          frozen: [], // all Tron Power unfrozen
+          votes: [
+            { srAddress: "TSR", votes: 100n },
+            { srAddress: "TSR2", votes: 50n },
+          ], // votes linger on-chain until re-cast; they back zero frozen TRX
+          unfreezing: [{ resource: "BANDWIDTH", amount: 150_000_000n, expireTime: future }],
+        }),
+      }),
+      () => tronWeb
+    );
+    const { delegations } = await svc.getDelegations("TWallet");
+
+    // Stale votes must NOT surface as 0-amount Active positions.
+    expect(delegations.filter((d) => d.status === "Active")).toHaveLength(0);
+    expect(delegations.every((d) => d.amount > 0n)).toBe(true);
+    // The funds are correctly represented as the unbonding (Pending) position.
+    const pending = delegations.filter((d) => d.status === "Pending");
+    expect(pending).toHaveLength(1);
+    expect(pending[0]?.amount).toBe(150_000_000n);
+  });
+
   it("unbonding -> Pending, matured -> Claimable", async () => {
     const future = Date.now() + 1_000_000;
     const past = Date.now() - 1_000_000;
@@ -167,6 +263,87 @@ describe("getDelegations", () => {
     // Distinct ids per resource keep concurrent unfreezes from colliding.
     expect(pending?.id).toBe("TWallet:unfreeze-ENERGY-" + future);
     expect(claimable?.id).toBe("TWallet:unfreeze-BANDWIDTH-" + past);
+  });
+});
+
+describe("scaleVotesToFrozen (pure)", () => {
+  const SUN = 1_000_000n;
+  const sum = (vs: { amount: bigint }[]) => vs.reduce((s, v) => s + v.amount, 0n);
+
+  it("no scaling when votes fit within frozen -> raw amounts", () => {
+    const votes = [
+      { srAddress: "A", votes: 100n },
+      { srAddress: "B", votes: 50n },
+    ];
+    const totalVoted = 150n * SUN;
+    const out = scaleVotesToFrozen(votes, 200n * SUN, totalVoted, totalVoted);
+    expect(out.map((v) => v.amount)).toEqual([100n * SUN, 50n * SUN]);
+  });
+
+  it("over-vote across many SRs -> Σ scaled === effectiveVoted exactly (residual on last, no dust loss)", () => {
+    const votes = [
+      { srAddress: "A", votes: 100n },
+      { srAddress: "B", votes: 101n },
+      { srAddress: "C", votes: 103n },
+    ];
+    const totalVoted = 304n * SUN;
+    const totalFrozen = 100n * SUN;
+    const out = scaleVotesToFrozen(votes, totalFrozen, totalVoted, totalFrozen);
+    expect(sum(out)).toBe(totalFrozen);
+  });
+
+  it("fully unfrozen (frozen 0) with lingering votes -> every scaled amount is 0", () => {
+    const votes = [
+      { srAddress: "A", votes: 100n },
+      { srAddress: "B", votes: 50n },
+    ];
+    const out = scaleVotesToFrozen(votes, 0n, 150n * SUN, 0n);
+    expect(out.every((v) => v.amount === 0n)).toBe(true);
+  });
+
+  it("empty votes -> empty result (no divide-by-zero)", () => {
+    expect(scaleVotesToFrozen([], 0n, 0n, 0n)).toEqual([]);
+  });
+});
+
+describe("splitRemainderByResource (pure)", () => {
+  it("no votes -> one chunk per resource, each its full frozen amount", () => {
+    const frozen = [
+      { resource: "BANDWIDTH" as const, amount: 100n },
+      { resource: "ENERGY" as const, amount: 80n },
+    ];
+    const out = splitRemainderByResource(frozen, 180n);
+    expect(out).toEqual([
+      { resource: "BANDWIDTH", amount: 100n },
+      { resource: "ENERGY", amount: 80n },
+    ]);
+  });
+
+  it("partial remainder -> filled largest-first, each chunk capped at its resource amount", () => {
+    const frozen = [
+      { resource: "BANDWIDTH" as const, amount: 100n },
+      { resource: "ENERGY" as const, amount: 80n },
+    ];
+    const out = splitRemainderByResource(frozen, 40n);
+    // 40 fits entirely in the largest resource; ENERGY gets nothing.
+    expect(out).toEqual([{ resource: "BANDWIDTH", amount: 40n }]);
+  });
+
+  it("remainder spilling past the largest resource -> caps and overflows to the next", () => {
+    const frozen = [
+      { resource: "BANDWIDTH" as const, amount: 100n },
+      { resource: "ENERGY" as const, amount: 80n },
+    ];
+    const out = splitRemainderByResource(frozen, 130n);
+    expect(out).toEqual([
+      { resource: "BANDWIDTH", amount: 100n },
+      { resource: "ENERGY", amount: 30n },
+    ]);
+    expect(out.reduce((s, c) => s + c.amount, 0n)).toBe(130n);
+  });
+
+  it("zero remainder -> no chunks", () => {
+    expect(splitRemainderByResource([{ resource: "ENERGY", amount: 50n }], 0n)).toEqual([]);
   });
 });
 

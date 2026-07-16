@@ -88,19 +88,26 @@ Unlike Cardano — which rejects partial reward withdrawals and forces a full-ba
 
 ## `getDelegations` is resource-granular
 
-A Tron "delegation" in the SDK sense is really **one entry per `frozenV2`/`unfrozenV2` position**, not one entry per SR — this keeps `amount` always the exact, directly-actionable unstake/claim figure instead of an aggregate.
+A Tron "delegation" in the SDK sense is really **one entry per vote / frozen-resource / `unfrozenV2` position**, not one entry per SR. `getDelegations` reconstructs the view from three independent sources in a fixed order, then assigns `delegationIndex` once, at the end:
 
 | Source position | `status` | `validator` | `amount` (SUN) | `pendingUntil` |
 |---|---|---|---|---|
-| `frozenV2[resource]`, backed by votes | `Active` | real SR (enriched + APR) | frozen amount for that resource | 0 |
-| `frozenV2[resource]`, no votes covering it | `Frozen` | placeholder | frozen amount for that resource | 0 |
-| Unvoted-TP remainder (`Σ frozen − Σ votes > 0`) | `Frozen` | placeholder | remainder | 0 |
+| a vote (scaled to frozen Tron Power) | `Active` | real SR (enriched + APR); fallback if delisted | voted Tron Power for that SR | 0 |
+| unvoted Tron-Power remainder, **per frozen resource** | `Frozen` | placeholder | that resource's share of the remainder | 0 |
 | `unfrozenV2[]` entry, not yet expired | `Pending` | placeholder | `unfreeze_amount` | `unfreeze_expire_time` |
 | `unfrozenV2[]` entry, matured | `Claimable` | placeholder | `unfreeze_amount` | `unfreeze_expire_time` |
 
+The pure vote-scaling (`scaleVotesToFrozen`) and remainder-splitting (`splitRemainderByResource`) are exported from `staking-service.ts` and unit-tested table-driven.
+
+**`Active` amount is voted Tron Power, not a per-resource unstake size.** The shared `Delegation` has no `resource` field, so a fully-voted multi-resource position collapses into vote-shaped `Active` entries. To size an `Undelegate`, use the per-resource `Frozen`/`Pending`/`Claimable` amounts (which ARE capped per resource) or query `getBalances`/`frozenV2` — don't pass an `Active` `amount` straight into `Undelegate`.
+
 **Placeholder validator** (used for every `Frozen`/`Pending`/`Claimable` entry, never `null`): `id: "tron-frozen-{resource}"`, `name: "Frozen — vote to earn rewards"`, `status: "Inactive"`, `apy: 0`, `operatorAddress: ""`. Kept non-null so BSC/Cardano-shaped consumers never have to null-check `delegation.validator`. The `{resource}` is the position's own resource: for `Frozen` it's the frozen resource; for `Pending`/`Claimable` it's the unfreeze's resource, carried through from `unfrozenV2[].type` (`ENERGY` vs `BANDWIDTH`) — an ENERGY unfreeze is never mislabeled as BANDWIDTH. The `Pending`/`Claimable` `id` is `{owner}:unfreeze-{resource}-{expireTime}`, so concurrent unfreezes of different resources never collide.
 
-**Partial-voting remainder rule**: a resource position is `Active` if the account has votes covering it, else `Frozen`. Any leftover unvoted Tron Power (`Σ frozen − Σ votes`) becomes **one extra `Frozen` entry**. In the common case where a user freezes and votes in lockstep for the full amount, there is no remainder and delegations are clean `Active` entries.
+**Unknown-SR fallback (`Active` only):** if a voted SR isn't in the current witness list (e.g. delisted), the `Active` entry uses `unknownSrValidator(srAddress)` — a real, non-null `Validator` carrying the SR address (`id`/`operatorAddress = srAddress`, `status: "Inactive"`, `apy: 0`) — NOT the "vote to earn rewards" placeholder, which would misdescribe a position that IS voted.
+
+**Partial-voting remainder rule**: any leftover unvoted Tron Power (`Σ frozen − effectiveVoted`) is **split across the frozen resources, largest-first, each chunk capped at that resource's frozen amount** — so with no votes you get one `Frozen` entry per frozen resource (each its full amount), never a single blob that overstates one resource. In the common case (freeze + vote in lockstep for the full amount) there is no remainder and delegations are clean `Active` entries. Votes aren't resource-tagged on-chain, so which resource is "unvoted" is an approximation — the per-resource cap keeps every `Frozen` amount a valid `Undelegate` figure regardless.
+
+**Zero-amount positions are dropped:** a vote backed by zero Tron Power (fully unfrozen, votes not yet re-cast) never becomes a `0`-amount `Active` entry, and zero-amount `unfrozenV2` rows are ignored (mirrors the RPC client's filter on frozen amounts).
 
 `getReward` (unclaimed rewards) is **not** attached per-delegation — it's per-account and lives solely in the `Rewards` balance.
 
