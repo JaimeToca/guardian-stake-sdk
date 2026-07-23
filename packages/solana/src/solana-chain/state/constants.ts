@@ -25,6 +25,12 @@ export const SYSVAR_CLOCK_ADDRESS = address("SysvarC1ock111111111111111111111111
 /** Sysvar: Rent. */
 export const SYSVAR_RENT_ADDRESS = address("SysvarRent111111111111111111111111111111111");
 
+/**
+ * Former stake-config account still required as the unused meta on `DelegateStake`.
+ * Program no longer reads it for rates, but the account must be present.
+ */
+export const STAKE_CONFIG_ADDRESS = address("StakeConfig11111111111111111111111111111111");
+
 /** Bootstrap / not-deactivating sentinel (`u64::MAX`). */
 export const U64_MAX = 18_446_744_073_709_551_615n;
 
