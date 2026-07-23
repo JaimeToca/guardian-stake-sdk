@@ -58,22 +58,26 @@ function encodeInitialized(): Uint8Array {
   return new Uint8Array(encoder.encode({ state }));
 }
 
-function stakeAccount(seedIndex: number, data: Uint8Array, lamports: bigint): SolanaAccountInfo {
+async function stakeAccount(
+  seedIndex: number,
+  data: Uint8Array,
+  lamports: bigint
+): Promise<SolanaAccountInfo> {
   return {
-    address: deriveStakeAddress(AUTHORITY, seedString(seedIndex)),
+    address: await deriveStakeAddress(AUTHORITY, seedString(seedIndex)),
     lamports,
     data,
     owner: STAKE_PROGRAM_ADDRESS,
   };
 }
 
-function multiPositionMap(): Map<string, SolanaAccountInfo | null> {
-  const active = stakeAccount(
+async function multiPositionMap(): Promise<Map<string, SolanaAccountInfo | null>> {
+  const active = await stakeAccount(
     0,
     encodeStake({ voter: VOTE, stake: 1_000_000_000n, activationEpoch: 10n }),
     1_002_282_880n
   );
-  const deactivating = stakeAccount(
+  const deactivating = await stakeAccount(
     1,
     encodeStake({
       voter: VOTE,
@@ -83,7 +87,7 @@ function multiPositionMap(): Map<string, SolanaAccountInfo | null> {
     }),
     502_282_880n
   );
-  const claimable = stakeAccount(2, encodeInitialized(), 2_282_880n);
+  const claimable = await stakeAccount(2, encodeInitialized(), 2_282_880n);
   return new Map([
     [active.address, active],
     [deactivating.address, deactivating],
@@ -91,8 +95,10 @@ function multiPositionMap(): Map<string, SolanaAccountInfo | null> {
   ]);
 }
 
-function mockRpc(overrides: Partial<SolanaRpcClientContract> = {}): SolanaRpcClientContract {
-  const map = multiPositionMap();
+async function mockRpc(
+  overrides: Partial<SolanaRpcClientContract> = {}
+): Promise<SolanaRpcClientContract> {
+  const map = await multiPositionMap();
   return {
     getBalance: vi.fn().mockResolvedValue(9_000_000_000n),
     getLatestBlockhash: vi.fn(),
@@ -126,7 +132,7 @@ describe("createBalanceService", () => {
   });
 
   it("returns Available / Staked / Pending / Claimable without Rewards", async () => {
-    const rpc = mockRpc();
+    const rpc = await mockRpc();
     const service = createBalanceService(rpc, cache, { seedScanMax: 10 });
     const balances = await service.getBalances(AUTHORITY);
 
@@ -139,7 +145,7 @@ describe("createBalanceService", () => {
   });
 
   it("shares cache with staking service — second call does not re-scan", async () => {
-    const rpc = mockRpc();
+    const rpc = await mockRpc();
     const staking = createStakingService(rpc, cache, { seedScanMax: 10 });
     const balance = createBalanceService(rpc, cache, { seedScanMax: 10 });
 
@@ -154,7 +160,7 @@ describe("createBalanceService", () => {
   });
 
   it("balance-first still populates cache for subsequent getDelegations", async () => {
-    const rpc = mockRpc();
+    const rpc = await mockRpc();
     const staking = createStakingService(rpc, cache, { seedScanMax: 10 });
     const balance = createBalanceService(rpc, cache, { seedScanMax: 10 });
 
@@ -167,7 +173,7 @@ describe("createBalanceService", () => {
   });
 
   it("empty wallet: zeros for stake categories", async () => {
-    const rpc = mockRpc({
+    const rpc = await mockRpc({
       getBalance: vi.fn().mockResolvedValue(1_000n),
       getMultipleAccounts: vi.fn().mockResolvedValue([null, null, null, null, null, null]),
     });

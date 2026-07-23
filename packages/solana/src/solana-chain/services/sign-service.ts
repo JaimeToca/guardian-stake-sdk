@@ -10,6 +10,9 @@ import { NoopLogger, SigningError } from "@guardian-sdk/sdk";
 import {
   createKeyPairFromPrivateKeyBytes,
   createKeyPairSignerFromPrivateKeyBytes,
+  getBase16Encoder,
+  getBase64Decoder,
+  getBase64Encoder,
   getBase64EncodedWireTransaction,
   getTransactionDecoder,
   signTransaction,
@@ -34,6 +37,11 @@ export interface SolanaSignService {
 /** 32-byte Ed25519 seed as 64 lowercase hex characters (v1). */
 const SEED_HEX_RE = /^[0-9a-f]{64}$/;
 
+const base16Encoder = getBase16Encoder();
+const base64Encoder = getBase64Encoder();
+const base64Decoder = getBase64Decoder();
+const transactionDecoder = getTransactionDecoder();
+
 function assertSolanaFee(fee: { type: string }): asserts fee is SolanaFee {
   if (fee.type !== "SolanaFee") {
     throw new SigningError(
@@ -44,7 +52,7 @@ function assertSolanaFee(fee: { type: string }): asserts fee is SolanaFee {
 }
 
 /**
- * Parse a 32-byte Ed25519 seed from 64-char lowercase hex.
+ * Parse a 32-byte Ed25519 seed from 64-char lowercase hex via Kit {@link getBase16Encoder}.
  * Full 64-byte solana-keygen secret arrays are out of scope for v1.
  */
 export function parseEd25519SeedHex(privateKey: string): Uint8Array {
@@ -54,16 +62,18 @@ export function parseEd25519SeedHex(privateKey: string): Uint8Array {
       "Solana privateKey must be a 32-byte Ed25519 seed as 64 lowercase hex characters."
     );
   }
-  const out = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) {
-    out[i] = Number.parseInt(privateKey.slice(i * 2, i * 2 + 2), 16);
-  }
-  return out;
+  return new Uint8Array(base16Encoder.encode(privateKey));
 }
 
 function decodeWireTransaction(wireBase64: string): KitTransaction {
-  const bytes = Buffer.from(wireBase64, "base64");
-  return getTransactionDecoder().decode(bytes);
+  // Kit: base64 *encoder* maps base64 string → bytes.
+  const bytes = base64Encoder.encode(wireBase64);
+  return transactionDecoder.decode(bytes);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  // Kit: base64 *decoder* maps bytes → base64 string.
+  return base64Decoder.decode(bytes);
 }
 
 function attachFeePayerSignature(
@@ -182,7 +192,7 @@ export function createSignService(
       logger.info("SignService: prehash complete — send serializedTransaction to external signer");
       return {
         // Exact Ed25519 payload the external signer must sign (message bytes, not wire tx).
-        serializedTransaction: Buffer.from(built.messageBytes).toString("base64"),
+        serializedTransaction: bytesToBase64(built.messageBytes),
         signArgs,
       };
     },
@@ -205,15 +215,8 @@ export function createSignService(
         );
       }
 
-      let sigBytes: Buffer;
-      try {
-        sigBytes = Buffer.from(args.signature, "base64");
-      } catch {
-        throw new SigningError(
-          "INVALID_SIGNING_ARGS",
-          "compile() signature must be valid base64 of a 64-byte Ed25519 signature."
-        );
-      }
+      // Kit base64 encoder: base64 string → bytes (invalid base64 may not throw — length checked below).
+      const sigBytes = new Uint8Array(base64Encoder.encode(args.signature));
 
       const feePayer = solanaArgs.transaction.account;
       if (!feePayer) {
@@ -224,7 +227,7 @@ export function createSignService(
       }
 
       const unsigned = decodeWireTransaction(wire);
-      const signed = attachFeePayerSignature(unsigned, feePayer, new Uint8Array(sigBytes));
+      const signed = attachFeePayerSignature(unsigned, feePayer, sigBytes);
       const out = getBase64EncodedWireTransaction(signed);
 
       logger.info("SignService: transaction compiled");

@@ -114,7 +114,7 @@ function programIdsFromResult(messageBytes: Uint8Array): string[] {
 describe("findNextFreeSeed", () => {
   it("returns the first missing derived address", async () => {
     const occupied0 = {
-      address: deriveStakeAddress(AUTHORITY, "0"),
+      address: await deriveStakeAddress(AUTHORITY, "0"),
       lamports: 1n,
       data: new Uint8Array(STAKE_ACCOUNT_SPACE),
       owner: STAKE_PROGRAM_ADDRESS,
@@ -126,7 +126,7 @@ describe("findNextFreeSeed", () => {
     const result = await findNextFreeSeed(rpc, AUTHORITY, 2);
     expect(result.index).toBe(1);
     expect(result.seed).toBe("1");
-    expect(result.stakeAddress).toBe(deriveStakeAddress(AUTHORITY, seedString(1)));
+    expect(result.stakeAddress).toBe(await deriveStakeAddress(AUTHORITY, seedString(1)));
   });
 
   it("throws when every seed slot is occupied", async () => {
@@ -219,7 +219,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("Undelegate: single Deactivate on stake program", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -259,7 +259,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("Undelegate: rejects non-stake-program owner", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -283,7 +283,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("Undelegate: rejects when staker is not the fee payer", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -310,7 +310,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("ClaimDelegate: Withdraw full lamports to authority", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const lamports = 3_000_000_000n;
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
@@ -338,7 +338,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("ClaimDelegate: rejects still-active stake (never deactivated)", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -361,7 +361,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("ClaimDelegate: rejects when withdrawer is not the fee payer", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -387,7 +387,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("ClaimDelegate: rejects missing stake account on chain", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([null]),
     });
@@ -403,7 +403,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("ClaimDelegate: rejects when lockup is in force (unixTimestamp)", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -427,7 +427,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("ClaimDelegate: rejects when lockup is in force (epoch)", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -451,7 +451,7 @@ describe("buildUnsignedTx", () => {
   });
 
   it("Undelegate: rejects already-deactivated stake", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -516,7 +516,7 @@ describe("buildUnsignedTx", () => {
   );
 
   it("rejects non-SolanaFee", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {

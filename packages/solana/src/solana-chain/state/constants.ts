@@ -1,6 +1,11 @@
 import { address, type Address } from "@solana/kit";
 import { STAKE_PROGRAM_ADDRESS as STAKE_PROGRAM_ADDRESS_KIT } from "@solana-program/stake";
 import { SYSTEM_PROGRAM_ADDRESS as SYSTEM_PROGRAM_ADDRESS_KIT } from "@solana-program/system";
+import {
+  SYSVAR_CLOCK_ADDRESS as SYSVAR_CLOCK_ADDRESS_KIT,
+  SYSVAR_RENT_ADDRESS as SYSVAR_RENT_ADDRESS_KIT,
+  SYSVAR_STAKE_HISTORY_ADDRESS as SYSVAR_STAKE_HISTORY_ADDRESS_KIT,
+} from "@solana/sysvars";
 
 /** 1 SOL = 1_000_000_000 lamports. */
 export const LAMPORTS_PER_SOL = 1_000_000_000n;
@@ -16,18 +21,19 @@ export const STAKE_PROGRAM_ADDRESS: Address<"Stake111111111111111111111111111111
 export const SYSTEM_PROGRAM_ADDRESS: Address<"11111111111111111111111111111111"> =
   SYSTEM_PROGRAM_ADDRESS_KIT;
 
-/** Sysvar: StakeHistory. */
-export const SYSVAR_STAKE_HISTORY_ADDRESS = address("SysvarStakeHistory1111111111111111111111111");
+/** Sysvar: StakeHistory (from `@solana/sysvars`). */
+export const SYSVAR_STAKE_HISTORY_ADDRESS = SYSVAR_STAKE_HISTORY_ADDRESS_KIT;
 
-/** Sysvar: Clock. */
-export const SYSVAR_CLOCK_ADDRESS = address("SysvarC1ock11111111111111111111111111111111");
+/** Sysvar: Clock (from `@solana/sysvars`). */
+export const SYSVAR_CLOCK_ADDRESS = SYSVAR_CLOCK_ADDRESS_KIT;
 
-/** Sysvar: Rent. */
-export const SYSVAR_RENT_ADDRESS = address("SysvarRent111111111111111111111111111111111");
+/** Sysvar: Rent (from `@solana/sysvars`). */
+export const SYSVAR_RENT_ADDRESS = SYSVAR_RENT_ADDRESS_KIT;
 
 /**
  * Former stake-config account still required as the unused meta on `DelegateStake`.
  * Program no longer reads it for rates, but the account must be present.
+ * Not exported by `@solana-program/stake` — protocol constant only.
  */
 export const STAKE_CONFIG_ADDRESS = address("StakeConfig11111111111111111111111111111111");
 

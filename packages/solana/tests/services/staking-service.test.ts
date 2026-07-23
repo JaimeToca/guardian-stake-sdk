@@ -68,9 +68,13 @@ function encodeInitialized(staker = AUTHORITY): Uint8Array {
   return new Uint8Array(encoder.encode({ state }));
 }
 
-function stakeAccount(seedIndex: number, data: Uint8Array, lamports: bigint): SolanaAccountInfo {
+async function stakeAccount(
+  seedIndex: number,
+  data: Uint8Array,
+  lamports: bigint
+): Promise<SolanaAccountInfo> {
   return {
-    address: deriveStakeAddress(AUTHORITY, seedString(seedIndex)),
+    address: await deriveStakeAddress(AUTHORITY, seedString(seedIndex)),
     lamports,
     data,
     owner: STAKE_PROGRAM_ADDRESS,
@@ -119,8 +123,8 @@ function mockRpc(overrides: Partial<SolanaRpcClientContract> = {}): SolanaRpcCli
 }
 
 /** Multi-position fixture: active seed0, deactivating seed1, inactive claimable seed2. */
-function multiPositionAccounts(): Map<string, SolanaAccountInfo | null> {
-  const active = stakeAccount(
+async function multiPositionAccounts(): Promise<Map<string, SolanaAccountInfo | null>> {
+  const active = await stakeAccount(
     0,
     encodeStake({
       voter: VOTE_A,
@@ -129,7 +133,7 @@ function multiPositionAccounts(): Map<string, SolanaAccountInfo | null> {
     }),
     1_002_282_880n
   );
-  const deactivating = stakeAccount(
+  const deactivating = await stakeAccount(
     1,
     encodeStake({
       voter: VOTE_A,
@@ -139,7 +143,7 @@ function multiPositionAccounts(): Map<string, SolanaAccountInfo | null> {
     }),
     502_282_880n
   );
-  const claimable = stakeAccount(2, encodeInitialized(), 2_282_880n);
+  const claimable = await stakeAccount(2, encodeInitialized(), 2_282_880n);
   return new Map([
     [active.address, active],
     [deactivating.address, deactivating],
@@ -217,7 +221,7 @@ describe("createStakingService", () => {
   });
 
   it("getDelegations maps multi-position lifecycle", async () => {
-    const map = multiPositionAccounts();
+    const map = await multiPositionAccounts();
     const rpc = mockRpc({
       getMultipleAccounts: mockGetMultipleFromMap(map),
       getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
@@ -238,7 +242,7 @@ describe("createStakingService", () => {
     expect(active.amount).toBe(1_000_000_000n);
     expect(active.validator.id).toBe(VOTE_A);
     expect(active.pendingUntil).toBe(0);
-    expect(active.id).toBe(deriveStakeAddress(AUTHORITY, "0"));
+    expect(active.id).toBe(await deriveStakeAddress(AUTHORITY, "0"));
 
     const pending = delegations.find((d) => d.delegationIndex === 1n)!;
     expect(pending.status).toBe("Pending");
@@ -261,7 +265,7 @@ describe("createStakingService", () => {
   });
 
   it("cache hit skips getMultipleAccounts on second getDelegations", async () => {
-    const map = multiPositionAccounts();
+    const map = await multiPositionAccounts();
     const getMultipleAccounts = mockGetMultipleFromMap(map);
     const rpc = mockRpc({ getMultipleAccounts });
     const service = createStakingService(rpc, cache, { seedScanMax: 10 });
@@ -277,7 +281,7 @@ describe("createStakingService", () => {
   });
 
   it("stops seed-scan after consecutive empty gap", async () => {
-    const seed0 = stakeAccount(
+    const seed0 = await stakeAccount(
       0,
       encodeStake({ voter: VOTE_A, stake: 1_000n, activationEpoch: 1n }),
       3_000n
@@ -309,7 +313,7 @@ describe("createStakingService", () => {
       activationEpoch: 1n,
     });
     // Address outside seed-scan range (seed 99) so only GPA discovers it.
-    const highSeedAddr = deriveStakeAddress(AUTHORITY, seedString(99));
+    const highSeedAddr = await deriveStakeAddress(AUTHORITY, seedString(99));
     const gpaAccount = {
       address: highSeedAddr,
       lamports: 2_002_282_880n,
@@ -336,7 +340,7 @@ describe("createStakingService", () => {
   });
 
   it("filters accounts whose staker/withdrawer do not match authority", async () => {
-    const other = stakeAccount(
+    const other = await stakeAccount(
       0,
       encodeStake({
         staker: VOTE_A,

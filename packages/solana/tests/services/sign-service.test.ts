@@ -156,8 +156,8 @@ describe("sign / prehash / compile parity", () => {
     },
     {
       name: "Undelegate",
-      setup: () => {
-        const stakeAccount = deriveStakeAddress(TEST_ADDRESS, "0");
+      setup: async () => {
+        const stakeAccount = await deriveStakeAddress(TEST_ADDRESS, "0");
         const rpc = mockRpc({
           getMultipleAccounts: vi.fn().mockResolvedValue([
             {
@@ -173,8 +173,8 @@ describe("sign / prehash / compile parity", () => {
     },
     {
       name: "ClaimDelegate",
-      setup: () => {
-        const stakeAccount = deriveStakeAddress(TEST_ADDRESS, "0");
+      setup: async () => {
+        const stakeAccount = await deriveStakeAddress(TEST_ADDRESS, "0");
         const rpc = mockRpc({
           getMultipleAccounts: vi.fn().mockResolvedValue([
             {
@@ -191,7 +191,7 @@ describe("sign / prehash / compile parity", () => {
   ] as const)(
     "$name: sign() wire equals compile(prehash + local Ed25519 sign of messageBytes)",
     async ({ setup }) => {
-      const { rpc, tx, fee: opFee } = setup();
+      const { rpc, tx, fee: opFee } = await setup();
       // Fresh service per path so both share the same mocked blockhash (deterministic message).
       const svc = createSignService(rpc, { seedScanMax: 0 });
 

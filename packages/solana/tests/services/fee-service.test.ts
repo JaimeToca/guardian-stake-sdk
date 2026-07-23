@@ -108,7 +108,7 @@ describe("createFeeService", () => {
   });
 
   it("Undelegate: uses static CU budget 50_000", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -136,7 +136,7 @@ describe("createFeeService", () => {
   });
 
   it("ClaimDelegate: fee for withdraw message", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {
@@ -179,7 +179,7 @@ describe("createFeeService", () => {
   });
 
   it("throws when getFeeForMessage returns null", async () => {
-    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([
         {

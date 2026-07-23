@@ -74,7 +74,7 @@ export async function findNextFreeSeed(
 
   const addresses: string[] = [];
   for (let i = 0; i <= seedScanMax; i++) {
-    addresses.push(deriveStakeAddress(authorityAddress, seedString(i)));
+    addresses.push(await deriveStakeAddress(authorityAddress, seedString(i)));
   }
 
   const accounts = await rpc.getMultipleAccounts(addresses);

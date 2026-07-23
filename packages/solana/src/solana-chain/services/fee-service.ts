@@ -1,8 +1,12 @@
 import type { Logger, SolanaFee, Transaction } from "@guardian-sdk/sdk";
 import { NoopLogger, ValidationError } from "@guardian-sdk/sdk";
+import { getBase64Decoder } from "@solana/kit";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import { assertSupportedTransactionType } from "../tx/validations";
+
+/** Kit: bytes → base64 string. */
+const base64Decoder = getBase64Decoder();
 
 /** Static CU budgets per op class (simulation optional; unit tests mock getFeeForMessage). */
 const STATIC_COMPUTE_UNITS: Record<"Delegate" | "Undelegate" | "ClaimDelegate", bigint> = {
@@ -102,7 +106,7 @@ export function createFeeService(
         draftFee
       );
 
-      const messageBase64 = Buffer.from(built.messageBytes).toString("base64");
+      const messageBase64 = base64Decoder.decode(built.messageBytes);
       const feeFromRpc = await rpc.getFeeForMessage(messageBase64);
       if (feeFromRpc === null) {
         throw new ValidationError(

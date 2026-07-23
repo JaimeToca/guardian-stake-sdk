@@ -159,7 +159,9 @@ async function seedScan(
     const indices: number[] = [];
     for (let i = start; i <= end; i++) indices.push(i);
 
-    const addresses = indices.map((i) => deriveStakeAddress(authority, seedString(i)));
+    const addresses = await Promise.all(
+      indices.map((i) => deriveStakeAddress(authority, seedString(i)))
+    );
     const accounts = await rpc.getMultipleAccounts(addresses);
 
     let stop = false;

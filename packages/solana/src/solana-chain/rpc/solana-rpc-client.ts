@@ -3,6 +3,7 @@ import { ApiError, ApiErrorType, NoopLogger } from "@guardian-sdk/sdk";
 import {
   address,
   createSolanaRpc,
+  getBase64Encoder,
   type Address,
   type Base58EncodedBytes,
   type Base64EncodedWireTransaction,
@@ -23,6 +24,9 @@ const GET_MULTIPLE_ACCOUNTS_MAX = 100;
 
 /** Stake Meta layout: 4-byte enum disc + 8-byte rent_exempt_reserve → staker pubkey at offset 12. */
 const STAKE_STAKER_MEMCMP_OFFSET = 12n;
+
+/** Kit: base64 string → bytes. */
+const base64Encoder = getBase64Encoder();
 
 function mapRpcError(err: unknown, operation: string): never {
   if (err instanceof ApiError) {
@@ -52,7 +56,7 @@ function toAddress(value: string): Address {
 
 function decodeBase64Data(data: readonly [string, string] | string): Uint8Array {
   const b64 = typeof data === "string" ? data : data[0];
-  return new Uint8Array(Buffer.from(b64, "base64"));
+  return new Uint8Array(base64Encoder.encode(b64));
 }
 
 function mapVoteAccount(raw: {

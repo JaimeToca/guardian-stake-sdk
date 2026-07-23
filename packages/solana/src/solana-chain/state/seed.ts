@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-import { address, getAddressDecoder, getAddressEncoder } from "@solana/kit";
+import { address, createAddressWithSeed } from "@solana/kit";
 import {
   DEFAULT_SEED_SCAN_GAP_LIMIT,
   DEFAULT_SEED_SCAN_MAX,
@@ -7,39 +6,34 @@ import {
   STAKE_PROGRAM_ADDRESS,
 } from "./constants";
 
-const addressEncoder = getAddressEncoder();
-const addressDecoder = getAddressDecoder();
-
 /**
- * Solana `create_with_seed` address derivation (NOT a PDA):
- * `SHA256(base_pubkey_bytes || seed_utf8_bytes || owner_pubkey_bytes)` → first 32 bytes as pubkey.
+ * Solana `create_with_seed` address derivation via Kit {@link createAddressWithSeed}
+ * (NOT a PDA): `SHA256(base ‖ seed ‖ owner)` → first 32 bytes as pubkey.
  *
  * Seed must be at most {@link MAX_SEED_LENGTH} bytes (UTF-8).
  */
-export function deriveStakeAddressWithSeed(base: string, seed: string, owner: string): string {
-  if (new TextEncoder().encode(seed).length > MAX_SEED_LENGTH) {
-    throw new Error(`seed must be at most ${MAX_SEED_LENGTH} bytes`);
-  }
-
-  const baseBytes = addressEncoder.encode(address(base));
-  const ownerBytes = addressEncoder.encode(address(owner));
-  const seedBytes = Buffer.from(seed, "utf8");
-
-  const digest = createHash("sha256")
-    .update(Buffer.from(baseBytes))
-    .update(seedBytes)
-    .update(Buffer.from(ownerBytes))
-    .digest();
-
-  return addressDecoder.decode(digest.subarray(0, 32));
+export async function deriveStakeAddressWithSeed(
+  base: string,
+  seed: string,
+  owner: string
+): Promise<string> {
+  return createAddressWithSeed({
+    baseAddress: address(base),
+    programAddress: address(owner),
+    seed,
+  });
 }
 
 /**
  * Derive a stake account address for the Stake program using a decimal seed string
  * (`"0"`, `"1"`, … — CLI-compatible).
  */
-export function deriveStakeAddress(base: string, seed: string): string {
-  return deriveStakeAddressWithSeed(base, seed, STAKE_PROGRAM_ADDRESS);
+export async function deriveStakeAddress(base: string, seed: string): Promise<string> {
+  return createAddressWithSeed({
+    baseAddress: address(base),
+    programAddress: STAKE_PROGRAM_ADDRESS,
+    seed,
+  });
 }
 
 /** CLI-compatible seed string for a numeric index. */
