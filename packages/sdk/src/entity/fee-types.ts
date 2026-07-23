@@ -1,4 +1,4 @@
-export type FeeType = "GasFee" | "UtxoFee" | "ResourceFee";
+export type FeeType = "GasFee" | "UtxoFee" | "ResourceFee" | "SolanaFee";
 
 export interface GasFee {
   type: "GasFee";
@@ -27,4 +27,12 @@ export interface ResourceFee {
   total: bigint;
 }
 
-export type Fee = GasFee | UtxoFee | ResourceFee;
+/** Solana fee model: base signature fee + optional priority (CU × microlamports/CU). `total` in lamports. */
+export interface SolanaFee {
+  type: "SolanaFee";
+  computeUnits: bigint;
+  computeUnitPrice: bigint;
+  total: bigint;
+}
+
+export type Fee = GasFee | UtxoFee | ResourceFee | SolanaFee;
