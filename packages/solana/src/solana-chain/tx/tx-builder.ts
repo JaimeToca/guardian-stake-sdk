@@ -36,8 +36,11 @@ import {
   STAKE_ACCOUNT_SPACE,
   STAKE_CONFIG_ADDRESS,
   STAKE_PROGRAM_ADDRESS,
+  U64_MAX,
 } from "../state/constants";
+import { decodeStakeAccount } from "../state/stake-account";
 import { deriveStakeAddress, seedString } from "../state/seed";
+import type { SolanaAccountInfo } from "../rpc/solana-rpc-types";
 import type {
   BuildTxDeps,
   BuildTxResult,
@@ -226,6 +229,52 @@ async function buildDelegate(
   });
 }
 
+/**
+ * State gates for Undelegate / ClaimDelegate (Task 5 review):
+ * - account exists and is owned by the stake program
+ * - decoded staker/withdrawer matches the signing authority when decode succeeds
+ * - Claim: reject never-deactivated Stake (deactivationEpoch === U64_MAX); full activation
+ *   history walk is out of scope for v1 — residual cooldown is enforced on-chain
+ */
+async function loadAndAssertStakeAccount(
+  rpc: SolanaRpcClientContract,
+  stakeAccount: string,
+  authorityAddress: string,
+  role: "staker" | "withdrawer",
+  opts: { rejectActiveStake?: boolean } = {}
+): Promise<SolanaAccountInfo> {
+  const accounts = await rpc.getMultipleAccounts([stakeAccount]);
+  const account = accounts[0];
+  if (!account) {
+    throw new ValidationError("INVALID_ADDRESS", `Stake account not found: "${stakeAccount}".`);
+  }
+  if (account.owner !== STAKE_PROGRAM_ADDRESS) {
+    throw new ValidationError(
+      "INVALID_ADDRESS",
+      `Account "${stakeAccount}" is not owned by the stake program (owner=${account.owner}).`
+    );
+  }
+
+  const view = decodeStakeAccount(account.data);
+  if (view) {
+    const expected = role === "staker" ? view.staker : view.withdrawer;
+    if (expected !== undefined && expected !== authorityAddress) {
+      throw new ValidationError(
+        "INVALID_ADDRESS",
+        `Authority does not match stake account ${role} (expected ${expected}, got ${authorityAddress}).`
+      );
+    }
+    if (opts.rejectActiveStake && view.kind === "Stake" && view.deactivationEpoch === U64_MAX) {
+      throw new ValidationError(
+        "UNSUPPORTED_OPERATION",
+        `Stake account "${stakeAccount}" is still active (never deactivated). Undelegate and wait for cooldown before ClaimDelegate.`
+      );
+    }
+  }
+
+  return account;
+}
+
 async function buildUndelegate(
   deps: BuildTxDeps,
   tx: SolanaUndelegateTransaction,
@@ -238,7 +287,10 @@ async function buildUndelegate(
   const signer = createNoopSigner(authority);
   const stake = address(tx.stakeAccount);
 
-  const latest = await deps.rpc.getLatestBlockhash();
+  const [, latest] = await Promise.all([
+    loadAndAssertStakeAccount(deps.rpc, tx.stakeAccount, deps.authorityAddress, "staker"),
+    deps.rpc.getLatestBlockhash(),
+  ]);
 
   const deactivateIx = getDeactivateInstruction({
     stake,
@@ -270,15 +322,13 @@ async function buildClaimDelegate(
   const signer = createNoopSigner(authority);
   const stake = address(tx.stakeAccount);
 
-  const [accounts, latest] = await Promise.all([
-    deps.rpc.getMultipleAccounts([tx.stakeAccount]),
+  const [account, latest] = await Promise.all([
+    loadAndAssertStakeAccount(deps.rpc, tx.stakeAccount, deps.authorityAddress, "withdrawer", {
+      rejectActiveStake: true,
+    }),
     deps.rpc.getLatestBlockhash(),
   ]);
 
-  const account = accounts[0];
-  if (!account) {
-    throw new ValidationError("INVALID_ADDRESS", `Stake account not found: "${tx.stakeAccount}".`);
-  }
   if (account.lamports <= 0n) {
     throw new ValidationError(
       "INVALID_AMOUNT",
