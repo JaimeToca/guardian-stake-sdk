@@ -54,54 +54,44 @@ Solana native staking is a **delegation of lamports held inside stake accounts**
 
 ### Compared to BSC, Cardano, and Tron
 
-| Topic | **Solana (this package)** | BSC | Cardano | Tron |
-|---|---|---|---|---|
-| What holds stake | **Stake account(s)** per position | StakeCredit shares per validator | Nothing locked — stake key preference | `frozenV2` on the account |
-| Wallet address role | **Authority** (staker + withdrawer) | Delegator EOA | Payment + stake addresses | Owner TRX address |
-| Position handle for unstake/claim | **`stakeAccount` pubkey** (`delegation.id`) | `validator` + unbond **`index`** | Stake key / pool id | Resource-granular entries; claim often ignores validator |
-| Multiple positions | **Common** — one account per stake | Multiple unbond requests + multi-validator | Usually one stake key | Multiple frozen/unfreeze rows |
-| Unbonding | **~1+ epoch** deactivate then withdraw | **~7 days** then `ClaimDelegate` | **None** | **14 days** then claim principal |
-| Rewards | **Auto-compound** into stake account | Auto-compound via share price | Separate **`ClaimRewards`** | Separate **`ClaimRewards`** (24h cooldown) |
-| `ClaimRewards` in SDK | **Unsupported** (not needed) | Unsupported | Supported | Supported |
-| `Vote` in SDK | **Unsupported** | Unsupported | Unsupported | **Required** after freeze to earn TRX |
-| `Redelegate` in SDK | **Unsupported** (on-chain Redelegate never activated) | Supported | Supported | Unsupported |
-| Partial unstake | **Not in v1** (needs Split) | Partial via shares | N/A (no lock) | **Partial unfreeze allowed** |
-| `isMaxAmount` | **Rejected** on Delegate | Used on some ops | Used on some ops | **Rejected** (like Solana) |
-| Fee shape | **`SolanaFee`** (CU + priority) | `GasFee` | `UtxoFee` | `ResourceFee` |
-| `getNonce` | Always **`0`** (blockhash in message) | Real EVM nonce | Always `0` | Always `0` |
-| Signing | **Ed25519**, single key (v1) | secp256k1 | **Two** Ed25519 keys | secp256k1 |
-| APR in v1 | **`apy: 0`** always | From BNB metadata API | From pool metadata | **Computed** from witnesses |
-| Package extension fields | `stakeAccount` on undelegate/claim | — | — | `resource` on freeze/unfreeze |
+Short resume — not a full feature matrix:
 
-**Takeaways for multi-chain UIs:**
+- **What is staked:** SOL lives in **stake accounts** (like locking principal). That differs from Cardano (nothing locked) and is closer to BSC/Tron freezes than to “stake key only” delegation.
+- **How you target a position:** use **`delegation.id` → `stakeAccount`** (same idea as BSC unbond `index` or Tron per-resource rows). Wallet address alone is not enough to undelegate/claim.
+- **Rewards:** **auto-compound** into the stake account — no `ClaimRewards` (unlike Cardano/Tron). No separate `Rewards` balance.
+- **Unbonding:** deactivate → wait ~epoch(s) → withdraw (`ClaimDelegate`). BSC ~7d, Tron ~14d, Cardano none.
+- **No Vote / no Redelegate in v1** (Tron needs Vote after freeze; BSC/Cardano support redelegate).
+- **Fees / signing:** `SolanaFee` + single Ed25519 key; `getNonce` is always `0` (like Cardano/Tron).
 
-1. Treat Solana like **BSC unbond indexes** or **Tron resource rows**: list positions from `getDelegations`, then pass a **position id** into undelegate/claim — not only the wallet address.
-2. Do **not** offer a “claim rewards” button for Solana native stake (unlike Cardano/Tron).
-3. Do **not** expect a single atomic redelegate (unlike BSC/Cardano); product flow is deactivate → wait → withdraw → new delegate (or later MoveStake, out of scope).
+**UI takeaway:** list `getDelegations`, act per row with `stakeAccount`; do not show a claim-rewards button for native SOL stake.
 
 ### Authority vs stake account
 
 Native staking is **not** “lock SOL in the wallet.” SOL sits in a **stake account** owned by the Stake program. The wallet is the **authority** (fee payer, staker, and withdrawer in v1), **not** the stake account address.
 
 ```text
-Wallet (authority)                         Stake account (per position)
-┌──────────────────┐  CreateAccountWithSeed   ┌────────────────────────────┐
-│  fee payer       │ ───────────────────────► │ holds lamports             │
-│  staker          │  InitializeChecked        │ Meta.authorized = wallet   │
-│  withdrawer      │  DelegateStake            │ delegated to Vote account  │
-└──────────────────┘ ◄──── Withdraw (close) ── └────────────────────────────┘
-         │                                                    │
-         │                                                    ▼
-         │                                            Vote account (validator)
+  Wallet (authority)              Stake account (per position)
+  fee payer / staker / withdrawer holds lamports; Meta.authorized = wallet
+         |                                      |
+         |  CreateAccountWithSeed               |
+         |  InitializeChecked                   |
+         |  DelegateStake                       |
+         +------------------------------------->|
+         |                                      |
+         |  Withdraw (close)                    |
+         |<-------------------------------------+
+         |                                      |
+         |                                      v
+         |                              Vote account (validator)
 ```
 
-| Address | What it is | Used for |
-|---|---|---|
-| **Wallet / authority** | User’s main key | `getBalances(address)`, `getDelegations(address)`, `transaction.account`, fee payer |
-| **Stake account** | Separate account, often seed-derived | Holds staked SOL; target of Deactivate / Withdraw |
-| **Vote account** | Validator consensus identity | `transaction.validator` on `Delegate` (`operatorAddress` from `getValidators`) |
+| Address | Role |
+|---|---|
+| **Wallet / authority** | `getBalances` / `getDelegations` / `transaction.account` / fee payer |
+| **Stake account** | Holds staked SOL; target of Deactivate / Withdraw (`stakeAccount`) |
+| **Vote account** | Validator for `Delegate.validator` (`operatorAddress` from `getValidators`) |
 
-**Position targeting:** `Undelegate` and `ClaimDelegate` require package-local **`stakeAccount`** (base58 stake account pubkey) — same extension pattern as Tron’s `resource`. Pass `delegation.id` from `getDelegations`.
+**Position targeting:** `Undelegate` and `ClaimDelegate` require package-local **`stakeAccount`** (base58) — same extension pattern as Tron’s `resource`. Pass `delegation.id` from `getDelegations`.
 
 ### Vote accounts (validators)
 
