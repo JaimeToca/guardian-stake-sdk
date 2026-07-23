@@ -25,6 +25,13 @@ export interface StakePosition {
   status: StakePositionStatus;
 }
 
+/** Stake Meta.lockup fields (unixTimestamp / epoch / custodian). */
+export interface StakeLockup {
+  unixTimestamp: bigint;
+  epoch: bigint;
+  custodian: string;
+}
+
 /** Decoded stake account data without activation or account meta. */
 export interface StakeAccountView {
   kind: StakeStateV2["__kind"];
@@ -36,6 +43,19 @@ export interface StakeAccountView {
   activationEpoch: bigint;
   deactivationEpoch: bigint;
   creditsObserved: bigint;
+  /** Present for Initialized / Stake; undefined for Uninitialized / RewardsPool. */
+  lockup: StakeLockup | undefined;
+}
+
+/**
+ * Solana lockup is in force when either wall-clock or epoch lockup has not elapsed.
+ * Custodian co-sign is out of scope in v1 — treat any in-force lockup as non-withdrawable.
+ */
+export function isLockupInForce(
+  lockup: StakeLockup,
+  clock: { epoch: bigint; unixTimestamp: bigint }
+): boolean {
+  return lockup.unixTimestamp > clock.unixTimestamp || lockup.epoch > clock.epoch;
 }
 
 const decoder = getStakeStateAccountDecoder();
@@ -57,6 +77,16 @@ export function decodeStakeAccount(data: Uint8Array): StakeAccountView | null {
   }
 }
 
+function mapLockup(meta: {
+  lockup: { unixTimestamp: bigint; epoch: bigint; custodian: string };
+}): StakeLockup {
+  return {
+    unixTimestamp: meta.lockup.unixTimestamp,
+    epoch: meta.lockup.epoch,
+    custodian: meta.lockup.custodian,
+  };
+}
+
 function mapState(state: StakeStateV2): StakeAccountView {
   switch (state.__kind) {
     case "Uninitialized":
@@ -71,6 +101,7 @@ function mapState(state: StakeStateV2): StakeAccountView {
         activationEpoch: 0n,
         deactivationEpoch: U64_MAX,
         creditsObserved: 0n,
+        lockup: undefined,
       };
     case "Initialized": {
       const [meta] = state.fields;
@@ -84,6 +115,7 @@ function mapState(state: StakeStateV2): StakeAccountView {
         activationEpoch: 0n,
         deactivationEpoch: U64_MAX,
         creditsObserved: 0n,
+        lockup: mapLockup(meta),
       };
     }
     case "Stake": {
@@ -98,6 +130,7 @@ function mapState(state: StakeStateV2): StakeAccountView {
         activationEpoch: stake.delegation.activationEpoch,
         deactivationEpoch: stake.delegation.deactivationEpoch,
         creditsObserved: stake.creditsObserved,
+        lockup: mapLockup(meta),
       };
     }
   }

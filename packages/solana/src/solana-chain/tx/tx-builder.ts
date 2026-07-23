@@ -38,7 +38,7 @@ import {
   STAKE_PROGRAM_ADDRESS,
   U64_MAX,
 } from "../state/constants";
-import { decodeStakeAccount } from "../state/stake-account";
+import { decodeStakeAccount, isLockupInForce } from "../state/stake-account";
 import { deriveStakeAddress, seedString } from "../state/seed";
 import type { SolanaAccountInfo } from "../rpc/solana-rpc-types";
 import type {
@@ -53,6 +53,9 @@ import {
   assertStakeAccount,
   assertSupportedTransactionType,
 } from "./validations";
+
+/** Small base-fee cushion for Delegate funding preflight (lamports). */
+const DELEGATE_FEE_CUSHION_LAMPORTS = 10_000n;
 
 const voteAddressOf = (v: Validator | OperatorAddress): string =>
   typeof v === "string" ? v : v.operatorAddress;
@@ -175,10 +178,11 @@ async function buildDelegate(
   const signer: TransactionSigner = createNoopSigner(authority);
   const vote = address(voteAddressOf(tx.validator!));
 
-  const [minDelegation, rentExempt, latest] = await Promise.all([
+  const [minDelegation, rentExempt, latest, balance] = await Promise.all([
     deps.rpc.getStakeMinimumDelegation(),
     deps.rpc.getMinimumBalanceForRentExemption(STAKE_ACCOUNT_SPACE),
     deps.rpc.getLatestBlockhash(),
+    deps.rpc.getBalance(authorityStr),
   ]);
 
   if (tx.amount < minDelegation) {
@@ -192,6 +196,15 @@ async function buildDelegate(
   const { seed, stakeAddress } = await findNextFreeSeed(deps.rpc, authorityStr, seedScanMax);
   const stake = address(stakeAddress);
   const lamports = tx.amount + rentExempt;
+
+  const feeCushion = fee.total > 0n ? fee.total : DELEGATE_FEE_CUSHION_LAMPORTS;
+  const required = lamports + feeCushion;
+  if (balance < required) {
+    throw new ValidationError(
+      "INVALID_AMOUNT",
+      `Insufficient balance to fund stake: need ~${required} lamports (amount + rent + fee cushion), have ${balance}.`
+    );
+  }
 
   const createIx = getCreateAccountWithSeedInstruction({
     payer: signer,
@@ -230,18 +243,25 @@ async function buildDelegate(
 }
 
 /**
- * State gates for Undelegate / ClaimDelegate (Task 5 review):
+ * State gates for Undelegate / ClaimDelegate:
  * - account exists and is owned by the stake program
  * - decoded staker/withdrawer matches the signing authority when decode succeeds
- * - Claim: reject never-deactivated Stake (deactivationEpoch === U64_MAX); full activation
+ * - Undelegate: reject if not delegated Stake, or already deactivating/inactive
+ * - Claim: reject never-deactivated Stake (deactivationEpoch === U64_MAX); residual cooldown
  *   history walk is out of scope for v1 — residual cooldown is enforced on-chain
+ * - Claim: reject when Meta.lockup is in force (no custodian co-sign in v1)
  */
 async function loadAndAssertStakeAccount(
   rpc: SolanaRpcClientContract,
   stakeAccount: string,
   authorityAddress: string,
   role: "staker" | "withdrawer",
-  opts: { rejectActiveStake?: boolean } = {}
+  opts: {
+    rejectActiveStake?: boolean;
+    rejectLockup?: boolean;
+    /** Reject accounts that are not an active (never-deactivated) Stake delegation. */
+    rejectNotDelegatedActive?: boolean;
+  } = {}
 ): Promise<SolanaAccountInfo> {
   const accounts = await rpc.getMultipleAccounts([stakeAccount]);
   const account = accounts[0];
@@ -270,6 +290,29 @@ async function loadAndAssertStakeAccount(
         `Stake account "${stakeAccount}" is still active (never deactivated). Undelegate and wait for cooldown before ClaimDelegate.`
       );
     }
+    if (opts.rejectNotDelegatedActive) {
+      if (view.kind !== "Stake") {
+        throw new ValidationError(
+          "UNSUPPORTED_OPERATION",
+          `Stake account "${stakeAccount}" is not a delegated Stake state (${view.kind}); nothing to deactivate.`
+        );
+      }
+      if (view.deactivationEpoch !== U64_MAX) {
+        throw new ValidationError(
+          "UNSUPPORTED_OPERATION",
+          `Stake account "${stakeAccount}" is already deactivating or inactive (deactivationEpoch=${view.deactivationEpoch}); Deactivate is a no-op / rejected.`
+        );
+      }
+    }
+    if (opts.rejectLockup && view.lockup) {
+      const clock = await rpc.getClock();
+      if (isLockupInForce(view.lockup, clock)) {
+        throw new ValidationError(
+          "UNSUPPORTED_OPERATION",
+          `Stake account "${stakeAccount}" has lockup in force until unixTimestamp=${view.lockup.unixTimestamp} / epoch=${view.lockup.epoch}. Custodian co-sign is not supported in v1.`
+        );
+      }
+    }
   }
 
   return account;
@@ -288,7 +331,9 @@ async function buildUndelegate(
   const stake = address(tx.stakeAccount);
 
   const [, latest] = await Promise.all([
-    loadAndAssertStakeAccount(deps.rpc, tx.stakeAccount, deps.authorityAddress, "staker"),
+    loadAndAssertStakeAccount(deps.rpc, tx.stakeAccount, deps.authorityAddress, "staker", {
+      rejectNotDelegatedActive: true,
+    }),
     deps.rpc.getLatestBlockhash(),
   ]);
 
@@ -325,6 +370,7 @@ async function buildClaimDelegate(
   const [account, latest] = await Promise.all([
     loadAndAssertStakeAccount(deps.rpc, tx.stakeAccount, deps.authorityAddress, "withdrawer", {
       rejectActiveStake: true,
+      rejectLockup: true,
     }),
     deps.rpc.getLatestBlockhash(),
   ]);

@@ -54,6 +54,12 @@ export interface EpochInfo {
   absoluteSlot: bigint;
 }
 
+/** Subset of the Clock sysvar used for epoch + lockup checks. */
+export interface SolanaClock {
+  epoch: bigint;
+  unixTimestamp: bigint;
+}
+
 export interface VoteAccountsResult {
   current: VoteAccountInfo[];
   delinquent: VoteAccountInfo[];

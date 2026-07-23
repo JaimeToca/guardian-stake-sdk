@@ -2,6 +2,7 @@ import type {
   EpochInfo,
   LatestBlockhash,
   SolanaAccountInfo,
+  SolanaClock,
   SolanaStakeProgramAccount,
   StakeHistoryEntry,
   VoteAccountsResult,
@@ -22,6 +23,8 @@ export interface SolanaRpcClientContract {
   sendTransaction(wireTransactionBase64: string): Promise<string>;
   /** StakeHistory sysvar rows, newest epoch first. */
   getStakeHistory(): Promise<StakeHistoryEntry[]>;
+  /** Clock sysvar — epoch + wall-clock unix timestamp (for lockup checks). */
+  getClock(): Promise<SolanaClock>;
   /** Current epoch from the Clock sysvar. */
   getClockEpoch(): Promise<bigint>;
 }

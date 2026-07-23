@@ -81,7 +81,7 @@ Epoch-driven (~2–2.5 days/epoch on mainnet). Activation status is computed cli
 |---|---|---|
 | `Delegate` | CreateAccountWithSeed + InitializeChecked + DelegateStake | explicit `amount`; **`isMaxAmount: true` rejected**; rent-exempt reserve added on fund |
 | `Undelegate` | Deactivate | requires `stakeAccount`; whole account; `amount` ignored |
-| `ClaimDelegate` | Withdraw (full / close) | requires `stakeAccount`; fully inactive; lockup in force → reject |
+| `ClaimDelegate` | Withdraw (full / close) | requires `stakeAccount`; never-deactivated → reject; lockup in force → reject (no custodian co-sign) |
 | `Redelegate` / `ClaimRewards` / `Vote` | — | `UNSUPPORTED_TRANSACTION_TYPE` |
 
 **`transaction.validator` = vote account pubkey** (what `DelegateStake` needs), not node identity alone.

@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getStakeStateAccountEncoder, stakeStateV2 } from "@solana-program/stake";
 import { address } from "@solana/kit";
-import { decodeStakeAccount, toStakePosition } from "../../src/solana-chain/state/stake-account";
+import {
+  decodeStakeAccount,
+  isLockupInForce,
+  toStakePosition,
+} from "../../src/solana-chain/state/stake-account";
 import { U64_MAX } from "../../src/solana-chain/state/constants";
 import { computeStakeActivation } from "../../src/solana-chain/state/activation";
 
@@ -55,7 +59,7 @@ describe("decodeStakeAccount", () => {
       {
         rentExemptReserve: 2_282_880n,
         authorized: { staker, withdrawer: staker },
-        lockup: { unixTimestamp: 0n, epoch: 0n, custodian: zero },
+        lockup: { unixTimestamp: 1_800_000_000n, epoch: 300n, custodian: zero },
       },
       {
         delegation: {
@@ -75,6 +79,46 @@ describe("decodeStakeAccount", () => {
     expect(view!.delegatedStake).toBe(5_000_000_000n);
     expect(view!.activationEpoch).toBe(7n);
     expect(view!.creditsObserved).toBe(99n);
+    expect(view!.lockup).toEqual({
+      unixTimestamp: 1_800_000_000n,
+      epoch: 300n,
+      custodian: "11111111111111111111111111111111",
+    });
+  });
+
+  it("exposes zero lockup on fixture Stake accounts", () => {
+    const data = new Uint8Array(readFileSync(join(fixturesDir, "stake-account-stake.bin")));
+    const view = decodeStakeAccount(data)!;
+    expect(view.lockup).toBeDefined();
+    expect(view.lockup!.unixTimestamp).toBe(0n);
+    expect(view.lockup!.epoch).toBe(0n);
+  });
+});
+
+describe("isLockupInForce", () => {
+  const lockup = {
+    unixTimestamp: 0n,
+    epoch: 0n,
+    custodian: "11111111111111111111111111111111",
+  };
+
+  it("is false when both lockup fields are zero / past", () => {
+    expect(isLockupInForce(lockup, { epoch: 200n, unixTimestamp: 1_700_000_000n })).toBe(false);
+  });
+
+  it("is true when unixTimestamp is still in the future", () => {
+    expect(
+      isLockupInForce(
+        { ...lockup, unixTimestamp: 9_999_999_999n },
+        { epoch: 200n, unixTimestamp: 1_700_000_000n }
+      )
+    ).toBe(true);
+  });
+
+  it("is true when lockup epoch is after current epoch", () => {
+    expect(
+      isLockupInForce({ ...lockup, epoch: 500n }, { epoch: 200n, unixTimestamp: 1_700_000_000n })
+    ).toBe(true);
   });
 });
 

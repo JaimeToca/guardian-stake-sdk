@@ -176,7 +176,7 @@ interface SolanaConfig {
   seedScanMax?: number;
   /** TTL for authority → stake positions cache (default 30_000). */
   stakeCacheTtlMs?: number;
-  /** TTL for validators page cache (default 180_000). */
+  /** TTL for the full vote-accounts list cache (default 180_000). */
   validatorsCacheTtlMs?: number;
   /** Heavy getProgramAccounts reconciliation (default false). */
   enableGpaFallback?: boolean;
@@ -187,7 +187,7 @@ interface SolanaConfig {
 
 ### `getValidators`
 
-Returns vote accounts from `getVoteAccounts` (`current` + `delinquent`). Cached per page for ~3 minutes (`validatorsCacheTtlMs`).
+Returns vote accounts from `getVoteAccounts` (`current` + `delinquent`). The full vote list is cached for ~3 minutes (`validatorsCacheTtlMs`), then sliced in memory for `page` / `pageSize`.
 
 ```typescript
 const { data, pagination } = await sdk.getValidators(chains.solanaMainnet);
@@ -348,7 +348,7 @@ interface SolanaClaimDelegateTransaction extends ClaimDelegateTransaction {
 | `ClaimRewards` | `UNSUPPORTED_TRANSACTION_TYPE` (rewards auto-compound) |
 | `Vote` | `UNSUPPORTED_TRANSACTION_TYPE` (not a delegator action on Solana) |
 
-Also out of scope: Split / Merge / MoveStake, lockup / custodian, dual authorities (staker ≠ withdrawer), ephemeral stake keypairs, liquid staking.
+Also out of scope: Split / Merge / MoveStake, setting / managing lockup, custodian co-sign, dual authorities (staker ≠ withdrawer), ephemeral stake keypairs, liquid staking.
 
 ### `Delegate` notes
 
@@ -356,12 +356,15 @@ Also out of scope: Split / Merge / MoveStake, lockup / custodian, dual authoriti
 - `amount` = stake lamports; builder adds rent-exempt reserve to funded lamports.
 - Next free seed chosen internally.
 - `isMaxAmount: true` → `ValidationError`.
+- Preflight: rejects when authority balance cannot cover `amount + rent + fee cushion`.
 
 ### `Undelegate` / `ClaimDelegate` notes
 
 - `stakeAccount` is **required** at runtime (throws if missing even if typed only as the shared type).
 - Whole-account only; `amount` is ignored for instruction construction.
-- Claim requires fully inactive stake (and rejects lockup in force if present).
+- Undelegate rejects when the account is not an active delegated Stake (already deactivating/inactive or never delegated).
+- Claim rejects never-deactivated Stake (`deactivationEpoch === u64::MAX`); residual cooldown is enforced on-chain.
+- Claim rejects when Meta lockup is in force (`unixTimestamp > now` or `epoch > current epoch`). Custodian co-sign is not supported in v1.
 
 ---
 

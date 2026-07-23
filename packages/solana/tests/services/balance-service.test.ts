@@ -112,6 +112,7 @@ function mockRpc(overrides: Partial<SolanaRpcClientContract> = {}): SolanaRpcCli
     getProgramAccountsStakeByStaker: vi.fn().mockResolvedValue([]),
     sendTransaction: vi.fn(),
     getStakeHistory: vi.fn().mockResolvedValue([]),
+    getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
     getClockEpoch: vi.fn().mockResolvedValue(200n),
     ...overrides,
   };

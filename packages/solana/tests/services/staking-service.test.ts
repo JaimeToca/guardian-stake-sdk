@@ -112,6 +112,7 @@ function mockRpc(overrides: Partial<SolanaRpcClientContract> = {}): SolanaRpcCli
     sendTransaction: vi.fn(),
     getStakeHistory: vi.fn().mockResolvedValue([]),
     // epoch 200, no history → fully effective for activationEpoch << 200
+    getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
     getClockEpoch: vi.fn().mockResolvedValue(200n),
     ...overrides,
   };
@@ -219,6 +220,7 @@ describe("createStakingService", () => {
     const map = multiPositionAccounts();
     const rpc = mockRpc({
       getMultipleAccounts: mockGetMultipleFromMap(map),
+      getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
       getClockEpoch: vi.fn().mockResolvedValue(200n),
       getStakeHistory: vi.fn().mockResolvedValue([]),
     });

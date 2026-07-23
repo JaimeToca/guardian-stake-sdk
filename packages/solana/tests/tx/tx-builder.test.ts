@@ -40,7 +40,12 @@ const OTHER_AUTHORITY = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 
 function encodeStakeAccount(
   deactivationEpoch: bigint,
-  authorities: { staker?: string; withdrawer?: string } = {}
+  authorities: {
+    staker?: string;
+    withdrawer?: string;
+    lockupUnix?: bigint;
+    lockupEpoch?: bigint;
+  } = {}
 ): Uint8Array {
   const staker = address(authorities.staker ?? AUTHORITY);
   const withdrawer = address(authorities.withdrawer ?? authorities.staker ?? AUTHORITY);
@@ -50,7 +55,11 @@ function encodeStakeAccount(
     {
       rentExemptReserve: 2_282_880n,
       authorized: { staker, withdrawer },
-      lockup: { unixTimestamp: 0n, epoch: 0n, custodian: zero },
+      lockup: {
+        unixTimestamp: authorities.lockupUnix ?? 0n,
+        epoch: authorities.lockupEpoch ?? 0n,
+        custodian: zero,
+      },
     },
     {
       delegation: {
@@ -90,7 +99,8 @@ function mockRpc(overrides: Partial<SolanaRpcClientContract> = {}): SolanaRpcCli
     getProgramAccountsStakeByStaker: vi.fn(),
     sendTransaction: vi.fn(),
     getStakeHistory: vi.fn(),
-    getClockEpoch: vi.fn(),
+    getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
+    getClockEpoch: vi.fn().mockResolvedValue(200n),
     ...overrides,
   };
 }
@@ -390,6 +400,96 @@ describe("buildUnsignedTx", () => {
     await expect(
       buildUnsignedTx({ rpc, authorityAddress: AUTHORITY }, tx, fee)
     ).rejects.toMatchObject({ code: "INVALID_ADDRESS" });
+  });
+
+  it("ClaimDelegate: rejects when lockup is in force (unixTimestamp)", async () => {
+    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const rpc = mockRpc({
+      getMultipleAccounts: vi.fn().mockResolvedValue([
+        {
+          address: stakeAccount,
+          lamports: 3_000_000_000n,
+          data: encodeStakeAccount(110n, { lockupUnix: 9_999_999_999n }),
+          owner: STAKE_PROGRAM_ADDRESS,
+        },
+      ]),
+      getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
+    });
+    const tx: SolanaClaimDelegateTransaction = {
+      type: "ClaimDelegate",
+      chain,
+      amount: 0n,
+      stakeAccount,
+    };
+    await expect(
+      buildUnsignedTx({ rpc, authorityAddress: AUTHORITY }, tx, fee)
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_OPERATION" });
+  });
+
+  it("ClaimDelegate: rejects when lockup is in force (epoch)", async () => {
+    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const rpc = mockRpc({
+      getMultipleAccounts: vi.fn().mockResolvedValue([
+        {
+          address: stakeAccount,
+          lamports: 3_000_000_000n,
+          data: encodeStakeAccount(110n, { lockupEpoch: 500n }),
+          owner: STAKE_PROGRAM_ADDRESS,
+        },
+      ]),
+      getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
+    });
+    const tx: SolanaClaimDelegateTransaction = {
+      type: "ClaimDelegate",
+      chain,
+      amount: 0n,
+      stakeAccount,
+    };
+    await expect(
+      buildUnsignedTx({ rpc, authorityAddress: AUTHORITY }, tx, fee)
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_OPERATION" });
+  });
+
+  it("Undelegate: rejects already-deactivated stake", async () => {
+    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const rpc = mockRpc({
+      getMultipleAccounts: vi.fn().mockResolvedValue([
+        {
+          address: stakeAccount,
+          lamports: 1_000_000_000n + RENT,
+          data: encodeStakeAccount(110n),
+          owner: STAKE_PROGRAM_ADDRESS,
+        },
+      ]),
+    });
+    const tx: SolanaUndelegateTransaction = {
+      type: "Undelegate",
+      chain,
+      amount: 0n,
+      isMaxAmount: false,
+      stakeAccount,
+    };
+    await expect(
+      buildUnsignedTx({ rpc, authorityAddress: AUTHORITY }, tx, fee)
+    ).rejects.toMatchObject({ code: "UNSUPPORTED_OPERATION" });
+  });
+
+  it("Delegate: rejects insufficient balance for amount+rent+fee", async () => {
+    const rpc = mockRpc({
+      getBalance: vi.fn().mockResolvedValue(1_000n),
+      getMultipleAccounts: vi.fn().mockResolvedValue([null]),
+    });
+    const tx = {
+      type: "Delegate",
+      chain,
+      amount: 1_000_000_000n,
+      isMaxAmount: false,
+      account: AUTHORITY,
+      validator: VOTE,
+    } as Transaction;
+    await expect(
+      buildUnsignedTx({ rpc, authorityAddress: AUTHORITY, config: { seedScanMax: 0 } }, tx, fee)
+    ).rejects.toMatchObject({ code: "INVALID_AMOUNT" });
   });
 
   it.each(["Redelegate", "ClaimRewards", "Vote"] as const)(

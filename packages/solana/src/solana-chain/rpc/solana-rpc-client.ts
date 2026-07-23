@@ -235,10 +235,20 @@ export function createSolanaRpcClient(
       });
     },
 
+    getClock() {
+      return rpcCall("getClock", logger, async () => {
+        const clock = await fetchSysvarClock(rpc);
+        return {
+          epoch: BigInt(clock.epoch),
+          unixTimestamp: BigInt(clock.unixTimestamp),
+        };
+      });
+    },
+
     getClockEpoch() {
       return rpcCall("getClockEpoch", logger, async () => {
         const clock = await fetchSysvarClock(rpc);
-        return clock.epoch;
+        return BigInt(clock.epoch);
       });
     },
   };
