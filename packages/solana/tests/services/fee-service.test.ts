@@ -80,7 +80,9 @@ describe("priorityFeeLamports", () => {
 });
 
 describe("createFeeService", () => {
-  it("Delegate: SolanaFee shape = base fee + priority", async () => {
+  it("Delegate: SolanaFee total is getFeeForMessage only (no priority double-count)", async () => {
+    // When CU price > 0 the built message includes SetComputeUnitPrice, so
+    // getFeeForMessage already returns signature fee + prioritization fee.
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([null]),
       getFeeForMessage: vi.fn().mockResolvedValue(5_000n),
@@ -99,8 +101,8 @@ describe("createFeeService", () => {
     expect(fee.type).toBe("SolanaFee");
     expect(fee.computeUnits).toBe(200_000n);
     expect(fee.computeUnitPrice).toBe(1_000n);
-    // 5000 base + 200_000 * 1000 / 1e6 = 5000 + 200
-    expect(fee.total).toBe(5_200n);
+    // total === mock getFeeForMessage only (do not add priorityFeeLamports again)
+    expect(fee.total).toBe(5_000n);
     expect(rpc.getFeeForMessage).toHaveBeenCalledOnce();
   });
 

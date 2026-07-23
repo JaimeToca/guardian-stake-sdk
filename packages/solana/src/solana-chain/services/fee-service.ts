@@ -60,7 +60,11 @@ export function priorityFeeLamports(computeUnits: bigint, computeUnitPrice: bigi
 
 /**
  * Builds the same message as sign (static CU budget + config priority price), then:
- * `total = getFeeForMessage + priorityLamports`.
+ * `total = getFeeForMessage` alone.
+ *
+ * When the message already includes SetComputeUnitLimit/Price, getFeeForMessage
+ * returns signature fee + prioritization fee — do NOT add priority again.
+ * `computeUnits` / `computeUnitPrice` are still returned for the SolanaFee shape.
  */
 export function createFeeService(
   rpc: SolanaRpcClientContract,
@@ -99,21 +103,22 @@ export function createFeeService(
       );
 
       const messageBase64 = Buffer.from(built.messageBytes).toString("base64");
-      const baseFee = await rpc.getFeeForMessage(messageBase64);
-      if (baseFee === null) {
+      const feeFromRpc = await rpc.getFeeForMessage(messageBase64);
+      if (feeFromRpc === null) {
         throw new ValidationError(
           "INVALID_FEE",
           "getFeeForMessage returned null for the built staking message."
         );
       }
 
-      const priority = priorityFeeLamports(computeUnits, computeUnitPrice);
-      const total = baseFee + priority;
+      // getFeeForMessage already includes prioritization when CU price ixs are present.
+      const total = feeFromRpc;
 
       logger.debug("FeeService: fee estimated", {
         type: tx.type,
-        baseFee: baseFee.toString(),
-        priority: priority.toString(),
+        feeFromRpc: feeFromRpc.toString(),
+        computeUnits: computeUnits.toString(),
+        computeUnitPrice: computeUnitPrice.toString(),
         total: total.toString(),
       });
 

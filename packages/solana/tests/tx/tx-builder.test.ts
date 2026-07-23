@@ -35,14 +35,21 @@ const stakeFixtureData = new Uint8Array(
   readFileSync(join(__dirname, "../fixtures/stake-account-stake.bin"))
 );
 
-function encodeStakeAccount(deactivationEpoch: bigint): Uint8Array {
-  const staker = address(AUTHORITY);
+/** Other pubkey used for wrong-authority gate tests (not the fee payer). */
+const OTHER_AUTHORITY = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+
+function encodeStakeAccount(
+  deactivationEpoch: bigint,
+  authorities: { staker?: string; withdrawer?: string } = {}
+): Uint8Array {
+  const staker = address(authorities.staker ?? AUTHORITY);
+  const withdrawer = address(authorities.withdrawer ?? authorities.staker ?? AUTHORITY);
   const voter = address("Vote111111111111111111111111111111111111111");
   const zero = address("11111111111111111111111111111111");
   const state = stakeStateV2("Stake", [
     {
       rentExemptReserve: 2_282_880n,
-      authorized: { staker, withdrawer: staker },
+      authorized: { staker, withdrawer },
       lockup: { unixTimestamp: 0n, epoch: 0n, custodian: zero },
     },
     {
@@ -265,6 +272,33 @@ describe("buildUnsignedTx", () => {
     ).rejects.toMatchObject({ code: "INVALID_ADDRESS" });
   });
 
+  it("Undelegate: rejects when staker is not the fee payer", async () => {
+    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const rpc = mockRpc({
+      getMultipleAccounts: vi.fn().mockResolvedValue([
+        {
+          address: stakeAccount,
+          lamports: 1_000_000_000n + RENT,
+          data: encodeStakeAccount(U64_MAX, {
+            staker: OTHER_AUTHORITY,
+            withdrawer: OTHER_AUTHORITY,
+          }),
+          owner: STAKE_PROGRAM_ADDRESS,
+        },
+      ]),
+    });
+    const tx: SolanaUndelegateTransaction = {
+      type: "Undelegate",
+      chain,
+      amount: 0n,
+      isMaxAmount: false,
+      stakeAccount,
+    };
+    await expect(
+      buildUnsignedTx({ rpc, authorityAddress: AUTHORITY }, tx, fee)
+    ).rejects.toMatchObject({ code: "INVALID_ADDRESS" });
+  });
+
   it("ClaimDelegate: Withdraw full lamports to authority", async () => {
     const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
     const lamports = 3_000_000_000n;
@@ -314,6 +348,32 @@ describe("buildUnsignedTx", () => {
     await expect(
       buildUnsignedTx({ rpc, authorityAddress: AUTHORITY }, tx, fee)
     ).rejects.toMatchObject({ code: "UNSUPPORTED_OPERATION" });
+  });
+
+  it("ClaimDelegate: rejects when withdrawer is not the fee payer", async () => {
+    const stakeAccount = deriveStakeAddress(AUTHORITY, "0");
+    const rpc = mockRpc({
+      getMultipleAccounts: vi.fn().mockResolvedValue([
+        {
+          address: stakeAccount,
+          lamports: 3_000_000_000n,
+          data: encodeStakeAccount(110n, {
+            staker: OTHER_AUTHORITY,
+            withdrawer: OTHER_AUTHORITY,
+          }),
+          owner: STAKE_PROGRAM_ADDRESS,
+        },
+      ]),
+    });
+    const tx: SolanaClaimDelegateTransaction = {
+      type: "ClaimDelegate",
+      chain,
+      amount: 0n,
+      stakeAccount,
+    };
+    await expect(
+      buildUnsignedTx({ rpc, authorityAddress: AUTHORITY }, tx, fee)
+    ).rejects.toMatchObject({ code: "INVALID_ADDRESS" });
   });
 
   it("ClaimDelegate: rejects missing stake account on chain", async () => {

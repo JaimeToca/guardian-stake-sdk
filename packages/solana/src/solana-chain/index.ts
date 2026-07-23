@@ -38,6 +38,7 @@ export function solana(config: SolanaConfig): GuardianServiceContract {
     enableGpaFallback: config.enableGpaFallback,
     validatorsCacheTtlMs: config.validatorsCacheTtlMs,
     defaultComputeUnitPrice: config.defaultComputeUnitPrice,
+    stakeCacheTtlMs: config.stakeCacheTtlMs,
   };
 
   const staking = createStakingService(rpc, stakeCache, serviceConfig, logger);
