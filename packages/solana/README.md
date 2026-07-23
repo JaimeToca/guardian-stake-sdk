@@ -167,11 +167,13 @@ v1 creates stake accounts **only** via Kit’s **`createAddressWithSeed`** / Sys
 
 On `Delegate`, the builder picks the **next free seed** (first index whose derived address has no account). There is **no** seed field on the transaction object.
 
+> **Concurrent Delegates share the same "next free seed".** Seed selection is stateless — two `Delegate` builds issued before either confirms will both pick the same index and emit `CreateAccountWithSeed` at that address; the second lands on an existing account and is rejected on-chain (no funds lost, just a failed tx). Serialize `Delegate` submissions per wallet, or wait for confirmation between them.
+
 **Discovery** (`getDelegations` / `getBalances`):
 
 1. Shared in-memory cache per authority (default TTL **30s**)  
 2. Seed-scan `0 … seedScanMax` (default max **50**), stop after `seedScanGapLimit` consecutive empty slots (default **5**)  
-3. Optional heavy `getProgramAccounts` (staker memcmp) if `enableGpaFallback: true` — finds stake accounts **not** created with our seed scheme (other wallets/apps)
+3. Optional heavy `getProgramAccounts` (staker memcmp) if `enableGpaFallback: true` — finds stake accounts **not** created with our seed scheme (other wallets/apps). The result is **unbounded** by the node (no cap on returned accounts); it stays off by default. Enable only for authorities you know hold a bounded number of stake accounts.
 
 ### Multiple stake accounts — when and how to track them
 
@@ -200,7 +202,7 @@ getDelegations(wallet)
 
 1. **Source of truth:** `getDelegations(chain, wallet)` after each confirmed mutation (or after cache TTL).  
 2. **Stable handle:** `delegation.id` === stake account base58 — store this for undelegate/claim, not only seed index.  
-3. **Seed index:** `delegation.delegationIndex` when discovered via seed-scan (useful for support/debug; do not rely on it alone if GPA-found accounts use `0n`).  
+3. **Seed index:** `delegation.delegationIndex` when discovered via seed-scan (useful for support/debug); GPA-found accounts have no seed and report `-1n` — never treat that as seed 0.  
 4. **Totals:** `getBalances` for Available / Staked / Pending / Claimable sums.  
 5. **UI:** one row per delegation; actions disabled until status allows (e.g. Withdraw only when `Claimable`).
 
@@ -478,6 +480,8 @@ on-chain: seed0 delegated to VoteA, fully active
 
 No double-counting: lamports in `Pending` are not also in `Staked`.
 
+> **Rent-reserve asymmetry (by design):** `Staked` counts a position's *delegated stake* (`effective + activating`), which excludes the ~0.0023 SOL rent-exempt reserve, while `Claimable` counts the account's *full lamports* (reserve included, since a full withdraw closes the account and returns it). So `Available + Staked + Pending + Claimable` slightly under-reports total controlled SOL by roughly one rent reserve per active/pending account. Use `Staked` as economic stake weight, `Claimable` as the exact withdrawable figure.
+
 `getBalances` and `getDelegations` **share one stake-position cache** (default 30s TTL).
 
 ---
@@ -504,6 +508,7 @@ interface SolanaFee {
 - Message includes optional compute-budget ixs when `computeUnitPrice > 0`.  
 - `total` comes from **`getFeeForMessage`** (already includes prioritization when CU price ixs are present — do not double-count).  
 - Sign rejects non-`SolanaFee` with `INVALID_FEE_TYPE`.
+- **`estimateFee` does not require a funded wallet.** For `Delegate` it builds the message (fee size is independent of balance) but skips the funding sufficiency check that `sign()` enforces — so you can quote a fee before funding. `sign()` still rejects an under-funded `Delegate` with `INVALID_AMOUNT`.
 
 Typical static CU budgets (implementation defaults): Delegate higher than Undelegate/Claim (create+init+delegate is multi-ix).
 

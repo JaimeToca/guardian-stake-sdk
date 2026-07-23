@@ -53,4 +53,10 @@ export interface BuildTxDeps {
   config?: BuildTxConfig;
   /** Override priority fee (microlamports/CU); falls back to fee.computeUnitPrice / config. */
   computeUnitPrice?: bigint;
+  /**
+   * Skip the Delegate funding sufficiency assertion. Set by fee estimation so a
+   * fee can be quoted before the wallet is funded (message size is independent of
+   * balance). Signing keeps it off so under-funded Delegates still fail fast.
+   */
+  skipBalanceCheck?: boolean;
 }

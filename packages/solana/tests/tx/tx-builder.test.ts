@@ -6,7 +6,11 @@ import {
   decompileTransactionMessage,
   getCompiledTransactionMessageDecoder,
 } from "@solana/kit";
-import { getStakeStateAccountEncoder, stakeStateV2 } from "@solana-program/stake";
+import {
+  getStakeStateAccountEncoder,
+  getWithdrawInstructionDataDecoder,
+  stakeStateV2,
+} from "@solana-program/stake";
 import type { GuardianChain, SolanaFee, Transaction } from "@guardian-sdk/sdk";
 import { SigningError } from "@guardian-sdk/sdk";
 import { buildUnsignedTx, findNextFreeSeed } from "../../src/solana-chain/tx/tx-builder";
@@ -109,6 +113,17 @@ function programIdsFromResult(messageBytes: Uint8Array): string[] {
   const compiled = getCompiledTransactionMessageDecoder().decode(messageBytes);
   const decompiled = decompileTransactionMessage(compiled);
   return decompiled.instructions.map((ix) => ix.programAddress);
+}
+
+/** Decode the lamport amount encoded in the (single) Withdraw instruction of a Claim message. */
+function withdrawLamportsFromResult(messageBytes: Uint8Array): bigint {
+  const compiled = getCompiledTransactionMessageDecoder().decode(messageBytes);
+  const decompiled = decompileTransactionMessage(compiled);
+  const withdrawIx = decompiled.instructions.find(
+    (ix) => ix.programAddress === STAKE_PROGRAM_ADDRESS
+  );
+  if (!withdrawIx?.data) throw new Error("no stake-program instruction with data found");
+  return getWithdrawInstructionDataDecoder().decode(withdrawIx.data).args;
 }
 
 describe("findNextFreeSeed", () => {
@@ -335,6 +350,8 @@ describe("buildUnsignedTx", () => {
     const programs = programIdsFromResult(result.messageBytes);
     expect(programs).toEqual([STAKE_PROGRAM_ADDRESS]);
     expect(result.feePayer).toBe(AUTHORITY);
+    // Fund-safety: the Withdraw must drain the account's full lamports, not tx.amount.
+    expect(withdrawLamportsFromResult(result.messageBytes)).toBe(lamports);
   });
 
   it("ClaimDelegate: rejects still-active stake (never deactivated)", async () => {

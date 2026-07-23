@@ -101,6 +101,8 @@ export function createFeeService(
             defaultComputeUnitPrice: computeUnitPrice,
           },
           computeUnitPrice,
+          // Quote a fee even for an unfunded wallet — fee size is independent of balance.
+          skipBalanceCheck: true,
         },
         tx,
         draftFee

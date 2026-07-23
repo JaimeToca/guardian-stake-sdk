@@ -197,13 +197,16 @@ async function buildDelegate(
   const stake = address(stakeAddress);
   const lamports = tx.amount + rentExempt;
 
-  const feeCushion = fee.total > 0n ? fee.total : DELEGATE_FEE_CUSHION_LAMPORTS;
-  const required = lamports + feeCushion;
-  if (balance < required) {
-    throw new ValidationError(
-      "INVALID_AMOUNT",
-      `Insufficient balance to fund stake: need ~${required} lamports (amount + rent + fee cushion), have ${balance}.`
-    );
+  // Fee estimation quotes a price before the wallet is funded, so it skips this gate.
+  if (!deps.skipBalanceCheck) {
+    const feeCushion = fee.total > 0n ? fee.total : DELEGATE_FEE_CUSHION_LAMPORTS;
+    const required = lamports + feeCushion;
+    if (balance < required) {
+      throw new ValidationError(
+        "INVALID_AMOUNT",
+        `Insufficient balance to fund stake: need ~${required} lamports (amount + rent + fee cushion), have ${balance}.`
+      );
+    }
   }
 
   const createIx = getCreateAccountWithSeedInstruction({

@@ -107,6 +107,28 @@ describe("createFeeService", () => {
     expect(rpc.getFeeForMessage).toHaveBeenCalledOnce();
   });
 
+  it("Delegate: quotes a fee for an unfunded wallet (no balance gate on estimate)", async () => {
+    // Balance far below amount + rent — sign() would reject, but estimateFee must not.
+    const rpc = mockRpc({
+      getBalance: vi.fn().mockResolvedValue(0n),
+      getMultipleAccounts: vi.fn().mockResolvedValue([null]),
+      getFeeForMessage: vi.fn().mockResolvedValue(5_000n),
+    });
+    const feeSvc = createFeeService(rpc, { seedScanMax: 0 });
+    const tx = {
+      type: "Delegate",
+      chain,
+      amount: 1_000_000_000n,
+      isMaxAmount: false,
+      account: AUTHORITY,
+      validator: VOTE,
+    } as Transaction;
+
+    const fee = await feeSvc.estimateFee(tx);
+    expect(fee.type).toBe("SolanaFee");
+    expect(fee.total).toBe(5_000n);
+  });
+
   it("Undelegate: uses static CU budget 50_000", async () => {
     const stakeAccount = await deriveStakeAddress(AUTHORITY, "0");
     const rpc = mockRpc({

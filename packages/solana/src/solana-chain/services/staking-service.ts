@@ -235,10 +235,7 @@ export function createStakingService(
       for (const position of positions) {
         const status = mapPositionStatus(position.status);
         const amount = positionAmount(position);
-        if (amount === 0n && status !== "Claimable") {
-          // Drop zero-weight active/pending noise; claimable with 0 is already omitted by loadPositions.
-          continue;
-        }
+        // Drop zero-weight positions (loadPositions already omits closed/zero-lamport accounts).
         if (amount === 0n) continue;
 
         delegations.push({
@@ -246,7 +243,8 @@ export function createStakingService(
           validator: resolveValidator(position, byVote),
           amount,
           status,
-          delegationIndex: BigInt(position.seedIndex ?? 0),
+          // Seed index when known; -1 for GPA-discovered accounts so they don't alias seed 0.
+          delegationIndex: BigInt(position.seedIndex ?? -1),
           pendingUntil: status === "Pending" ? epochBoundaryMs : 0,
         });
       }

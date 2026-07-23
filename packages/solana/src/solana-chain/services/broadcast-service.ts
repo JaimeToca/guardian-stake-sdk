@@ -1,5 +1,5 @@
 import type { Logger } from "@guardian-sdk/sdk";
-import { NoopLogger } from "@guardian-sdk/sdk";
+import { NoopLogger, SigningError } from "@guardian-sdk/sdk";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 
 export interface SolanaBroadcastService {
@@ -18,7 +18,10 @@ export function createBroadcastService(
     async broadcast(rawTx: string): Promise<string> {
       logger.info("BroadcastService: broadcasting transaction");
       if (typeof rawTx !== "string" || rawTx.length === 0) {
-        throw new Error("broadcast() requires a non-empty base64 wire transaction.");
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "broadcast() requires a non-empty base64 wire transaction."
+        );
       }
       const signature = await rpc.sendTransaction(rawTx);
       logger.info("BroadcastService: transaction broadcasted", { signature });

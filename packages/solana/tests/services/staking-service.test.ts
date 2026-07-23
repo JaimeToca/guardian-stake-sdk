@@ -336,7 +336,7 @@ describe("createStakingService", () => {
     const found = delegations.find((d) => d.id === highSeedAddr)!;
     expect(found.status).toBe("Active");
     expect(found.amount).toBe(2_000_000_000n);
-    expect(found.delegationIndex).toBe(0n); // seed unknown → 0
+    expect(found.delegationIndex).toBe(-1n); // seed unknown (GPA) → -1 sentinel, never aliases seed 0
   });
 
   it("filters accounts whose staker/withdrawer do not match authority", async () => {
