@@ -14,11 +14,16 @@ import {
   getBase64Decoder,
   getBase64Encoder,
   getBase64EncodedWireTransaction,
+  getPublicKeyFromAddress,
   getTransactionDecoder,
   signTransaction,
   signatureBytes,
+  verifySignature,
+  type Address,
+  type ReadonlyUint8Array,
   type Transaction as KitTransaction,
 } from "@solana/kit";
+import { timingSafeEqual } from "node:crypto";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import type { SolanaSignArgs } from "../tx/solana-types";
@@ -74,6 +79,18 @@ function decodeWireTransaction(wireBase64: string): KitTransaction {
 function bytesToBase64(bytes: Uint8Array): string {
   // Kit: base64 *decoder* maps bytes → base64 string.
   return base64Decoder.decode(bytes);
+}
+
+/**
+ * Constant-time byte-array equality. Compares full length first (a length mismatch is not
+ * secret-dependent), then compares every byte via `crypto.timingSafeEqual` — never short-circuits
+ * on the first differing byte — so the comparison time doesn't leak *where* two buffers diverge.
+ */
+function constantTimeBytesEqual(a: ReadonlyUint8Array, b: ReadonlyUint8Array): boolean {
+  if (a.byteLength !== b.byteLength) {
+    return false;
+  }
+  return timingSafeEqual(Uint8Array.from(a), Uint8Array.from(b));
 }
 
 function attachFeePayerSignature(
@@ -227,6 +244,53 @@ export function createSignService(
       }
 
       const unsigned = decodeWireTransaction(wire);
+
+      // SEC-SIGN-1d, check 1: bind compile() to the exact bytes prehash() returned (and that the
+      // external signer signed) instead of trusting `_wireTransaction` alone. If `_wireTransaction`
+      // was swapped or mutated for a different message after prehash(), `unsigned.messageBytes`
+      // will diverge from `_messageBytes` and this must throw before any signature is attached.
+      const expectedMessageBytes = solanaArgs._messageBytes;
+      if (!expectedMessageBytes) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "compile() requires signArgs._messageBytes from prehash()."
+        );
+      }
+      if (!constantTimeBytesEqual(unsigned.messageBytes, expectedMessageBytes)) {
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() detected that signArgs._wireTransaction's message does not match " +
+            "signArgs._messageBytes. This means _wireTransaction was mutated or swapped after prehash()."
+        );
+      }
+
+      // SEC-SIGN-1d, check 2: verify the supplied signature is a valid Ed25519 signature by the
+      // fee payer over the message bytes, before attaching it. Without this, a garbage/invalid
+      // signature — or a valid signature from an unrelated key — would be silently assembled into
+      // a wire transaction that only fails (or is rejected) at broadcast.
+      // Length is validated here (rather than relying solely on attachFeePayerSignature's later
+      // check) because `signatureBytes`/`verifySignature` require exactly 64 bytes.
+      if (sigBytes.byteLength !== 64) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          `compile() signature must decode to 64 Ed25519 bytes, got ${sigBytes.byteLength}.`
+        );
+      }
+      const feePayerPublicKey = await getPublicKeyFromAddress(feePayer as Address);
+      const isValidSignature = await verifySignature(
+        feePayerPublicKey,
+        signatureBytes(sigBytes),
+        expectedMessageBytes
+      );
+      if (!isValidSignature) {
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() produced a transaction whose signature does not verify against the fee " +
+            "payer's public key over the prehashed message. This can mean signArgs was mutated " +
+            "after prehash(), or the supplied signature belongs to a different signer/transaction."
+        );
+      }
+
       const signed = attachFeePayerSignature(unsigned, feePayer, sigBytes);
       const out = getBase64EncodedWireTransaction(signed);
 

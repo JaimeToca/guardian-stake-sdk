@@ -327,3 +327,92 @@ describe("prehash / compile validations", () => {
     );
   });
 });
+
+describe("compile() SEC-SIGN-1d — message-bytes binding + signature verification", () => {
+  it("rejects a _wireTransaction whose message diverges from _messageBytes (tampered post-prehash)", async () => {
+    const rpc = mockRpc({ getMultipleAccounts: vi.fn().mockResolvedValue([null]) });
+    const svc = createSignService(rpc, { seedScanMax: 0 });
+
+    const pre = await svc.prehash({
+      transaction: delegateTx(),
+      fee: feeDelegate,
+      nonce: 0,
+    });
+    const signArgs = pre.signArgs as SolanaSignArgs;
+
+    // Build a second, different unsigned tx (different compute-unit price -> different message
+    // bytes, same transaction type so no additional RPC-side account lookups are needed) and
+    // swap it in as _wireTransaction while _messageBytes still reflects the original prehash.
+    const pre2 = await svc.prehash({
+      transaction: delegateTx(),
+      fee: { ...feeDelegate, computeUnitPrice: 12_345n },
+      nonce: 0,
+    });
+    const swappedSignArgs: SolanaSignArgs = {
+      ...signArgs,
+      _wireTransaction: (pre2.signArgs as SolanaSignArgs)._wireTransaction,
+    };
+
+    const keypair = await createKeyPairFromPrivateKeyBytes(parseEd25519SeedHex(TEST_PRIVATE_KEY));
+    const messageBytes = Buffer.from(pre.serializedTransaction, "base64");
+    const sig = await signBytes(keypair.privateKey, messageBytes);
+
+    await expectSdkError(
+      svc.compile({
+        signArgs: swappedSignArgs,
+        signature: Buffer.from(sig).toString("base64"),
+      }),
+      SigningError,
+      "SIGNATURE_MISMATCH"
+    );
+  });
+
+  it("rejects a garbage 64-byte signature that doesn't verify against the fee payer", async () => {
+    const rpc = mockRpc({ getMultipleAccounts: vi.fn().mockResolvedValue([null]) });
+    const svc = createSignService(rpc, { seedScanMax: 0 });
+
+    const pre = await svc.prehash({
+      transaction: delegateTx(),
+      fee: feeDelegate,
+      nonce: 0,
+    });
+
+    const garbageSig = Buffer.alloc(64, 7); // well-formed length, not a valid Ed25519 signature
+    await expectSdkError(
+      svc.compile({
+        signArgs: pre.signArgs,
+        signature: garbageSig.toString("base64"),
+      }),
+      SigningError,
+      "SIGNATURE_MISMATCH"
+    );
+  });
+
+  it("rejects a valid signature produced by a different key over the same message", async () => {
+    const rpc = mockRpc({ getMultipleAccounts: vi.fn().mockResolvedValue([null]) });
+    const svc = createSignService(rpc, { seedScanMax: 0 });
+
+    const pre = await svc.prehash({
+      transaction: delegateTx(),
+      fee: feeDelegate,
+      nonce: 0,
+    });
+    const messageBytes = Buffer.from(pre.serializedTransaction, "base64");
+
+    // A different, unrelated key signs the exact same message bytes.
+    const OTHER_PRIVATE_KEY = "0000000000000000000000000000000000000000000000000000000000000002";
+    const otherKeypair = await createKeyPairFromPrivateKeyBytes(
+      parseEd25519SeedHex(OTHER_PRIVATE_KEY)
+    );
+    const wrongSig = await signBytes(otherKeypair.privateKey, messageBytes);
+
+    await expectSdkError(
+      svc.compile({
+        signArgs: pre.signArgs,
+        signature: Buffer.from(wrongSig).toString("base64"),
+      }),
+      SigningError,
+      "SIGNATURE_MISMATCH"
+    );
+  });
+});
