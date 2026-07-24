@@ -732,6 +732,8 @@ const rawTx = await sdk.compile({
 });
 ```
 
+`compile()` cryptographically verifies both `paymentSigHex` and `stakingSigHex` against the tx body hash (via `@cardano-sdk/crypto`'s `Ed25519PublicKey.verify`) before assembling the witness set — a signature that doesn't verify against the exact digest returned by `preHash()` throws `SigningError("SIGNATURE_MISMATCH", ...)` locally instead of silently producing a transaction that would only fail at broadcast. A valid signature round-trip is unaffected and produces byte-identical CBOR.
+
 **Step 3 — broadcast:**
 
 ```typescript
@@ -1030,6 +1032,7 @@ import { SigningError } from "@guardian-sdk/sdk";
 | `INVALID_SIGNING_ARGS` | `paymentPrivateKey` or `stakingPrivateKey` missing from signing args |
 | `INVALID_FEE_TYPE` | `fee.type` is not `"UtxoFee"` — use `estimateFee()` to get a Cardano fee |
 | `INVALID_SIGNING_ARGS` | The `signature` string passed to `compile()` does not contain exactly four `:` delimited components |
+| `SIGNATURE_MISMATCH` | `compile()` — `paymentSigHex` or `stakingSigHex` does not cryptographically verify against the transaction body hash (wrong signer, corrupted signature, or `signArgs` no longer matches what was actually signed) |
 
 ### `ConfigError`
 

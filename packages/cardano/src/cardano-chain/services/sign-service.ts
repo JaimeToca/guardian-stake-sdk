@@ -4,6 +4,8 @@ import {
   Ed25519PrivateNormalKeyHex,
   Ed25519PublicKey,
   Ed25519PublicKeyHex,
+  Ed25519Signature,
+  Ed25519SignatureHex,
 } from "@cardano-sdk/crypto";
 import { HexBlob } from "@cardano-sdk/util";
 import type {
@@ -515,6 +517,33 @@ export function createSignService(
         );
       }
       const body = Serialization.TransactionBody.fromCbor(HexBlob(prehashArgs._txBodyCbor));
+
+      // #SEC-SIGN-1b: verify both external Ed25519 signatures against the tx body hash
+      // BEFORE assembling the witness set. Without this, compile() would happily attach
+      // a garbage/mismatched/stale signature and only fail at broadcast (or not at all,
+      // if the node were ever lenient). The digest here is exactly what prehash() returned
+      // as `serializedTransaction`, so a valid external signer's signature always verifies.
+      const bodyHash = HexBlob(body.hash());
+      const paymentVerifies = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(paymentVKeyHex)).verify(
+        Ed25519Signature.fromHex(Ed25519SignatureHex(paymentSigHex)),
+        bodyHash
+      );
+      if (!paymentVerifies) {
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "paymentSigHex does not verify against the transaction body hash."
+        );
+      }
+      const stakingVerifies = Ed25519PublicKey.fromHex(Ed25519PublicKeyHex(stakingVKeyHex)).verify(
+        Ed25519Signature.fromHex(Ed25519SignatureHex(stakingSigHex)),
+        bodyHash
+      );
+      if (!stakingVerifies) {
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "stakingSigHex does not verify against the transaction body hash."
+        );
+      }
 
       const witnesses: TxWitness[] = [
         { vkeyHex: paymentVKeyHex, sigHex: paymentSigHex },
