@@ -107,9 +107,11 @@ Ed25519 over compiled transaction **message bytes** (Kit: compile → `messageBy
 
 **Private key (v1):** **32-byte Ed25519 seed** as **64-char hex**. Full 64-byte solana-keygen secret-key arrays are out of scope. Single key: fee payer = staker = withdrawer. Do not use the SDK’s secp256k1 `privateKey()` helper for Solana.
 
-## No APR
+## APR / APY — issuance estimate
 
-`Validator.apy` and `stakingSummary.maxApy` are **always `0`** in v1. Do not invent APR formulas from inflation rate without an explicit product task. Validators come from `getVoteAccounts` only.
+`Validator.apy` and `stakingSummary.maxApy` are a computed **issuance APY** (percent), not `0`. The pure `computeStakingApy(input)` in `state/apr.ts` does the math: `inflation.validator / stakedFraction × (1 − commission)`, compounded per epoch (`epochsPerYear = SLOTS_PER_YEAR / slotsInEpoch`). Inputs come from `getInflationRate` + `getSupply` + `getEpochInfo` + summed `activatedStake`, fetched best-effort into the validators cache.
+
+**Issuance only** — MEV and priority/block fees are out of scope (documented). On any input-fetch failure the service logs a warning and degrades to `apy 0` / `maxApy 0`; delinquent validators are always `0`. Do not change the shared `Validator.apy` type away from `number` — `0` is the "unavailable/none" sentinel across all chains.
 
 ## Dependencies & conventions
 

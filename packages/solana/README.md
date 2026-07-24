@@ -20,7 +20,7 @@ Abstracts Solana Kit transaction construction, stake-account discovery, client-s
   - [Seed-derived stake accounts](#seed-derived-stake-accounts)
   - [Multiple stake accounts — when and how to track them](#multiple-stake-accounts--when-and-how-to-track-them)
   - [Whole-account undelegate & claim](#whole-account-undelegate--claim)
-  - [APR / APY in v1](#apr--apy-in-v1)
+  - [APR / APY](#apr--apy)
 - [Installation](#installation)
   - [Dependencies](#dependencies)
 - [Quick Start](#quick-start)
@@ -98,9 +98,9 @@ Native staking is **not** “lock SOL in the wallet.” SOL sits in a **stake ac
 On Solana, “validators” for delegators are **vote accounts**, not node identity alone. `getValidators()` uses `getVoteAccounts` and sets:
 
 - `id` / `operatorAddress` = **vote account** address  
-- `status` = `"Active"` if in `current`, `"Inactive"` if delinquent  
-- `creditAddress` = `""` (no BSC-style credit contract)  
-- `apy` = `0` in v1  
+- `status` = `”Active”` if in `current`, `”Inactive”` if delinquent  
+- `creditAddress` = `””` (no BSC-style credit contract)  
+- `apy` = computed issuance APY (percent); `0` for delinquent validators or if APY is unavailable  
 
 Always pass the **vote pubkey** as `Delegate.validator`.
 
@@ -218,9 +218,19 @@ getDelegations(wallet)
 
 Partial unstake would require **Split** (out of scope for v1). For comparison: Tron allows partial unfreeze; Cardano does not “lock” principal at all.
 
-### APR / APY in v1
+### APR / APY
 
-`Validator.apy` and `stakingSummary.maxApy` are always **`0`**. Do not show a fake yield. Inflation + commission APR can be added later from live RPC (`getInflationRate`, vote commission) — intentionally skipped in v1 (same spirit as shipping without every BSC batch feature).
+`Validator.apy` and `stakingSummary.maxApy` carry a computed **issuance APY** (percent):
+
+- `networkApr = inflationRate.validator / stakedFraction` (both annual, from `getInflationRate` + `getSupply` + summed `activatedStake`)
+- per validator: `× (1 − commission)`, then **compounded per epoch** to an APY (`epochsPerYear = 78_894_000 / slotsInEpoch`).
+- `stakingSummary.maxApy` = the lowest-commission current validator's APY.
+
+**Issuance only** — excludes MEV and priority/block fees. Live check (epoch 1006): ours ~**5.65%** vs Helius's own validator `total_apy` **5.63%** (MEV was ~0.10pp). Delegator-facing yield is therefore very close; real yield runs marginally higher.
+
+**`apy: 0` is also the "unavailable" sentinel.** Delinquent validators are always `0` (not producing). If the inflation/supply/epoch fetch fails, the service logs a warning and reports `apy 0` / `maxApy 0` rather than breaking `getValidators` / `getDelegations`. Check logs to distinguish "unavailable" from a genuine ~0% (100%-commission) validator.
+
+Inputs are fetched best-effort and cached with the validators list (~3 min TTL): 3 extra RPC calls per refresh, shared by `getValidators` and `getDelegations`.
 
 ---
 
@@ -268,7 +278,7 @@ const ADDRESS = process.env.SOLANA_ADDRESS!;
 /** 32-byte Ed25519 seed as 64 hex characters (not a full 64-byte keypair file). */
 const PRIVATE_KEY = process.env.SOLANA_PRIVATE_KEY!;
 
-// 1. Validators (vote accounts). apy is 0 in v1.
+// 1. Validators (vote accounts). apy is computed issuance APY.
 const { data: validators } = await sdk.getValidators(chains.solanaMainnet);
 const voteAccount = validators[0]!.operatorAddress;
 
@@ -382,7 +392,7 @@ interface Validator {
   name: string;
   description: string;
   image: undefined;
-  apy: number;                // always 0 in v1
+  apy: number;                // computed issuance APY (percent); 0 for delinquent or unavailable
   delegators: number | undefined;
   operatorAddress: string;    // vote account — use as Delegate.validator
   creditAddress: string;      // always ""
@@ -459,7 +469,7 @@ on-chain: seed0 delegated to VoteA, fully active
 | Field | Source |
 |---|---|
 | `totalProtocolStake` | Σ activated stake from vote accounts |
-| `maxApy` | `0` |
+| `maxApy` | Lowest-commission current validator's issuance APY (percent) |
 | `minAmountToStake` | `getStakeMinimumDelegation` |
 | `unboundPeriodInMillis` | ~1 epoch wall-time **estimate** (approximate) |
 | `redelegateFeeRate` | `0` |
@@ -734,7 +744,6 @@ Intentionally **not** in v1 (may land later):
 
 | Feature | Notes |
 |---|---|
-| APR / APY | Live inflation + commission |
 | Split / partial undelegate | Enables partial unstake without whole-account deactivate |
 | Merge / MoveStake / MoveLamports | Instant rebalance / dust cleanup |
 | Product redelegate | Multi-tx UX after deactivate |
