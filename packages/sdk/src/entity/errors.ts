@@ -105,6 +105,7 @@ export class ConfigError extends GuardianError {
  * | `INVALID_FEE_TYPE` | Fee type mismatch — e.g. passing a `UtxoFee` to a BSC sign call |
  * | `UNSUPPORTED_TRANSACTION_TYPE` | Transaction `type` is not handled by this chain |
  * | `SIGNATURE_MISMATCH` | `compile()` assembled a transaction whose recovered/verified signer does not match the expected account, or whose signed bytes do not match what `prehash()` produced |
+ * | `MISSING_ACCOUNT` | `compile()` was given prehash state but no `transaction.account`, so the external signature cannot be verified against an expected signer |
  */
 export class SigningError extends GuardianError {
   constructor(code: SigningErrorCode, message: string) {

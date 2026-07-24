@@ -263,6 +263,9 @@ export function createSignService(
       }
 
       const signature = parseSignature(compileArgs.signature as Hex);
+      // Re-parsing the threaded _unsignedTx is safe only because the recovery check below runs
+      // over the re-serialized `compiled` bytes: any parse/serialize drift surfaces as a
+      // signer mismatch. Do not drop that check on the assumption this round-trip is lossless.
       const compiled = serializeTransaction(parseTransactionSafely(unsignedTx), signature);
 
       // Verify the signature actually recovers to the expected signer over the exact bytes
