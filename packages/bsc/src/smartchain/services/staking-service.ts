@@ -24,6 +24,51 @@ const DEFAULT_PAGE_SIZE = 100;
 const BASE_VALIDATOR_IMAGE_URL =
   "https://raw.githubusercontent.com/bnb-chain/bsc-validator-directory/main/mainnet/validators/";
 
+/**
+ * Sanity bound for the RPC-reported pending-unbond count (M-BSC-2).
+ *
+ * `getPendingUnbondDelegation` returns a count that directly sizes an
+ * `Array.from({ length: count })` fan-out of per-index RPC calls
+ * (`getUnbondRequestData`). BSC's staking contract itself caps concurrent
+ * unbond requests per delegator at 7 (`maxElements` in StakeCredit) — 64 is a
+ * generous ceiling above that real protocol limit, bounding the fan-out
+ * against a hostile/buggy RPC without ever clamping a real wallet's count.
+ */
+const MAX_PENDING_UNBOND_COUNT = 64;
+
+/**
+ * Plausibility bound for `unlockTime` (unix seconds) before the `* 1000n`
+ * conversion to millis (M-BSC-2). Guards against a malformed value (e.g.
+ * already in millis, or some other unit) that would otherwise silently
+ * overflow `Number.MAX_SAFE_INTEGER` when narrowed to a `number` for
+ * `pendingUntil`. Bounded to year 2286 (10 digits of unix seconds) —
+ * comfortably beyond any real unbond unlock time.
+ */
+const MAX_PLAUSIBLE_UNLOCK_TIME_SECONDS = 9_999_999_999n;
+
+function clampPendingUnbondCount(rawCount: bigint, logger: Logger): number {
+  const count = Number(rawCount);
+  if (!Number.isSafeInteger(count) || count <= 0) return 0;
+  if (count > MAX_PENDING_UNBOND_COUNT) {
+    logger.warn("StakingService: pending-unbond count exceeds sanity bound — clamping", {
+      reported: rawCount.toString(),
+      clampedTo: MAX_PENDING_UNBOND_COUNT,
+    });
+    return MAX_PENDING_UNBOND_COUNT;
+  }
+  return count;
+}
+
+function safeUnlockTimeMillis(unlockTime: bigint, logger: Logger): number {
+  if (unlockTime < 0n || unlockTime > MAX_PLAUSIBLE_UNLOCK_TIME_SECONDS) {
+    logger.warn("StakingService: implausible unlockTime from RPC — treating as already unlocked", {
+      unlockTime: unlockTime.toString(),
+    });
+    return 0;
+  }
+  return Number(unlockTime * 1000n);
+}
+
 function getValidatorStatus(v: BNBChainValidator): ValidatorStatus {
   if (v.status === "INACTIVE") return "Inactive";
   if (v.status === "JAILED") return "Jailed";
@@ -133,14 +178,14 @@ export function createStakingService(
     const now = Date.now();
 
     return unbondRequests.map((req, index) => {
-      const unlockTimeInMillis = req.unlockTime * 1000n;
+      const unlockTimeInMillis = safeUnlockTimeMillis(req.unlockTime, logger);
       return {
         id: `delegation_pending__${validator.creditAddress}_${index}`,
         validator,
         amount: req.amount,
         status: now > unlockTimeInMillis ? ("Claimable" as const) : ("Pending" as const),
         delegationIndex: BigInt(index),
-        pendingUntil: now > unlockTimeInMillis ? 0 : Number(unlockTimeInMillis),
+        pendingUntil: now > unlockTimeInMillis ? 0 : unlockTimeInMillis,
       };
     });
   }
@@ -159,11 +204,13 @@ export function createStakingService(
       pendingUnbond.flatMap((result, index) => {
         const pendingCountRaw = processSingleMulticallResult(result);
         if (pendingCountRaw === undefined) return [];
+        const pendingCount = clampPendingUnbondCount(pendingCountRaw, logger);
+        if (pendingCount <= 0) return [];
         return [
           getUnbondDelegations(
             parseEvmAddress(validators[index].creditAddress),
             address,
-            Number(pendingCountRaw),
+            pendingCount,
             validators[index]
           ),
         ];

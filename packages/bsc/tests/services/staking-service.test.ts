@@ -334,6 +334,69 @@ describe("StakingService", () => {
       expect(claimable[0].validator.name).toBe("Namelix");
     });
 
+    it("clamps a huge pending-unbond count before fanning out RPC requests (M-BSC-2)", async () => {
+      const hugeCount = 1_000_000n; // hostile/buggy RPC reporting an absurd count
+      const bnbRpcClient = makeBNBRpcClient();
+      const stakingRpcClient = makeStakingRpcClient(
+        CREDIT_MAP,
+        VALIDATORS.map(() => ({ status: "success", result: 0n })),
+        [
+          { status: "success", result: hugeCount },
+          { status: "success", result: 0n },
+          { status: "success", result: 0n },
+        ]
+      );
+      stakingRpcClient.getUnbondRequestData = vi.fn().mockResolvedValue({
+        amount: 1_000_000_000_000_000_000n,
+        unlockTime: BigInt(Math.floor(Date.now() / 1000) + 86400),
+      });
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
+        stakingRpcClient as any,
+        bnbRpcClient as any
+      );
+
+      await service.getDelegations(delegatorAddress);
+
+      // Bounded fan-out: far fewer calls than the RPC-reported count.
+      expect(stakingRpcClient.getUnbondRequestData.mock.calls.length).toBeLessThan(
+        Number(hugeCount)
+      );
+      expect(stakingRpcClient.getUnbondRequestData.mock.calls.length).toBeGreaterThan(0);
+    });
+
+    it("does not overflow pendingUntil and treats an implausible unlockTime as Claimable-safe (M-BSC-2)", async () => {
+      const bnbRpcClient = makeBNBRpcClient();
+      const stakingRpcClient = makeStakingRpcClient(
+        CREDIT_MAP,
+        VALIDATORS.map(() => ({ status: "success", result: 0n })),
+        [
+          { status: "success", result: 1n },
+          { status: "success", result: 0n },
+          { status: "success", result: 0n },
+        ]
+      );
+      // Implausible unlockTime: already in milliseconds (or otherwise absurd),
+      // which after `* 1000n` would overflow Number.MAX_SAFE_INTEGER if unguarded.
+      stakingRpcClient.getUnbondRequestData = vi.fn().mockResolvedValue({
+        amount: 1_000_000_000_000_000_000n,
+        unlockTime: 99_999_999_999_999_999n,
+      });
+      const service = createStakingService(
+        createInMemoryCache(),
+        createInMemoryCache(),
+        stakingRpcClient as any,
+        bnbRpcClient as any
+      );
+
+      const result = await service.getDelegations(delegatorAddress);
+      const unbond = result.delegations.find((d) => d.id.startsWith("delegation_pending_"));
+
+      expect(unbond).toBeDefined();
+      expect(Number.isSafeInteger(unbond!.pendingUntil)).toBe(true);
+    });
+
     it("exposes real staking summary from the API fixture", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient();
