@@ -62,7 +62,9 @@ const sdk = new GuardianSDK([
 
     // Cache TTLs. Positions are cached per-authority (shared by getDelegations & getBalances);
     // validators + APY inputs are cached separately.
-    stakeCacheTtlMs: 30_000, // default 30s
+    // Use 0 for this lifecycle sample so reads after Delegate/Undelegate always re-scan
+    // (production UIs typically keep the 30s default and re-query after confirmation + TTL).
+    stakeCacheTtlMs: 0,
     validatorsCacheTtlMs: 180_000, // default 3m
 
     // GPA fallback: also run getProgramAccounts to find stake accounts NOT on our seed scheme
@@ -92,12 +94,41 @@ async function submit(transaction: Transaction): Promise<string> {
   return sdk.broadcast(solanaMainnet, rawTx);
 }
 
+/** Solana charges ceil(CU × microlamports-per-CU / 1e6) lamports for priority fees. */
+function priorityFeeLamportsCeil(computeUnits: bigint, computeUnitPrice: bigint): bigint {
+  if (computeUnits <= 0n || computeUnitPrice <= 0n) return 0n;
+  const micro = computeUnits * computeUnitPrice;
+  return (micro + 1_000_000n - 1n) / 1_000_000n;
+}
+
+/**
+ * After a Delegate, identify the stake account this run created by set-difference against the
+ * pre-Delegate snapshot — never assume `delegations[0]` (wallet may already hold positions).
+ */
+async function resolveNewStakeAccount(beforeIds: ReadonlySet<string>): Promise<string> {
+  const { delegations } = await sdk.getDelegations(solanaMainnet, ADDRESS);
+  const created = delegations.find((d) => !beforeIds.has(d.id));
+  if (!created) {
+    throw new Error(
+      "Could not identify the stake account created by this Delegate (no new position vs pre-Delegate snapshot)."
+    );
+  }
+  return created.id;
+}
+
 // ── DELEGATE ────────────────────────────────────────────────────────────────────────────────
 // Creates a seed-derived stake account (lowest free seed), initializes it, and DelegateStake to a
 // vote account. `amount` is the stake in lamports; the builder ADDS the rent-exempt reserve on top
 // when funding. `isMaxAmount: true` is REJECTED — pass an explicit amount. `validator` is the VOTE
 // ACCOUNT pubkey (what DelegateStake needs), not the node identity.
-export async function stake(amountLamports: bigint, voteAccount: string): Promise<string> {
+// Returns the derived stake-account id created by this Delegate (use it for Undelegate/Claim).
+export async function stake(
+  amountLamports: bigint,
+  voteAccount: string
+): Promise<{ txHash: string; stakeAccount: string }> {
+  const { delegations: before } = await sdk.getDelegations(solanaMainnet, ADDRESS);
+  const beforeIds = new Set(before.map((d) => d.id));
+
   const tx: DelegateTransaction = {
     type: "Delegate",
     chain: solanaMainnet,
@@ -107,8 +138,9 @@ export async function stake(amountLamports: bigint, voteAccount: string): Promis
     account: ADDRESS,
   };
   const txHash = await submit(tx);
-  logger.info(`Delegated! https://explorer.solana.com/tx/${txHash}`);
-  return txHash;
+  const stakeAccount = await resolveNewStakeAccount(beforeIds);
+  logger.info(`Delegated! stakeAccount=${stakeAccount} https://explorer.solana.com/tx/${txHash}`);
+  return { txHash, stakeAccount };
 }
 
 // Same Delegate, but overriding the priority fee for THIS transaction only (config default is
@@ -117,7 +149,10 @@ export async function stakeWithPriority(
   amountLamports: bigint,
   voteAccount: string,
   computeUnitPrice: bigint
-): Promise<string> {
+): Promise<{ txHash: string; stakeAccount: string }> {
+  const { delegations: before } = await sdk.getDelegations(solanaMainnet, ADDRESS);
+  const beforeIds = new Set(before.map((d) => d.id));
+
   const tx: DelegateTransaction = {
     type: "Delegate",
     chain: solanaMainnet,
@@ -129,17 +164,20 @@ export async function stakeWithPriority(
   const base = (await sdk.estimateFee(tx)) as SolanaFee;
   // Re-price the fee for the new CU price. sign() reads fee.computeUnitPrice and emits the matching
   // SetComputeUnitPrice ix (that instruction is what's authoritative on-chain); we also recompute
-  // `total` so the quote stays accurate: total = baseFee + floor(computeUnits * price / 1e6).
-  const priorityAtBase = (base.computeUnits * base.computeUnitPrice) / 1_000_000n;
+  // `total` so the quote matches Solana’s ceil charge: total = baseFee + ceil(CU * price / 1e6).
+  const priorityAtBase = priorityFeeLamportsCeil(base.computeUnits, base.computeUnitPrice);
   const baseFeeOnly = base.total - priorityAtBase;
-  const priority = (base.computeUnits * computeUnitPrice) / 1_000_000n;
+  const priority = priorityFeeLamportsCeil(base.computeUnits, computeUnitPrice);
   const fee: SolanaFee = { ...base, computeUnitPrice, total: baseFeeOnly + priority };
   const nonce = await sdk.getNonce(solanaMainnet, ADDRESS);
   const signArgs: SigningWithPrivateKey = { transaction: tx, fee, nonce, privateKey: PRIVATE_KEY };
   const rawTx = await sdk.sign(signArgs);
   const txHash = await sdk.broadcast(solanaMainnet, rawTx);
-  logger.info(`Delegated (custom priority ${computeUnitPrice} µlamports/CU): ${txHash}`);
-  return txHash;
+  const stakeAccount = await resolveNewStakeAccount(beforeIds);
+  logger.info(
+    `Delegated (custom priority ${computeUnitPrice} µlamports/CU): stakeAccount=${stakeAccount} ${txHash}`
+  );
+  return { txHash, stakeAccount };
 }
 
 // ── UNDELEGATE ──────────────────────────────────────────────────────────────────────────────
@@ -300,29 +338,24 @@ export async function runFullLifecycle(): Promise<void> {
   await showBalances();
 
   // Stake 0.1 SOL (plus the rent-exempt reserve funded by the wallet on create).
-  await stake(LAMPORTS_PER_SOL / 10n, voteAccount);
+  // Track the exact stake account this run created — never undelegate delegations[0].
+  const { stakeAccount } = await stake(LAMPORTS_PER_SOL / 10n, voteAccount);
   await showDelegations("After Delegate (may show Active while still activating)");
 
-  const { delegations } = await sdk.getDelegations(solanaMainnet, ADDRESS);
-  const position = delegations[0];
-  if (!position) {
-    throw new Error("No stake position found after Delegate");
-  }
-
-  await undelegate(position.id);
+  await undelegate(stakeAccount);
   await showDelegations("After Undelegate (Pending while deactivating)");
 
   // ── ClaimDelegate after epoch cooldown ────────────────────────────────────────────────────
   // Deactivation completes at an epoch boundary; wall time is one or more boundaries (~2–5 days).
   // Poll getDelegations until status === "Claimable", then:
   //
-  //   await claimDelegate(position.id);
+  //   await claimDelegate(stakeAccount);
   //
   // Rewards auto-compound into the stake account — there is no separate ClaimRewards op.
   logger.info(
     [
       "Waiting for inactive stake before ClaimDelegate is not automated in this sample.",
-      `When status is Claimable, call claimDelegate("${position.id}").`,
+      `When status is Claimable, call claimDelegate("${stakeAccount}").`,
     ].join(" ")
   );
 }

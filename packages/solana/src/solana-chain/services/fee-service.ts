@@ -53,14 +53,17 @@ function staticComputeUnits(type: Transaction["type"]): bigint {
 }
 
 /**
- * Priority fee in lamports: `floor(computeUnits * computeUnitPrice / 1e6)`.
+ * Priority fee in lamports: `ceil(computeUnits * computeUnitPrice / 1e6)`.
+ * Matches Solana's on-chain charge for SetComputeUnitPrice.
  * `computeUnitPrice` is microlamports per compute unit.
  */
 export function priorityFeeLamports(computeUnits: bigint, computeUnitPrice: bigint): bigint {
   if (computeUnits <= 0n || computeUnitPrice <= 0n) {
     return 0n;
   }
-  return (computeUnits * computeUnitPrice) / MICRO_LAMPORTS_PER_LAMPORT;
+  const microLamports = computeUnits * computeUnitPrice;
+  // Ceiling division: (a + b - 1) / b
+  return (microLamports + MICRO_LAMPORTS_PER_LAMPORT - 1n) / MICRO_LAMPORTS_PER_LAMPORT;
 }
 
 /**

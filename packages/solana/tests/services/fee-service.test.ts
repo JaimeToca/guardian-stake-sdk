@@ -75,17 +75,22 @@ function mockRpc(overrides: Partial<SolanaRpcClientContract> = {}): SolanaRpcCli
 }
 
 describe("priorityFeeLamports", () => {
-  it("computes CU × price / 1e6", () => {
+  it("computes ceil(CU × price / 1e6)", () => {
+    // Exact division
     expect(priorityFeeLamports(200_000n, 1_000n)).toBe(200n);
     expect(priorityFeeLamports(50_000n, 0n)).toBe(0n);
     expect(priorityFeeLamports(0n, 1_000n)).toBe(0n);
+    // Remainder rounds up (Solana charges ceil, not floor)
+    expect(priorityFeeLamports(1n, 1n)).toBe(1n);
+    expect(priorityFeeLamports(1_000_001n, 1n)).toBe(2n);
+    expect(priorityFeeLamports(3n, 500_000n)).toBe(2n); // 1_500_000 / 1e6 → 2
   });
 });
 
 describe("createFeeService", () => {
   it("Delegate: SolanaFee total is base fee + priority fee when CU price > 0", async () => {
     // getFeeForMessage returns only the base signature fee; the prioritization fee
-    // (computeUnits * computeUnitPrice / 1e6) is added on top.
+    // ceil(computeUnits * computeUnitPrice / 1e6) is added on top.
     const rpc = mockRpc({
       getMultipleAccounts: vi.fn().mockResolvedValue([null]),
       getFeeForMessage: vi.fn().mockResolvedValue(5_000n),
@@ -104,7 +109,7 @@ describe("createFeeService", () => {
     expect(fee.type).toBe("SolanaFee");
     expect(fee.computeUnits).toBe(200_000n);
     expect(fee.computeUnitPrice).toBe(1_000n);
-    // 5_000 base + floor(200_000 * 1_000 / 1_000_000) = 5_000 + 200
+    // 5_000 base + ceil(200_000 * 1_000 / 1_000_000) = 5_000 + 200
     expect(fee.total).toBe(5_200n);
     expect(rpc.getFeeForMessage).toHaveBeenCalledOnce();
   });
@@ -128,7 +133,7 @@ describe("createFeeService", () => {
     const fee = await feeSvc.estimateFee(tx);
     expect(fee.type).toBe("SolanaFee");
     expect(fee.computeUnitPrice).toBe(100_000n);
-    // 5_000 base + floor(200_000 * 100_000 / 1_000_000) = 5_000 + 20_000
+    // 5_000 base + ceil(200_000 * 100_000 / 1_000_000) = 5_000 + 20_000
     expect(fee.total).toBe(25_000n);
   });
 
@@ -209,7 +214,7 @@ describe("createFeeService", () => {
     expect(fee.type).toBe("SolanaFee");
     expect(fee.computeUnits).toBe(50_000n);
     expect(fee.computeUnitPrice).toBe(100_000n);
-    // 5_000 base + floor(50_000 * 100_000 / 1_000_000) = 5_000 + 5_000
+    // 5_000 base + ceil(50_000 * 100_000 / 1_000_000) = 5_000 + 5_000
     expect(fee.total).toBe(10_000n);
   });
 

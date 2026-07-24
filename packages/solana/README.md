@@ -517,7 +517,7 @@ interface SolanaFee {
 
 - Message includes compute-budget ixs when `computeUnitPrice > 0`.  
 - **`computeUnitPrice` defaults to `100_000` microlamports/CU** when the caller omits `defaultComputeUnitPrice` — so a `Delegate` (200k CU) pays ~20,000 lamports priority, an Undelegate/Claim (50k CU) ~5,000. Pass `defaultComputeUnitPrice: 0n` (config) or `computeUnitPrice: 0n` (per-tx) to opt out.  
-- `total` = **base fee** (`getFeeForMessage`) **+ priority fee** (`floor(computeUnits × computeUnitPrice / 1e6)`). `getFeeForMessage` returns only the base signature fee, so the prioritization fee is added explicitly; with `computeUnitPrice == 0` it contributes 0.  
+- `total` = **base fee** (`getFeeForMessage`) **+ priority fee** (`ceil(computeUnits × computeUnitPrice / 1e6)`). `getFeeForMessage` returns only the base signature fee, so the prioritization fee is added explicitly; with `computeUnitPrice == 0` it contributes 0.
 - Sign rejects non-`SolanaFee` with `INVALID_FEE_TYPE`.
 - **`estimateFee` does not require a funded wallet.** For `Delegate` it builds the message (fee size is independent of balance) but skips the funding sufficiency check that `sign()` enforces — so you can quote a fee before funding. `sign()` still rejects an under-funded `Delegate` with `INVALID_AMOUNT`.
 
