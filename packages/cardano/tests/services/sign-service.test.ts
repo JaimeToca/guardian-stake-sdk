@@ -693,9 +693,12 @@ describe("SignService", () => {
       const { serializedTransaction: bodyHashA, signArgs: signArgsA } = await service.prehash(
         prehashArgsA as any
       );
-      const { signArgs: signArgsB } = await service.prehash(prehashArgsB as any);
+      const { serializedTransaction: bodyHashB, signArgs: signArgsB } = await service.prehash(
+        prehashArgsB as any
+      );
 
-      expect(bodyHashA).not.toBe((signArgsB as any)._txBodyCbor);
+      // Distinct txs must produce distinct body hashes (not hash-vs-CBOR).
+      expect(bodyHashA).not.toBe(bodyHashB);
 
       // Sign the digest for tx A (what the external signer actually saw)...
       const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(

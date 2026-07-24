@@ -59,12 +59,21 @@ function clampPendingUnbondCount(rawCount: bigint, logger: Logger): number {
   return count;
 }
 
-function safeUnlockTimeMillis(unlockTime: bigint, logger: Logger): number {
+/**
+ * Converts RPC `unlockTime` (unix seconds) to millis for `pendingUntil`.
+ * Returns `null` when the value is implausible so the caller can fail closed
+ * as `Pending` rather than treating `0` as "already unlocked" / Claimable
+ * (which would push users into a claim that reverts on-chain).
+ */
+function safeUnlockTimeMillis(unlockTime: bigint, logger: Logger): number | null {
   if (unlockTime < 0n || unlockTime > MAX_PLAUSIBLE_UNLOCK_TIME_SECONDS) {
-    logger.warn("StakingService: implausible unlockTime from RPC — treating as already unlocked", {
-      unlockTime: unlockTime.toString(),
-    });
-    return 0;
+    logger.warn(
+      "StakingService: implausible unlockTime from RPC — treating as still Pending (fail closed)",
+      {
+        unlockTime: unlockTime.toString(),
+      }
+    );
+    return null;
   }
   return Number(unlockTime * 1000n);
 }
@@ -179,6 +188,18 @@ export function createStakingService(
 
     return unbondRequests.map((req, index) => {
       const unlockTimeInMillis = safeUnlockTimeMillis(req.unlockTime, logger);
+      // Fail closed: implausible unlockTime stays Pending (never Claimable with pendingUntil: 0).
+      // Use a far-future sentinel so UIs do not treat pendingUntil: 0 as "ready to claim".
+      if (unlockTimeInMillis === null) {
+        return {
+          id: `delegation_pending__${validator.creditAddress}_${index}`,
+          validator,
+          amount: req.amount,
+          status: "Pending" as const,
+          delegationIndex: BigInt(index),
+          pendingUntil: Number.MAX_SAFE_INTEGER,
+        };
+      }
       return {
         id: `delegation_pending__${validator.creditAddress}_${index}`,
         validator,

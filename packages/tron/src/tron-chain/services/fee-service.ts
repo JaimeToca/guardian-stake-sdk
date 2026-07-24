@@ -39,6 +39,19 @@ export function createFeeService(
   return {
     async estimateFee(tx: Transaction): Promise<Fee> {
       logger.debug("FeeService: estimating fee", { type: tx.type });
+
+      // Validate account shape for ops that require it *before* any RPC fan-out so a malformed
+      // address fails with INVALID_ADDRESS instead of a chain-parameters/account RPC error.
+      switch (tx.type) {
+        case "Delegate":
+        case "Undelegate":
+        case "Vote":
+          requireAccount(tx);
+          break;
+        default:
+          break;
+      }
+
       const params = await rpc.getChainParameters();
       const bandwidthPrice = BigInt(Math.max(1, params.getTransactionFee ?? 1000)); // SUN per bandwidth point
 

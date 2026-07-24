@@ -119,10 +119,10 @@ export function createSignService(
           "compile() requires signArgs._rawTx.raw_data_hex from prehash()."
         );
 
-      // Integrity check: recompute SHA256(raw_data) and assert it equals the txID that was
+      // Integrity check: recompute SHA256(raw_data_hex) and assert it equals the txID that was
       // returned to the external signer by prehash(). This catches a `_rawTx` swapped (or
       // mutated) between prehash() and compile() before it ever reaches an "attach signature"
-      // step — without it, a tampered raw_data would silently carry over the STALE txID and the
+      // step — without it, a tampered raw_data_hex would silently carry over the STALE txID and the
       // signature would be attached to a transaction the signer never actually reviewed.
       const recomputedTxId = Buffer.from(
         tronUtils.crypto.SHA256(Array.from(Buffer.from(rawTx.raw_data_hex, "hex")))
@@ -131,13 +131,29 @@ export function createSignService(
         throw new SigningError(
           "SIGNATURE_MISMATCH",
           "compile() detected that signArgs._rawTx does not match its own txID " +
-            "(SHA256(raw_data) != txID). This means _rawTx was mutated or swapped after prehash()."
+            "(SHA256(raw_data_hex) != txID). This means _rawTx was mutated or swapped after prehash()."
+        );
+
+      // Bind structured `raw_data` to the same bytes as `raw_data_hex` / txID. `owner_address`
+      // (and every other field) is otherwise independently mutable on the JSON object; without
+      // this, a caller could pass a signature valid over raw_data_hex while shipping divergent
+      // raw_data for display/policy paths. TronWeb's txCheck re-encodes raw_data and compares.
+      let rawDataBoundToHex = false;
+      try {
+        rawDataBoundToHex = tronUtils.transaction.txCheck(rawTx as never);
+      } catch {
+        rawDataBoundToHex = false;
+      }
+      if (!rawDataBoundToHex)
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() detected that signArgs._rawTx.raw_data does not match raw_data_hex " +
+            "(structured raw_data was mutated after prehash() while hex/txID were left intact)."
         );
 
       // Signature check: recover the secp256k1 signer from the txID digest and confirm it equals
-      // the transaction's own owner_address. This catches a syntactically valid signature that
-      // simply belongs to the wrong key/tx, which would otherwise only be caught (or silently
-      // accepted) at broadcast.
+      // the transaction's own owner_address (now known to match the signed raw_data_hex bytes).
+      // This catches a syntactically valid signature that simply belongs to the wrong key/tx.
       const ownerAddressHex = extractOwnerAddressHex(rawTx);
       if (!ownerAddressHex)
         throw new SigningError(

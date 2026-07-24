@@ -244,6 +244,7 @@ describe("createFeeService — balance-aware validation", () => {
   it("Delegate: malformed account throws ValidationError(INVALID_ADDRESS), before hitting the RPC", async () => {
     const rpc = makeRpc(baseAccount);
     const getAccount = rpc.getAccount as Mock;
+    const getChainParameters = rpc.getChainParameters as Mock;
     const fee = createFeeService(rpc, makeStaking());
     const tx: Transaction = {
       type: "Delegate",
@@ -254,6 +255,7 @@ describe("createFeeService — balance-aware validation", () => {
     };
     await expect(fee.estimateFee(tx)).rejects.toMatchObject({ code: "INVALID_ADDRESS" });
     expect(getAccount).not.toHaveBeenCalled();
+    expect(getChainParameters).not.toHaveBeenCalled();
   });
 });
 

@@ -366,7 +366,7 @@ describe("StakingService", () => {
       expect(stakingRpcClient.getUnbondRequestData.mock.calls.length).toBeGreaterThan(0);
     });
 
-    it("does not overflow pendingUntil and treats an implausible unlockTime as Claimable-safe (M-BSC-2)", async () => {
+    it("does not overflow pendingUntil and fails closed as Pending for implausible unlockTime (M-BSC-2)", async () => {
       const bnbRpcClient = makeBNBRpcClient();
       const stakingRpcClient = makeStakingRpcClient(
         CREDIT_MAP,
@@ -395,6 +395,9 @@ describe("StakingService", () => {
 
       expect(unbond).toBeDefined();
       expect(Number.isSafeInteger(unbond!.pendingUntil)).toBe(true);
+      // Fail closed: never Claimable with pendingUntil 0 (that would invite a reverting claim).
+      expect(unbond!.status).toBe("Pending");
+      expect(unbond!.pendingUntil).toBeGreaterThan(0);
     });
 
     it("exposes real staking summary from the API fixture", async () => {

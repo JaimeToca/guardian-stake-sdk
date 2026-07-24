@@ -30,6 +30,9 @@ const MAX_GAS_PRICE_WEI = 100_000_000_000n;
 const MAX_GAS_LIMIT = 100_000_000n;
 
 function assertSaneGasPrice(gasPrice: bigint): bigint {
+  if (gasPrice <= 0n) {
+    throw new ValidationError("INVALID_FEE", "RPC-reported gasPrice must be greater than zero.");
+  }
   if (gasPrice > MAX_GAS_PRICE_WEI) {
     throw new ValidationError(
       "INVALID_FEE",

@@ -142,10 +142,10 @@ export function createSignService(
       logger.info("SignService: signing transaction", { type: args.transaction.type });
       assertSolanaFee(args.fee);
 
-      // M-SOLANA-1: build the unsigned tx (RPC-bound; no key material needed) *before* the seed
-      // is parsed, so the Ed25519 seed's lifetime in memory is as short as possible — parsed only
-      // right before it's handed to Kit for keypair derivation/signing, then zeroized in `finally`
-      // regardless of success or failure.
+      // M-SOLANA-1: authority is derived from the seed (privateKey), so we must parse the seed
+      // before the RPC-bound `buildUnsignedTx` call that needs `authorityAddress`. We still keep
+      // the seed in a single try/finally scope and zeroize it as soon as signing finishes so the
+      // in-process lifetime is bounded to this `sign()` invocation.
       let seed: Uint8Array | undefined;
       try {
         seed = parseEd25519SeedHex(args.privateKey);
@@ -180,9 +180,9 @@ export function createSignService(
         logger.info("SignService: transaction signed");
         return wire;
       } finally {
-        // Best-effort zeroization: once the keypair(s) are derived, the raw seed bytes are no
-        // longer needed. Doesn't help if the JS engine already copied the bytes internally, but
-        // it does shorten this reference's exposure window in process memory.
+        // Best-effort zeroization: once the keypair(s) are derived and the message signed, the raw
+        // seed bytes are no longer needed. Doesn't help if the JS engine already copied the bytes
+        // internally, but it does shorten this reference's exposure window in process memory.
         seed?.fill(0);
       }
     },

@@ -573,4 +573,40 @@ describe("compile", () => {
       "SIGNATURE_MISMATCH"
     );
   });
+
+  it("(SEC-SIGN-1c) throws SIGNATURE_MISMATCH when raw_data is mutated while raw_data_hex and signature stay intact", async () => {
+    const { factory } = realSetup();
+    const svc = createSignService(factory);
+
+    const prehashResult = await svc.prehash({ transaction: delegateTx, fee, nonce: 0 } as never);
+    const originalRaw = (prehashResult.signArgs as { _rawTx: typeof UNSIGNED_FIXTURE })._rawTx;
+    // Diverge structured raw_data (e.g. amount) while leaving the signed hex/txID/signature alone.
+    const tamperedRawTx = {
+      ...originalRaw,
+      raw_data: {
+        ...originalRaw.raw_data,
+        contract: [
+          {
+            ...originalRaw.raw_data.contract[0],
+            parameter: {
+              ...originalRaw.raw_data.contract[0].parameter,
+              value: {
+                ...originalRaw.raw_data.contract[0].parameter.value,
+                frozen_balance: 9_999_999,
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    await expectSdkError(
+      svc.compile({
+        signArgs: { ...prehashResult.signArgs, _rawTx: tamperedRawTx } as never,
+        signature: REAL_SIGNATURE,
+      }),
+      SigningError,
+      "SIGNATURE_MISMATCH"
+    );
+  });
 });

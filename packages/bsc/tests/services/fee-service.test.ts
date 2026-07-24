@@ -108,8 +108,27 @@ describe("FeeService", () => {
       });
     });
 
-    it("floors gasPrice at the network minimum when RPC reports a lower value", async () => {
-      const tooLowGasPrice = 1n; // 1 wei — below any sane BSC floor
+    it("throws INVALID_FEE when RPC gasPrice is zero", async () => {
+      const service = createFeeService(makePublicClient(0n) as any, makeSignService() as any);
+
+      await expect(
+        service.estimateFee({
+          type: "Delegate",
+          chain: bscMainnet,
+          amount: 1_000_000_000_000_000_000n,
+          isMaxAmount: false,
+          validator: VALIDATOR,
+          account: OPERATOR,
+        })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_FEE");
+        return true;
+      });
+    });
+
+    it("floors gasPrice at the network minimum when RPC reports a positive but sub-minimum value", async () => {
+      const tooLowGasPrice = 1n; // 1 wei — below any sane BSC floor, but still > 0
       const service = createFeeService(
         makePublicClient(tooLowGasPrice) as any,
         makeSignService() as any

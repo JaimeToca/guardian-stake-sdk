@@ -588,6 +588,48 @@ describe("buildUnsignedTx", () => {
       );
       expect(result.feePayer).toBe(AUTHORITY);
     });
+
+    it("rejects an under-funded wallet when fee.total is a small positive under-estimate", async () => {
+      const computeUnits = 200_000n;
+      const computeUnitPrice = 1_000_000n;
+      const realPriorityFee = 200_000n;
+      const BASE_CUSHION = 10_000n;
+      const minFromComponents = realPriorityFee + BASE_CUSHION;
+
+      const amount = 1_000_000_000n;
+      const lamportsNeeded = amount + RENT;
+      // Enough for a small positive fee.total, not enough for the real component floor.
+      const smallTotal = 1_000n;
+      const balance = lamportsNeeded + smallTotal + 1_000n;
+      expect(balance).toBeLessThan(lamportsNeeded + minFromComponents);
+
+      const rpc = mockRpc({
+        getBalance: vi.fn().mockResolvedValue(balance),
+        getMultipleAccounts: vi.fn().mockResolvedValue([null]),
+      });
+      const tx = {
+        type: "Delegate",
+        chain,
+        amount,
+        isMaxAmount: false,
+        account: AUTHORITY,
+        validator: VOTE,
+      } as Transaction;
+      const underfundedFee: SolanaFee = {
+        type: "SolanaFee",
+        computeUnits,
+        computeUnitPrice,
+        total: smallTotal,
+      };
+
+      await expect(
+        buildUnsignedTx(
+          { rpc, authorityAddress: AUTHORITY, config: { seedScanMax: 0 } },
+          tx,
+          underfundedFee
+        )
+      ).rejects.toMatchObject({ code: "INVALID_AMOUNT" });
+    });
   });
 
   it.each(["Redelegate", "ClaimRewards", "Vote"] as const)(

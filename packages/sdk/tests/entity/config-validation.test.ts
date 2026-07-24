@@ -47,6 +47,13 @@ describe("validateRpcUrl — opt-in private-host guard enabled", () => {
     "http://127.0.0.1:8545",
     "http://127.5.6.7",
     "http://[::1]:8545",
+    "http://[fe80::1]:8545",
+    "http://[fe80::abcd:1]:8545",
+    "http://[fc00::1]:8545",
+    "http://[fd12:3456:789a::1]:8545",
+    "http://[::ffff:127.0.0.1]:8545",
+    "http://[::ffff:7f00:1]:8545",
+    "http://[::ffff:a9fe:a9fe]:8545",
     "http://10.0.0.5",
     "http://172.16.0.1",
     "http://172.31.255.255",
@@ -66,6 +73,7 @@ describe("validateRpcUrl — opt-in private-host guard enabled", () => {
   it("accepts a normal public host", () => {
     expect(() => validateRpcUrl("https://bsc-dataseed.bnbchain.org", opts)).not.toThrow();
     expect(() => validateRpcUrl("https://8.8.8.8", opts)).not.toThrow();
+    expect(() => validateRpcUrl("https://[2001:4860:4860::8888]", opts)).not.toThrow();
   });
 
   it("does not reject a public host that merely contains '172' outside the private ranges", () => {

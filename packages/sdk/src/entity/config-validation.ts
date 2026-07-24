@@ -78,9 +78,14 @@ function isPrivateOrLocalHost(hostname: string): boolean {
     return true;
   }
 
-  // IPv4-mapped/compatible IPv6 loopback forms, e.g. ::ffff:127.0.0.1
-  const ipv4MappedMatch = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(bracketless);
-  const ipv4Candidate = ipv4MappedMatch ? ipv4MappedMatch[1] : bracketless;
+  // Native IPv6 unique-local (fc00::/7 → fc00::/8 and fd00::/8) and link-local (fe80::/10).
+  if (isIpv6UniqueLocalOrLinkLocal(bracketless)) {
+    return true;
+  }
+
+  // IPv4-mapped IPv6: dotted form (::ffff:127.0.0.1) or hex form (::ffff:7f00:1).
+  const ipv4Mapped = parseIpv4MappedIpv6(bracketless);
+  const ipv4Candidate = ipv4Mapped ?? bracketless;
 
   const octets = parseIpv4(ipv4Candidate);
   if (!octets) {
@@ -97,6 +102,54 @@ function isPrivateOrLocalHost(hostname: string): boolean {
   if (a === 0) return true; // 0.0.0.0/8 ("this network" / unspecified)
 
   return false;
+}
+
+/**
+ * True for literal IPv6 unique-local (`fc00::/7`) or link-local (`fe80::/10`) hostnames.
+ * Only inspects the leading hextet(s); does not fully parse IPv6.
+ */
+function isIpv6UniqueLocalOrLinkLocal(host: string): boolean {
+  // Must look like IPv6 (contains ':') and not be an IPv4-mapped form we handle elsewhere.
+  if (!host.includes(":")) {
+    return false;
+  }
+
+  // Unique local: fc00::/7 → first hextet in [fc00, fdff]
+  // Link-local: fe80::/10 → first hextet in [fe80, febf]
+  const firstHextetMatch = /^([0-9a-f]{1,4}):/i.exec(host);
+  if (!firstHextetMatch) {
+    return false;
+  }
+  const first = Number.parseInt(firstHextetMatch[1], 16);
+  if (Number.isNaN(first)) {
+    return false;
+  }
+  if (first >= 0xfc00 && first <= 0xfdff) return true; // fc00::/7
+  if (first >= 0xfe80 && first <= 0xfebf) return true; // fe80::/10
+  return false;
+}
+
+/**
+ * Parses IPv4-mapped IPv6 literals (`::ffff:…`) into a dotted-quad string for `parseIpv4`.
+ * Accepts both `::ffff:127.0.0.1` and hexadecimal `::ffff:7f00:1` / `::ffff:a9fe:a9fe`.
+ */
+function parseIpv4MappedIpv6(host: string): string | undefined {
+  const dotted = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(host);
+  if (dotted) {
+    return dotted[1];
+  }
+
+  // Hex form: ::ffff:HHHH:HHHH → four IPv4 octets from the two 16-bit hextets.
+  const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(host);
+  if (!hex) {
+    return undefined;
+  }
+  const hi = Number.parseInt(hex[1], 16);
+  const lo = Number.parseInt(hex[2], 16);
+  if (Number.isNaN(hi) || Number.isNaN(lo) || hi > 0xffff || lo > 0xffff) {
+    return undefined;
+  }
+  return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
 }
 
 /**

@@ -56,13 +56,14 @@ If Task 6 reports API drift, this goes to the Breaking-Change Register instead �
 Secret scanning + push protection:
 
 ```bash
-gh api repos/:owner/:repo -X PATCH \
+# From a clone of the target repo, `{owner}`/`{repo}` are filled by `gh` from git remote.
+gh api "repos/{owner}/{repo}" -X PATCH \
   -f security_and_analysis='{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}'
-gh api repos/:owner/:repo --jq '.security_and_analysis'   # confirm enabled
+gh api "repos/{owner}/{repo}" --jq '.security_and_analysis'   # confirm enabled
 ```
 
 CodeQL: recommended to enable **default setup** via GitHub UI → Settings → Code security → CodeQL analysis → Set up → Default (language: JavaScript/TypeScript). Zero-maintenance; no workflow file to keep. (Advanced setup / `.github/workflows/codeql.yml` only if you need custom queries.)
 
 ---
 
-**Note:** None of the above is required for the local branch work to proceed. The subagents will complete all code/dependency/audit/file changes and commit them locally on `JaimeToca/Security-Research`; you merge the Dependabot PRs and flip repo settings at your convenience.
+**Note:** None of the above is required for the local branch work to proceed. Subagents prepare all code, dependency, audit, and file changes locally on `JaimeToca/Security-Research`; commits occur only after explicit user approval. You merge the Dependabot PRs and flip repo settings at your convenience.

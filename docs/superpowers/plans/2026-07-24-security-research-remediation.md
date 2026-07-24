@@ -138,7 +138,7 @@ Expected: merged. Sync local: `git fetch origin && git rebase origin/main`.
 
 ## Phase 1 — Supply-chain hardening
 
-### Task 5: Override the tron/tronweb transitive axios chain
+### Task 5: Override transitive vulnerable deps (axios, form-data, ws, validator)
 
 **Files:**
 - Modify: `package.json` (root — add `pnpm.overrides`)
@@ -146,32 +146,43 @@ Expected: merged. Sync local: `git fetch origin && git rebase origin/main`.
 
 **Interfaces:**
 - Consumes: baseline audit from Task 1 Step 1.
-- Produces: repo-wide `axios@^1.18.1` resolution including under `tronweb`.
+- Produces: repo-wide patched resolutions for all four committed overrides, including `axios` under `tronweb`.
 
-- [ ] **Step 1: Add the axios override**
+- [ ] **Step 1: Add all four pnpm overrides**
 
-Edit root `package.json`, inside the existing `"pnpm"` object add:
+Edit root `package.json`, inside the existing `"pnpm"` object add (keep `publicHoistPattern` and `confirmModulesPurge`):
 ```json
 "overrides": {
-  "axios@<1.18.1": "^1.18.1"
+  "axios@<1.18.1": "^1.18.1",
+  "form-data@<4.0.6": "^4.0.6",
+  "ws@<8.21.0": "^8.21.1",
+  "validator@<13.15.22": "^13.15.35"
 }
 ```
-(Keep the existing `publicHoistPattern` and `confirmModulesPurge` keys.)
 
-- [ ] **Step 2: Reinstall and confirm tronweb picks up the override**
+- [ ] **Step 2: Reinstall and confirm each override resolves**
 
 Run: `pnpm install`
-Expected: install succeeds. Then: `pnpm why axios` — every axios instance (including `tronweb > axios`) resolves to ≥1.18.1.
+Expected: install succeeds. Then verify:
+- `pnpm why axios` — every axios instance (including `tronweb > axios`) resolves to ≥1.18.1
+- `pnpm why form-data` — every instance resolves to ≥4.0.6
+- `pnpm why ws` — every instance resolves to ≥8.21.0
+- `pnpm why validator` — every instance resolves to ≥13.15.22
 
-- [ ] **Step 3: Verify tronweb still builds and its tests pass**
+- [ ] **Step 3: Verify tronweb (axios consumer) still builds and its tests pass**
 
 Run: `pnpm --filter @guardian-sdk/tron run build && pnpm --filter @guardian-sdk/tron run test`
 Expected: PASS. tronweb 6.1.0's axios usage is standard request/response — 1.18.x is API-compatible. **If build/test fails on an axios API change → STOP: log "tronweb major bump" in the Breaking-Change Register and get approval before proceeding (do not silently widen tronweb).**
 
-- [ ] **Step 4: Add ws/validator overrides if still flagged**
+- [ ] **Step 4: Compatibility check for form-data / ws / validator consumers**
 
-Run: `pnpm audit --audit-level high --json 2>/dev/null | python3 -c "import json,sys;d=json.load(sys.stdin);print(sorted({a['module_name'] for a in d.get('advisories',{}).values() if a['severity'] in ('high','critical')}))"`
-Expected: list of remaining high/critical modules. For any runtime-reachable one still present (e.g. `ws`, `validator`), add a patched-range override under `pnpm.overrides` (look up the patched version from the advisory), then re-run `pnpm install`.
+Run: `pnpm run build && pnpm run test`
+Expected: PASS across packages. These overrides patch transitive CVEs without intentional public API changes; if a consumer package breaks on a patched minor, log it in the Breaking-Change Register rather than dropping the override.
+
+- [ ] **Step 5: Confirm high/critical residual set**
+
+Run: `pnpm audit --prod --audit-level high --json 2>/dev/null | python3 -c "import json,sys;d=json.load(sys.stdin);print(sorted({a['module_name'] for a in d.get('advisories',{}).values() if a['severity'] in ('high','critical')}))"`
+Expected: empty list for runtime-reachable high/critical after the four overrides (dev-only residuals are accepted under the runtime-only audit policy).
 
 - [ ] **Step 5: Full verification**
 
@@ -308,14 +319,16 @@ Do not mark Task 10 complete until every Confirmed finding is either fixed (with
 
 In `.github/workflows/ci.yml`, after the `Install dependencies` step, insert:
 ```yaml
-      - name: Security audit (high+)
-        run: pnpm audit --audit-level high
+      - name: Security audit (runtime deps, high+)
+        run: pnpm audit --prod --audit-level high
 ```
+
+This is intentionally **runtime-only** (`--prod`): high/critical advisories confined to dev/build tooling (vitest/vite, typedoc, eslint, etc.) are accepted residuals and must not fail CI. Document that posture in `SECURITY.md`.
 
 - [ ] **Step 2: Verify it passes locally with current tree**
 
-Run: `pnpm audit --audit-level high; echo "exit=$?"`
-Expected: `exit=0` after Phase 1 (no high/critical). If dev-only high advisories remain and block, scope the gate with `--prod` (`pnpm audit --prod --audit-level high`) so only shipped deps gate — document the choice in `SECURITY.md`.
+Run: `pnpm audit --prod --audit-level high; echo "exit=$?"`
+Expected: `exit=0` after Phase 1 (no runtime-reachable high/critical). Optionally run full-tree `pnpm audit --audit-level high` to inventory accepted dev-only residuals; those must not be the CI gate.
 
 - [ ] **Step 3: Commit (on user go-ahead)**
 
@@ -334,7 +347,7 @@ Assess adding GitHub CodeQL (native, free for public repos, JS/TS pack) vs Semgr
 
 - [ ] **Step 2: Enable secret scanning + push protection**
 
-Run: `gh api repos/:owner/:repo -X PATCH -f security_and_analysis='{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}'` (or via repo Settings → Code security). Confirm enabled: `gh api repos/:owner/:repo --jq '.security_and_analysis'`.
+Run (from a clone of the target repo; `{owner}`/`{repo}` are filled by `gh` from git remote): `gh api "repos/{owner}/{repo}" -X PATCH -f security_and_analysis='{"secret_scanning":{"status":"enabled"},"secret_scanning_push_protection":{"status":"enabled"}}'` (or via repo Settings → Code security). Confirm enabled: `gh api "repos/{owner}/{repo}" --jq '.security_and_analysis'`.
 
 - [ ] **Step 3: Record the decision**
 

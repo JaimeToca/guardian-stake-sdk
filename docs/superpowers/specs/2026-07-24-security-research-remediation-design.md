@@ -60,7 +60,7 @@ Fix known-exploitable dependency risk fast, run the deep source audit while easy
 
 ### Phase 3 — Remediate findings + CI hardening
 - Fix confirmed source findings; breaking ones go to the register for per-case approval.
-- Add CI `pnpm audit --audit-level high` gate; evaluate CodeQL/Semgrep + secret scanning.
+- Add CI `pnpm audit --prod --audit-level high` gate (runtime/shipped deps only; high/critical advisories confined to dev/build tooling are accepted residuals and do not fail CI); evaluate CodeQL/Semgrep + secret scanning.
 - Update `SECURITY.md` supported-versions table (add cardano/tron/solana).
 
 ## Breaking-change register (live)

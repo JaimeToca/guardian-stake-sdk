@@ -217,12 +217,12 @@ async function buildDelegate(
   if (!deps.skipBalanceCheck) {
     // M-SOLANA-2: derive the fee component of the gate from the real fee inputs
     // (computeUnits/computeUnitPrice) instead of trusting caller-supplied `fee.total`, which can
-    // be `0n` (e.g. a caller building `fee` manually rather than via estimateFee) while the
-    // compute-unit price still implies a real, non-trivial priority fee. Using `fee.total` as-is
-    // in that case silently fell back to a flat cushion that ignored the actual price.
+    // be `0n` or a small positive under-estimate while the compute-unit price still implies a
+    // real, non-trivial priority fee. Always take at least the real priority fee plus a small
+    // base-fee cushion so a low `fee.total` cannot bypass the funding gate.
     const realPriorityFee = priorityFeeLamports(fee.computeUnits, computeUnitPrice);
-    const feeComponent =
-      fee.total > 0n ? fee.total : realPriorityFee + DELEGATE_BASE_FEE_CUSHION_LAMPORTS;
+    const minFeeFromComponents = realPriorityFee + DELEGATE_BASE_FEE_CUSHION_LAMPORTS;
+    const feeComponent = fee.total > minFeeFromComponents ? fee.total : minFeeFromComponents;
     const required = lamports + feeComponent;
     if (balance < required) {
       throw new ValidationError(
