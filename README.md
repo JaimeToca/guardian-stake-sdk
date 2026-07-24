@@ -78,9 +78,9 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) | None |
 | [`@guardian-sdk/cardano`](https://www.npmjs.com/package/@guardian-sdk/cardano) | Cardano | Available | [README](./packages/cardano/README.md) | None |
 | [`@guardian-sdk/tron`](https://www.npmjs.com/package/@guardian-sdk/tron) | Tron | Available | [README](./packages/tron/README.md) | None |
+| [`@guardian-sdk/solana`](https://www.npmjs.com/package/@guardian-sdk/solana) | Solana | Available | [README](./packages/solana/README.md) | None |
 | `@guardian-sdk/ethereum` | Ethereum | Planned | — | — |
 | `@guardian-sdk/sui` | SUI | Planned | — | — |
-| `@guardian-sdk/solana` | Solana | Planned | — | — |
 
 
 > **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
@@ -249,6 +249,7 @@ Returns the balance categories for an address. Each `Balance` has a `type` and a
 - [BNB Smart Chain — getBalances](./packages/bsc/README.md#getbalances)
 - [Cardano — getBalances](./packages/cardano/README.md#getbalances)
 - [Tron — getBalances](./packages/tron/README.md#getbalances)
+- [Solana — getBalances](./packages/solana/README.md#getbalances)
 
 **Returns:** `Promise<Balance[]>`
 
@@ -291,16 +292,17 @@ const nonce = await sdk.getNonce(chains.bscMainnet, "0xYourAddress");
 
 ### `estimateFee(transaction)`
 
-Estimates the fee for a staking transaction. The concrete `Fee` shape returned is chain-specific — `GasFee` on BSC, `UtxoFee` on Cardano, `ResourceFee` on Tron:
+Estimates the fee for a staking transaction. The concrete `Fee` shape returned is chain-specific — `GasFee` on BSC, `UtxoFee` on Cardano, `ResourceFee` on Tron, `SolanaFee` on Solana:
 
 - [BNB Smart Chain — estimateFee](./packages/bsc/README.md#estimatefee)
 - [Cardano — estimateFee](./packages/cardano/README.md#estimatefee)
 - [Tron — estimateFee](./packages/tron/README.md#estimatefee)
+- [Solana — estimateFee](./packages/solana/README.md#estimatefee)
 
 **Returns:** `Promise<Fee>`
 
 ```typescript
-type Fee = GasFee | UtxoFee | ResourceFee;
+type Fee = GasFee | UtxoFee | ResourceFee | SolanaFee;
 
 interface GasFee {
   type: "GasFee";
@@ -325,7 +327,7 @@ const fee = await sdk.estimateFee({
 console.log(fee.gasPrice, fee.gasLimit, fee.total);
 ```
 
-Transaction types: `Delegate` (BSC, Tron), `Undelegate` (BSC, Tron), `Redelegate` (BSC, Cardano), `ClaimDelegate` (BSC, Tron), `ClaimRewards` (Cardano, Tron), `Vote` (Tron). See the [BSC README](./packages/bsc/README.md#estimatefee), [Cardano README](./packages/cardano/README.md#estimatefee), or [Tron README](./packages/tron/README.md#estimatefee) for the full shape of each.
+Transaction types: `Delegate` (BSC, Tron, Solana), `Undelegate` (BSC, Tron, Solana), `Redelegate` (BSC, Cardano), `ClaimDelegate` (BSC, Tron, Solana), `ClaimRewards` (Cardano, Tron), `Vote` (Tron). See the [BSC README](./packages/bsc/README.md#estimatefee), [Cardano README](./packages/cardano/README.md#estimatefee), [Tron README](./packages/tron/README.md#estimatefee), or [Solana README](./packages/solana/README.md#estimatefee) for the full shape of each.
 
 ---
 
@@ -437,8 +439,9 @@ For chain-specific details (protocol parameters, transaction shapes, error codes
 - [BNB Smart Chain →](./packages/bsc/README.md)
 - [Cardano →](./packages/cardano/README.md)
 - [Tron →](./packages/tron/README.md)
+- [Solana →](./packages/solana/README.md)
 
-Tron's own worked flow (freeze → vote → unfreeze → claim) lives in [`examples/tron-native-staking-sample.ts`](./examples/tron-native-staking-sample.ts) and the [Cardano sample](./examples/cardano-native-staking-sample.ts) covers the UTXO-based flow — see [Sample — Delegate on BNB Smart Chain](#sample--delegate-on-bnb-smart-chain) above for the BSC walkthrough.
+Tron's own worked flow (freeze → vote → unfreeze → claim) lives in [`examples/tron-native-staking-sample.ts`](./examples/tron-native-staking-sample.ts); Solana's (delegate → deactivate → claim after epoch) in [`examples/solana-native-staking-sample.ts`](./examples/solana-native-staking-sample.ts); the [Cardano sample](./examples/cardano-native-staking-sample.ts) covers the UTXO-based flow — see [Sample — Delegate on BNB Smart Chain](#sample--delegate-on-bnb-smart-chain) above for the BSC walkthrough.
 
 ---
 
@@ -727,7 +730,7 @@ Planned integrations follow the same architecture — each chain is an independe
 | BNB Smart Chain | [`@guardian-sdk/bsc`](./packages/bsc/README.md) | Available |
 | SUI | `@guardian-sdk/sui` | Planned |
 | Tron | [`@guardian-sdk/tron`](./packages/tron/README.md) | Available |
-| Solana | `@guardian-sdk/solana` | Planned |
+| Solana | [`@guardian-sdk/solana`](./packages/solana/README.md) | Available |
 | Cardano | [`@guardian-sdk/cardano`](./packages/cardano/README.md) | Available (alpha) |
 | Ethereum | `@guardian-sdk/ethereum` | Planned |
 

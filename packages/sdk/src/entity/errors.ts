@@ -36,7 +36,18 @@ export type SigningErrorCode =
   | "INVALID_FEE_TYPE"
   | "UNSUPPORTED_TRANSACTION_TYPE";
 
-export type ErrorCode = ValidationErrorCode | ConfigErrorCode | SigningErrorCode;
+/**
+ * Broadcast-time failures. `BLOCKHASH_EXPIRED` is Solana-specific (the recent
+ * blockhash embedded in the signed transaction is no longer valid) but lives in
+ * the shared union so callers can narrow on `err.code` without a chain import.
+ */
+export type BroadcastErrorCode = "BLOCKHASH_EXPIRED";
+
+export type ErrorCode =
+  | ValidationErrorCode
+  | ConfigErrorCode
+  | SigningErrorCode
+  | BroadcastErrorCode;
 
 // ─── Base error ───────────────────────────────────────────────────────────────
 
@@ -96,5 +107,20 @@ export class SigningError extends GuardianError {
   constructor(code: SigningErrorCode, message: string) {
     super(code, message);
     this.name = "SigningError";
+  }
+}
+
+/**
+ * Thrown when broadcasting a signed transaction fails in a recoverable way the
+ * caller may want to handle specially.
+ *
+ * | Code | When |
+ * |---|---|
+ * | `BLOCKHASH_EXPIRED` | The signed transaction's recent blockhash is no longer valid; re-sign (to embed a fresh blockhash) and rebroadcast. |
+ */
+export class BroadcastError extends GuardianError {
+  constructor(code: BroadcastErrorCode, message: string) {
+    super(code, message);
+    this.name = "BroadcastError";
   }
 }

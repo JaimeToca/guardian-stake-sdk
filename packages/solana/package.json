@@ -1,0 +1,40 @@
+{
+  "name": "@guardian-sdk/solana",
+  "version": "0.0.0",
+  "description": "Guardian SDK for Solana native staking",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": ["dist"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@guardian-sdk/sdk": "workspace:^"
+  },
+  "dependencies": {
+    "@solana/kit": "7.0.0",
+    "@solana/sysvars": "7.0.0",
+    "@solana-program/stake": "0.8.0",
+    "@solana-program/system": "0.13.0"
+  },
+  "devDependencies": {
+    "@guardian-sdk/sdk": "workspace:^",
+    "tsup": "^8.5.1",
+    "vitest": "^4.1.3"
+  },
+  "engines": { "node": ">=22" },
+  "license": "MIT"
+}

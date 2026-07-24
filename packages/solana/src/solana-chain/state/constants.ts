@@ -1,0 +1,76 @@
+import { address, type Address } from "@solana/kit";
+import { STAKE_PROGRAM_ADDRESS as STAKE_PROGRAM_ADDRESS_KIT } from "@solana-program/stake";
+import { SYSTEM_PROGRAM_ADDRESS as SYSTEM_PROGRAM_ADDRESS_KIT } from "@solana-program/system";
+import {
+  SYSVAR_CLOCK_ADDRESS as SYSVAR_CLOCK_ADDRESS_KIT,
+  SYSVAR_RENT_ADDRESS as SYSVAR_RENT_ADDRESS_KIT,
+  SYSVAR_STAKE_HISTORY_ADDRESS as SYSVAR_STAKE_HISTORY_ADDRESS_KIT,
+} from "@solana/sysvars";
+
+/** 1 SOL = 1_000_000_000 lamports. */
+export const LAMPORTS_PER_SOL = 1_000_000_000n;
+
+/** Fixed stake account data size (StakeStateV2). */
+export const STAKE_ACCOUNT_SPACE = 200;
+
+/** Stake program id. */
+export const STAKE_PROGRAM_ADDRESS: Address<"Stake11111111111111111111111111111111111111"> =
+  STAKE_PROGRAM_ADDRESS_KIT;
+
+/** System program id. */
+export const SYSTEM_PROGRAM_ADDRESS: Address<"11111111111111111111111111111111"> =
+  SYSTEM_PROGRAM_ADDRESS_KIT;
+
+/** Sysvar: StakeHistory (from `@solana/sysvars`). */
+export const SYSVAR_STAKE_HISTORY_ADDRESS = SYSVAR_STAKE_HISTORY_ADDRESS_KIT;
+
+/** Sysvar: Clock (from `@solana/sysvars`). */
+export const SYSVAR_CLOCK_ADDRESS = SYSVAR_CLOCK_ADDRESS_KIT;
+
+/** Sysvar: Rent (from `@solana/sysvars`). */
+export const SYSVAR_RENT_ADDRESS = SYSVAR_RENT_ADDRESS_KIT;
+
+/**
+ * Former stake-config account still required as the unused meta on `DelegateStake`.
+ * Program no longer reads it for rates, but the account must be present.
+ * Not exported by `@solana-program/stake` — protocol constant only.
+ */
+export const STAKE_CONFIG_ADDRESS = address("StakeConfig11111111111111111111111111111111");
+
+/** Bootstrap / not-deactivating sentinel (`u64::MAX`). */
+export const U64_MAX = 18_446_744_073_709_551_615n;
+
+/**
+ * Mainnet-era warmup/cooldown rate after `reduce_stake_warmup_cooldown`.
+ * Pass as a parameter to activation math; do not read the deprecated account field.
+ */
+export const DEFAULT_WARMUP_COOLDOWN_RATE = 0.09;
+
+/** Legacy rate before the feature gate (for historical epochs if needed). */
+export const LEGACY_WARMUP_COOLDOWN_RATE = 0.25;
+
+/** CreateAccountWithSeed seed string max length (bytes). */
+export const MAX_SEED_LENGTH = 32;
+
+/** Default consecutive empty slots before seed-scan stops. */
+export const DEFAULT_SEED_SCAN_GAP_LIMIT = 5;
+
+/** Default inclusive max seed index to probe. */
+export const DEFAULT_SEED_SCAN_MAX = 50;
+
+/** Default TTL for authority → stake positions cache (ms). */
+export const DEFAULT_STAKE_CACHE_TTL_MS = 30_000;
+
+/**
+ * Default priority fee: microlamports per compute unit, applied when the caller does not
+ * supply `defaultComputeUnitPrice` (or a per-tx `SolanaFee.computeUnitPrice`). Pass `0n`
+ * explicitly to opt out of any priority fee. Sized to land comfortably during mild congestion:
+ * a `Delegate` (200k CU) pays ~20_000 lamports priority, an Undelegate/Claim (50k CU) ~5_000.
+ */
+export const DEFAULT_COMPUTE_UNIT_PRICE = 100_000n;
+
+/**
+ * Solana protocol slots-per-year (2.5 ideal slots/sec × seconds/year) — the basis
+ * the runtime uses to annualize per-epoch rewards. `epochsPerYear = SLOTS_PER_YEAR / slotsInEpoch`.
+ */
+export const SLOTS_PER_YEAR = 78_894_000;
