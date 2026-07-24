@@ -32,6 +32,7 @@ import {
 import { getCreateAccountWithSeedInstruction } from "@solana-program/system";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 import {
+  DEFAULT_COMPUTE_UNIT_PRICE,
   DEFAULT_SEED_SCAN_MAX,
   STAKE_ACCOUNT_SPACE,
   STAKE_CONFIG_ADDRESS,
@@ -233,7 +234,10 @@ async function buildDelegate(
   });
 
   const computeUnitPrice =
-    deps.computeUnitPrice ?? fee.computeUnitPrice ?? deps.config?.defaultComputeUnitPrice ?? 0n;
+    deps.computeUnitPrice ??
+    fee.computeUnitPrice ??
+    deps.config?.defaultComputeUnitPrice ??
+    DEFAULT_COMPUTE_UNIT_PRICE;
 
   return buildMessage({
     authority,
@@ -346,7 +350,10 @@ async function buildUndelegate(
   });
 
   const computeUnitPrice =
-    deps.computeUnitPrice ?? fee.computeUnitPrice ?? deps.config?.defaultComputeUnitPrice ?? 0n;
+    deps.computeUnitPrice ??
+    fee.computeUnitPrice ??
+    deps.config?.defaultComputeUnitPrice ??
+    DEFAULT_COMPUTE_UNIT_PRICE;
 
   return buildMessage({
     authority,
@@ -393,7 +400,10 @@ async function buildClaimDelegate(
   });
 
   const computeUnitPrice =
-    deps.computeUnitPrice ?? fee.computeUnitPrice ?? deps.config?.defaultComputeUnitPrice ?? 0n;
+    deps.computeUnitPrice ??
+    fee.computeUnitPrice ??
+    deps.config?.defaultComputeUnitPrice ??
+    DEFAULT_COMPUTE_UNIT_PRICE;
 
   return buildMessage({
     authority,

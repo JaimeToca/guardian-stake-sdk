@@ -109,6 +109,29 @@ describe("createFeeService", () => {
     expect(rpc.getFeeForMessage).toHaveBeenCalledOnce();
   });
 
+  it("Delegate: applies the default 100k CU price when none is supplied", async () => {
+    // No defaultComputeUnitPrice → DEFAULT_COMPUTE_UNIT_PRICE (100_000 microlamports/CU).
+    const rpc = mockRpc({
+      getMultipleAccounts: vi.fn().mockResolvedValue([null]),
+      getFeeForMessage: vi.fn().mockResolvedValue(5_000n),
+    });
+    const feeSvc = createFeeService(rpc, { seedScanMax: 0 });
+    const tx = {
+      type: "Delegate",
+      chain,
+      amount: 1_000_000_000n,
+      isMaxAmount: false,
+      account: AUTHORITY,
+      validator: VOTE,
+    } as Transaction;
+
+    const fee = await feeSvc.estimateFee(tx);
+    expect(fee.type).toBe("SolanaFee");
+    expect(fee.computeUnitPrice).toBe(100_000n);
+    // 5_000 base + floor(200_000 * 100_000 / 1_000_000) = 5_000 + 20_000
+    expect(fee.total).toBe(25_000n);
+  });
+
   it("Delegate: quotes a fee for an unfunded wallet (no balance gate on estimate)", async () => {
     // Balance far below amount + rent — sign() would reject, but estimateFee must not.
     const rpc = mockRpc({
@@ -116,7 +139,8 @@ describe("createFeeService", () => {
       getMultipleAccounts: vi.fn().mockResolvedValue([null]),
       getFeeForMessage: vi.fn().mockResolvedValue(5_000n),
     });
-    const feeSvc = createFeeService(rpc, { seedScanMax: 0 });
+    // Explicit 0n opts out of the priority fee, isolating the balance-gate assertion.
+    const feeSvc = createFeeService(rpc, { seedScanMax: 0, defaultComputeUnitPrice: 0n });
     const tx = {
       type: "Delegate",
       chain,
@@ -184,7 +208,9 @@ describe("createFeeService", () => {
     const fee = await feeSvc.estimateFee(tx);
     expect(fee.type).toBe("SolanaFee");
     expect(fee.computeUnits).toBe(50_000n);
-    expect(fee.total).toBe(5_000n);
+    expect(fee.computeUnitPrice).toBe(100_000n);
+    // 5_000 base + floor(50_000 * 100_000 / 1_000_000) = 5_000 + 5_000
+    expect(fee.total).toBe(10_000n);
   });
 
   it("requires transaction.account", async () => {

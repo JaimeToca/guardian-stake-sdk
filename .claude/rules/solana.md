@@ -94,7 +94,7 @@ Rent: query `getMinimumBalanceForRentExemption(200)` — do not hardcode across 
 { type: "SolanaFee", computeUnits: bigint, computeUnitPrice: bigint, total: bigint }
 ```
 
-`total` is lamports (base fee + priority). Sign path rejects non-`SolanaFee` with `INVALID_FEE_TYPE`. Priority from `defaultComputeUnitPrice` / fee’s `computeUnitPrice` (microlamports per CU).
+`total` is lamports (base fee + priority; `getFeeForMessage` returns only the base fee, so priority is added explicitly). Sign path rejects non-`SolanaFee` with `INVALID_FEE_TYPE`. Priority from `defaultComputeUnitPrice` / fee’s `computeUnitPrice` (microlamports per CU), **defaulting to `DEFAULT_COMPUTE_UNIT_PRICE` (100_000) when unset** — pass `0n` to opt out.
 
 ## Signing (`sign` / `prehash` / `compile`)
 

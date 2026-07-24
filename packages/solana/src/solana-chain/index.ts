@@ -12,6 +12,7 @@ import { createStakingService } from "./services/staking-service";
 export interface SolanaConfig {
   rpcUrl: string;
   logger?: Logger;
+  /** Priority fee: microlamports per CU. Defaults to 100_000 when unset; pass 0n to opt out. */
   defaultComputeUnitPrice?: bigint;
   seedScanGapLimit?: number;
   seedScanMax?: number;

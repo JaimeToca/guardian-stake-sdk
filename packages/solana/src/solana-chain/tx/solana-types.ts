@@ -51,7 +51,10 @@ export interface BuildTxDeps {
   /** Fee payer = staker = withdrawer (v1). */
   authorityAddress: string;
   config?: BuildTxConfig;
-  /** Override priority fee (microlamports/CU); falls back to fee.computeUnitPrice / config. */
+  /**
+   * Override priority fee (microlamports/CU); falls back to fee.computeUnitPrice / config,
+   * then to DEFAULT_COMPUTE_UNIT_PRICE (100_000).
+   */
   computeUnitPrice?: bigint;
   /**
    * Skip the Delegate funding sufficiency assertion. Set by fee estimation so a

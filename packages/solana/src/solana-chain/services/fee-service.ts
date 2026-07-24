@@ -4,6 +4,7 @@ import { getBase64Decoder } from "@solana/kit";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import { assertSupportedTransactionType } from "../tx/validations";
+import { DEFAULT_COMPUTE_UNIT_PRICE } from "../state/constants";
 
 /** Kit: bytes → base64 string. */
 const base64Decoder = getBase64Decoder();
@@ -82,7 +83,7 @@ export function createFeeService(
       const authorityAddress = requireAccount(tx);
 
       const computeUnits = staticComputeUnits(tx.type);
-      const computeUnitPrice = config.defaultComputeUnitPrice ?? 0n;
+      const computeUnitPrice = config.defaultComputeUnitPrice ?? DEFAULT_COMPUTE_UNIT_PRICE;
 
       // Placeholder total; real total computed after getFeeForMessage.
       const draftFee: SolanaFee = {

@@ -62,6 +62,14 @@ export const DEFAULT_SEED_SCAN_MAX = 50;
 export const DEFAULT_STAKE_CACHE_TTL_MS = 30_000;
 
 /**
+ * Default priority fee: microlamports per compute unit, applied when the caller does not
+ * supply `defaultComputeUnitPrice` (or a per-tx `SolanaFee.computeUnitPrice`). Pass `0n`
+ * explicitly to opt out of any priority fee. Sized to land comfortably during mild congestion:
+ * a `Delegate` (200k CU) pays ~20_000 lamports priority, an Undelegate/Claim (50k CU) ~5_000.
+ */
+export const DEFAULT_COMPUTE_UNIT_PRICE = 100_000n;
+
+/**
  * Solana protocol slots-per-year (2.5 ideal slots/sec × seconds/year) — the basis
  * the runtime uses to annualize per-epoch rewards. `epochsPerYear = SLOTS_PER_YEAR / slotsInEpoch`.
  */
