@@ -680,7 +680,10 @@ const tx = {
 ```
 
 - Rejects `isMaxAmount: true`, `amount ≤ 0`, below `getStakeMinimumDelegation`.  
-- Prefund check: wallet must cover `amount + rent + fee cushion`.  
+- Prefund check: wallet must cover `amount + rent + fee`, where the fee component is `fee.total`
+  when the caller supplied a non-zero quote, otherwise the real priority fee
+  (`priorityFeeLamports(fee.computeUnits, computeUnitPrice)`) plus a small base-fee cushion — not a
+  flat constant that ignores `computeUnitPrice`.  
 - Rent-exempt reserve is **not** delegated; only lamports above reserve are staked.
 
 ### Undelegate — deactivate a stake account

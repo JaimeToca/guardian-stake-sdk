@@ -511,6 +511,85 @@ describe("buildUnsignedTx", () => {
     ).rejects.toMatchObject({ code: "INVALID_AMOUNT" });
   });
 
+  describe("M-SOLANA-2: Delegate funding gate derives fee from real components", () => {
+    it("rejects an under-funded wallet when fee.total is 0n but computeUnitPrice implies a large real priority fee", async () => {
+      const computeUnits = 200_000n;
+      const computeUnitPrice = 1_000_000n; // microlamports/CU — well above default, non-zero
+      // Real priority fee = ceil(200_000 * 1_000_000 / 1_000_000) = 200_000 lamports.
+      const realPriorityFee = 200_000n;
+      const FLAT_CUSHION = 10_000n; // legacy DELEGATE_FEE_CUSHION_LAMPORTS
+
+      const amount = 1_000_000_000n;
+      const lamportsNeeded = amount + RENT;
+      // Enough to pass under the OLD flat-cushion gate, not enough for the real priority fee.
+      const balance = lamportsNeeded + FLAT_CUSHION + 1_000n;
+      expect(balance).toBeLessThan(lamportsNeeded + realPriorityFee);
+
+      const rpc = mockRpc({
+        getBalance: vi.fn().mockResolvedValue(balance),
+        getMultipleAccounts: vi.fn().mockResolvedValue([null]),
+      });
+      const tx = {
+        type: "Delegate",
+        chain,
+        amount,
+        isMaxAmount: false,
+        account: AUTHORITY,
+        validator: VOTE,
+      } as Transaction;
+      const underfundedFee: SolanaFee = {
+        type: "SolanaFee",
+        computeUnits,
+        computeUnitPrice,
+        total: 0n,
+      };
+
+      await expect(
+        buildUnsignedTx(
+          { rpc, authorityAddress: AUTHORITY, config: { seedScanMax: 0 } },
+          tx,
+          underfundedFee
+        )
+      ).rejects.toMatchObject({ code: "INVALID_AMOUNT" });
+    });
+
+    it("accepts a wallet funded for the real priority fee (fee.total 0n, high computeUnitPrice)", async () => {
+      const computeUnits = 200_000n;
+      const computeUnitPrice = 1_000_000n;
+      const realPriorityFee = 200_000n;
+
+      const amount = 1_000_000_000n;
+      const lamportsNeeded = amount + RENT;
+      const balance = lamportsNeeded + realPriorityFee + 50_000n; // generous cushion over real fee
+
+      const rpc = mockRpc({
+        getBalance: vi.fn().mockResolvedValue(balance),
+        getMultipleAccounts: vi.fn().mockResolvedValue([null]),
+      });
+      const tx = {
+        type: "Delegate",
+        chain,
+        amount,
+        isMaxAmount: false,
+        account: AUTHORITY,
+        validator: VOTE,
+      } as Transaction;
+      const underfundedFee: SolanaFee = {
+        type: "SolanaFee",
+        computeUnits,
+        computeUnitPrice,
+        total: 0n,
+      };
+
+      const result = await buildUnsignedTx(
+        { rpc, authorityAddress: AUTHORITY, config: { seedScanMax: 0 } },
+        tx,
+        underfundedFee
+      );
+      expect(result.feePayer).toBe(AUTHORITY);
+    });
+  });
+
   it.each(["Redelegate", "ClaimRewards", "Vote"] as const)(
     "rejects unsupported type %s",
     async (type) => {

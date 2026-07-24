@@ -169,6 +169,17 @@ export function createSolanaRpcClient(
           const addrs = slice.map(toAddress);
           const { value } = await rpc.getMultipleAccounts(addrs, { encoding: "base64" }).send();
 
+          // M-SOLANA-3: `value` is trusted to correspond positionally to `slice` with no length
+          // check from Kit. A malformed/malicious RPC response with a shifted or short/long array
+          // would silently mis-associate account data with the wrong requested address. Fail
+          // loudly instead of guessing.
+          if (value.length !== slice.length) {
+            throw new ApiError(
+              `Solana RPC getMultipleAccounts returned ${value.length} accounts for a batch of ${slice.length} requested addresses.`,
+              { type: ApiErrorType.ServerResponseError }
+            );
+          }
+
           for (let i = 0; i < value.length; i++) {
             const account = value[i];
             const original = slice[i]!;

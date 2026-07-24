@@ -4,7 +4,11 @@ import { getBase64Decoder } from "@solana/kit";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import { assertSupportedTransactionType } from "../tx/validations";
-import { DEFAULT_COMPUTE_UNIT_PRICE } from "../state/constants";
+import { DEFAULT_COMPUTE_UNIT_PRICE, priorityFeeLamports } from "../state/constants";
+
+// Re-exported for backward compatibility — canonical definition lives in state/constants.ts so
+// tx-builder.ts (M-SOLANA-2 funding gate) can reuse it without a circular import with this module.
+export { priorityFeeLamports };
 
 /** Kit: bytes → base64 string. */
 const base64Decoder = getBase64Decoder();
@@ -15,9 +19,6 @@ const STATIC_COMPUTE_UNITS: Record<"Delegate" | "Undelegate" | "ClaimDelegate", 
   Undelegate: 50_000n,
   ClaimDelegate: 50_000n,
 };
-
-/** Microlamports per compute unit → lamports scale. */
-const MICRO_LAMPORTS_PER_LAMPORT = 1_000_000n;
 
 export interface SolanaFeeServiceConfig {
   defaultComputeUnitPrice?: bigint;
@@ -50,20 +51,6 @@ function staticComputeUnits(type: Transaction["type"]): bigint {
         `Solana fee estimation does not support transaction type "${type}".`
       );
   }
-}
-
-/**
- * Priority fee in lamports: `ceil(computeUnits * computeUnitPrice / 1e6)`.
- * Matches Solana's on-chain charge for SetComputeUnitPrice.
- * `computeUnitPrice` is microlamports per compute unit.
- */
-export function priorityFeeLamports(computeUnits: bigint, computeUnitPrice: bigint): bigint {
-  if (computeUnits <= 0n || computeUnitPrice <= 0n) {
-    return 0n;
-  }
-  const microLamports = computeUnits * computeUnitPrice;
-  // Ceiling division: (a + b - 1) / b
-  return (microLamports + MICRO_LAMPORTS_PER_LAMPORT - 1n) / MICRO_LAMPORTS_PER_LAMPORT;
 }
 
 /**

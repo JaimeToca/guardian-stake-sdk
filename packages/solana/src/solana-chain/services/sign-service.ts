@@ -142,37 +142,49 @@ export function createSignService(
       logger.info("SignService: signing transaction", { type: args.transaction.type });
       assertSolanaFee(args.fee);
 
-      const seed = parseEd25519SeedHex(args.privateKey);
-      const [keypair, keypairSigner] = await Promise.all([
-        createKeyPairFromPrivateKeyBytes(seed),
-        createKeyPairSignerFromPrivateKeyBytes(seed),
-      ]);
-      const authorityAddress = keypairSigner.address;
+      // M-SOLANA-1: build the unsigned tx (RPC-bound; no key material needed) *before* the seed
+      // is parsed, so the Ed25519 seed's lifetime in memory is as short as possible — parsed only
+      // right before it's handed to Kit for keypair derivation/signing, then zeroized in `finally`
+      // regardless of success or failure.
+      let seed: Uint8Array | undefined;
+      try {
+        seed = parseEd25519SeedHex(args.privateKey);
+        const [keypair, keypairSigner] = await Promise.all([
+          createKeyPairFromPrivateKeyBytes(seed),
+          createKeyPairSignerFromPrivateKeyBytes(seed),
+        ]);
+        const authorityAddress = keypairSigner.address;
 
-      if (args.transaction.account && args.transaction.account !== authorityAddress) {
-        throw new SigningError(
-          "INVALID_SIGNING_ARGS",
-          "transaction.account must match the address derived from privateKey."
+        if (args.transaction.account && args.transaction.account !== authorityAddress) {
+          throw new SigningError(
+            "INVALID_SIGNING_ARGS",
+            "transaction.account must match the address derived from privateKey."
+          );
+        }
+
+        const built = await buildUnsignedTx(
+          {
+            rpc,
+            authorityAddress,
+            config: buildConfig,
+            computeUnitPrice: args.fee.computeUnitPrice,
+          },
+          args.transaction,
+          args.fee
         );
+
+        const unsigned = decodeWireTransaction(built.wireTransactionBase64);
+        const signed = await signTransaction([keypair], unsigned);
+        const wire = getBase64EncodedWireTransaction(signed);
+
+        logger.info("SignService: transaction signed");
+        return wire;
+      } finally {
+        // Best-effort zeroization: once the keypair(s) are derived, the raw seed bytes are no
+        // longer needed. Doesn't help if the JS engine already copied the bytes internally, but
+        // it does shorten this reference's exposure window in process memory.
+        seed?.fill(0);
       }
-
-      const built = await buildUnsignedTx(
-        {
-          rpc,
-          authorityAddress,
-          config: buildConfig,
-          computeUnitPrice: args.fee.computeUnitPrice,
-        },
-        args.transaction,
-        args.fee
-      );
-
-      const unsigned = decodeWireTransaction(built.wireTransactionBase64);
-      const signed = await signTransaction([keypair], unsigned);
-      const wire = getBase64EncodedWireTransaction(signed);
-
-      logger.info("SignService: transaction signed");
-      return wire;
     },
 
     async prehash(args: BaseSignArgs): Promise<PrehashResult> {

@@ -34,6 +34,7 @@ import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract"
 import {
   DEFAULT_COMPUTE_UNIT_PRICE,
   DEFAULT_SEED_SCAN_MAX,
+  priorityFeeLamports,
   STAKE_ACCOUNT_SPACE,
   STAKE_CONFIG_ADDRESS,
   STAKE_PROGRAM_ADDRESS,
@@ -55,8 +56,16 @@ import {
   assertSupportedTransactionType,
 } from "./validations";
 
-/** Small base-fee cushion for Delegate funding preflight (lamports). */
-const DELEGATE_FEE_CUSHION_LAMPORTS = 10_000n;
+/**
+ * Base-signature-fee cushion for the Delegate funding preflight (lamports), covering the
+ * network's per-signature base fee (5_000 lamports/signature on mainnet) that `getFeeForMessage`
+ * would otherwise have to be queried for. Added on top of the *real* priority fee derived from
+ * `priorityFeeLamports(fee.computeUnits, fee.computeUnitPrice)` — see M-SOLANA-2: the gate no
+ * longer trusts caller-supplied `fee.total` (which can legitimately be `0n`, e.g. from a caller
+ * that hasn't called estimateFee) nor falls back to a flat constant that ignores the actual
+ * compute-unit price when `fee.total` is absent.
+ */
+const DELEGATE_BASE_FEE_CUSHION_LAMPORTS = 10_000n;
 
 const voteAddressOf = (v: Validator | OperatorAddress): string =>
   typeof v === "string" ? v : v.operatorAddress;
@@ -198,14 +207,27 @@ async function buildDelegate(
   const stake = address(stakeAddress);
   const lamports = tx.amount + rentExempt;
 
+  const computeUnitPrice =
+    deps.computeUnitPrice ??
+    fee.computeUnitPrice ??
+    deps.config?.defaultComputeUnitPrice ??
+    DEFAULT_COMPUTE_UNIT_PRICE;
+
   // Fee estimation quotes a price before the wallet is funded, so it skips this gate.
   if (!deps.skipBalanceCheck) {
-    const feeCushion = fee.total > 0n ? fee.total : DELEGATE_FEE_CUSHION_LAMPORTS;
-    const required = lamports + feeCushion;
+    // M-SOLANA-2: derive the fee component of the gate from the real fee inputs
+    // (computeUnits/computeUnitPrice) instead of trusting caller-supplied `fee.total`, which can
+    // be `0n` (e.g. a caller building `fee` manually rather than via estimateFee) while the
+    // compute-unit price still implies a real, non-trivial priority fee. Using `fee.total` as-is
+    // in that case silently fell back to a flat cushion that ignored the actual price.
+    const realPriorityFee = priorityFeeLamports(fee.computeUnits, computeUnitPrice);
+    const feeComponent =
+      fee.total > 0n ? fee.total : realPriorityFee + DELEGATE_BASE_FEE_CUSHION_LAMPORTS;
+    const required = lamports + feeComponent;
     if (balance < required) {
       throw new ValidationError(
         "INVALID_AMOUNT",
-        `Insufficient balance to fund stake: need ~${required} lamports (amount + rent + fee cushion), have ${balance}.`
+        `Insufficient balance to fund stake: need ~${required} lamports (amount + rent + fee), have ${balance}.`
       );
     }
   }
@@ -232,12 +254,6 @@ async function buildDelegate(
     unused: STAKE_CONFIG_ADDRESS,
     stakeAuthority: signer,
   });
-
-  const computeUnitPrice =
-    deps.computeUnitPrice ??
-    fee.computeUnitPrice ??
-    deps.config?.defaultComputeUnitPrice ??
-    DEFAULT_COMPUTE_UNIT_PRICE;
 
   return buildMessage({
     authority,

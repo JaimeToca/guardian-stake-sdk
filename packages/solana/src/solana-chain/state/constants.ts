@@ -74,3 +74,24 @@ export const DEFAULT_COMPUTE_UNIT_PRICE = 100_000n;
  * the runtime uses to annualize per-epoch rewards. `epochsPerYear = SLOTS_PER_YEAR / slotsInEpoch`.
  */
 export const SLOTS_PER_YEAR = 78_894_000;
+
+/** Microlamports per compute unit → lamports scale. */
+export const MICRO_LAMPORTS_PER_LAMPORT = 1_000_000n;
+
+/**
+ * Priority fee in lamports: `ceil(computeUnits * computeUnitPrice / 1e6)`.
+ * Matches Solana's on-chain charge for SetComputeUnitPrice.
+ * `computeUnitPrice` is microlamports per compute unit.
+ *
+ * Lives here (rather than only in fee-service) so both the fee service and the transaction
+ * builder's funding gate can share the exact same formula without a circular import between
+ * `services/fee-service.ts` and `tx/tx-builder.ts`.
+ */
+export function priorityFeeLamports(computeUnits: bigint, computeUnitPrice: bigint): bigint {
+  if (computeUnits <= 0n || computeUnitPrice <= 0n) {
+    return 0n;
+  }
+  const microLamports = computeUnits * computeUnitPrice;
+  // Ceiling division: (a + b - 1) / b
+  return (microLamports + MICRO_LAMPORTS_PER_LAMPORT - 1n) / MICRO_LAMPORTS_PER_LAMPORT;
+}

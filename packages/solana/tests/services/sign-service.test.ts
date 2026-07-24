@@ -1,4 +1,24 @@
 import { describe, it, expect, vi } from "vitest";
+import type * as SolanaKit from "@solana/kit";
+
+// Capture the exact Uint8Array seed reference sign() passes into Kit keypair derivation, so the
+// M-SOLANA-1 test below can inspect that same live buffer after sign() has resolved. sign() must
+// pass the seed by reference (not a copy) for a post-call zeroize to be observable this way.
+let capturedSignSeed: Uint8Array | undefined;
+vi.mock("@solana/kit", async (importOriginal) => {
+  const actual = await importOriginal<typeof SolanaKit>();
+  return {
+    ...actual,
+    createKeyPairFromPrivateKeyBytes: (seed: Uint8Array, ...rest: unknown[]) => {
+      capturedSignSeed = seed;
+      return (
+        actual.createKeyPairFromPrivateKeyBytes as unknown as (
+          ...a: unknown[]
+        ) => ReturnType<typeof actual.createKeyPairFromPrivateKeyBytes>
+      )(seed, ...rest);
+    },
+  };
+});
 import { address, createKeyPairFromPrivateKeyBytes, signBytes } from "@solana/kit";
 import { getStakeStateAccountEncoder, stakeStateV2 } from "@solana-program/stake";
 import type { GuardianChain, SolanaFee, Transaction } from "@guardian-sdk/sdk";
@@ -231,6 +251,25 @@ describe("sign / prehash / compile parity", () => {
       expect(Buffer.from(signedWire, "base64").byteLength).toBeGreaterThan(64);
     }
   );
+});
+
+describe("M-SOLANA-1: seed zeroization", () => {
+  it("zeroizes the parsed Ed25519 seed buffer after sign() returns", async () => {
+    capturedSignSeed = undefined;
+    const rpc = mockRpc({ getMultipleAccounts: vi.fn().mockResolvedValue([null]) });
+    const svc = createSignService(rpc, { seedScanMax: 0 });
+
+    await svc.sign({
+      transaction: delegateTx(),
+      fee: feeDelegate,
+      nonce: 0,
+      privateKey: TEST_PRIVATE_KEY,
+    });
+
+    expect(capturedSignSeed).toBeInstanceOf(Uint8Array);
+    expect(capturedSignSeed).toHaveLength(32);
+    expect(Array.from(capturedSignSeed!)).toEqual(Array(32).fill(0));
+  });
 });
 
 describe("sign validations", () => {
