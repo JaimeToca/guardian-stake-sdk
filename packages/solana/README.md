@@ -98,8 +98,8 @@ Native staking is **not** “lock SOL in the wallet.” SOL sits in a **stake ac
 On Solana, “validators” for delegators are **vote accounts**, not node identity alone. `getValidators()` uses `getVoteAccounts` and sets:
 
 - `id` / `operatorAddress` = **vote account** address  
-- `status` = `”Active”` if in `current`, `”Inactive”` if delinquent  
-- `creditAddress` = `””` (no BSC-style credit contract)  
+- `status` = `"Active"` if in `current`, `"Inactive"` if delinquent  
+- `creditAddress` = `""` (no BSC-style credit contract)  
 - `apy` = computed issuance APY (percent); `0` for delinquent validators or if APY is unavailable  
 
 Always pass the **vote pubkey** as `Delegate.validator`.
