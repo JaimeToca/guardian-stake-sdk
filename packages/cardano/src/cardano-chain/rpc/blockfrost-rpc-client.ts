@@ -1,4 +1,10 @@
-import { fetchOrError, NoopLogger, ApiError, ConfigError } from "@guardian-sdk/sdk";
+import {
+  fetchOrError,
+  NoopLogger,
+  ApiError,
+  ConfigError,
+  ValidationError,
+} from "@guardian-sdk/sdk";
 import { hexStringToBuffer } from "@cardano-sdk/util";
 import type { Logger } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "./blockfrost-rpc-client-contract";
@@ -22,6 +28,25 @@ import { parsePoolId } from "../validations";
 
 const DEFAULT_BASE_URL = "https://cardano-mainnet.blockfrost.io/api/v0";
 const DEFAULT_POOLS_PAGE_SIZE = 20;
+
+/**
+ * Strict bech32-shape check for the two address kinds this client interpolates
+ * into URL paths (stake1... / addr1...). Every live caller already pre-validates
+ * (`resolveStakeAddress`, `checkIfPaymentAddressIsValid`), so this is defense in
+ * depth: it stops a future caller that bypasses those checks from injecting
+ * path segments (`/../`) or query strings (`?...`) into a Blockfrost request URL.
+ * Deliberately does not echo the raw value back in the error message.
+ */
+const CARDANO_ADDRESS_SHAPE = /^(addr1|stake1)[023456789acdefghjklmnpqrstuvwxyz]+$/;
+
+function assertSafeAddressSegment(address: string, fieldName: string): void {
+  if (typeof address !== "string" || !CARDANO_ADDRESS_SHAPE.test(address)) {
+    throw new ValidationError(
+      "INVALID_ADDRESS",
+      `${fieldName} must be a well-formed Cardano address (addr1... or stake1...).`
+    );
+  }
+}
 
 function validateBaseUrl(url: string): void {
   try {
@@ -99,6 +124,7 @@ export function createBlockfrostRpcClient(
     },
 
     async getAccount(stakeAddress: string): Promise<BlockfrostAccount> {
+      assertSafeAddressSegment(stakeAddress, "stakeAddress");
       const url = `${baseUrl}/accounts/${stakeAddress}`;
       logger.debug("BlockfrostRpcClient: fetching account", { stakeAddress });
       const start = Date.now();
@@ -114,6 +140,7 @@ export function createBlockfrostRpcClient(
     },
 
     async getAccountOrNull(stakeAddress: string): Promise<BlockfrostAccount | null> {
+      assertSafeAddressSegment(stakeAddress, "stakeAddress");
       try {
         const url = `${baseUrl}/accounts/${stakeAddress}`;
         const account = await fetchOrError<BlockfrostAccount>({ url, method: "GET", headers });
@@ -131,6 +158,7 @@ export function createBlockfrostRpcClient(
     // estimation and signing see the same UTXOs. Pagination policy (how many pages
     // to pull) lives in the selection layer (`selectUtxosPaged`), not here.
     async getUtxos(paymentAddress: string, page = 1, count = 100): Promise<BlockfrostUtxo[]> {
+      assertSafeAddressSegment(paymentAddress, "paymentAddress");
       const url = `${baseUrl}/addresses/${paymentAddress}/utxos`;
       logger.debug("BlockfrostRpcClient: fetching UTXOs", { paymentAddress, page, count });
       const start = Date.now();

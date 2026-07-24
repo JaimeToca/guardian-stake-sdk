@@ -220,6 +220,56 @@ describe("FeeService", () => {
     expect(rpc.getUtxos).toHaveBeenCalledWith(PAYMENT_ADDRESS, 2, 100);
   });
 
+  // M-CARDANO-2: malformed Blockfrost numeric fields must throw a typed ValidationError,
+  // never propagate NaN/Infinity into the fee total.
+  it("throws ValidationError (not an uncaught exception) when min_fee_a is negative", async () => {
+    const malformedParams = { ...PARAMS, min_fee_a: -44 };
+    const service = createFeeService(makeRpcClient(malformedParams) as any);
+
+    await expect(
+      service.estimateFee({
+        type: "Delegate",
+        chain: cardanoMainnet,
+        amount: 5_000_000n,
+        isMaxAmount: false,
+        validator: POOL_ID,
+        account: PAYMENT_ADDRESS,
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("throws ValidationError when min_fee_b is NaN", async () => {
+    const malformedParams = { ...PARAMS, min_fee_b: Number.NaN };
+    const service = createFeeService(makeRpcClient(malformedParams) as any);
+
+    await expect(
+      service.estimateFee({
+        type: "Delegate",
+        chain: cardanoMainnet,
+        amount: 5_000_000n,
+        isMaxAmount: false,
+        validator: POOL_ID,
+        account: PAYMENT_ADDRESS,
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("throws ValidationError when min_fee_b is Infinity", async () => {
+    const malformedParams = { ...PARAMS, min_fee_b: Number.POSITIVE_INFINITY };
+    const service = createFeeService(makeRpcClient(malformedParams) as any);
+
+    await expect(
+      service.estimateFee({
+        type: "Delegate",
+        chain: cardanoMainnet,
+        amount: 5_000_000n,
+        isMaxAmount: false,
+        validator: POOL_ID,
+        account: PAYMENT_ADDRESS,
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
   it("unregistered Delegate has more CBOR bytes than a registered Redelegate (registration cert adds size)", async () => {
     // First-time Delegate: stake key not yet registered → StakeRegistration cert added.
     const delegateFee = (await createFeeService(

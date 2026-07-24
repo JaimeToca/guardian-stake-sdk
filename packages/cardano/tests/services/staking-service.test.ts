@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { ValidationError } from "@guardian-sdk/sdk";
 import { createStakingService } from "../../src/cardano-chain/services/staking-service";
 import poolsFixture from "../fixtures/pools.json";
 import poolMetadataFixture from "../fixtures/pool_metadata.json";
@@ -236,6 +237,91 @@ describe("StakingService", () => {
 
       expect(stakingSummary.activeValidators).toBeUndefined();
       expect(stakingSummary.totalValidators).toBeUndefined();
+    });
+
+    // M-CARDANO-2: Blockfrost numeric fields feeding BigInt/Number must be validated.
+    it("throws a typed ValidationError (not SyntaxError) when controlled_amount is non-numeric", async () => {
+      const rpcClient = makeRpcClient({ account: { controlled_amount: "not-a-number" } });
+      const service = createStakingService(rpcClient as any);
+
+      await expect(service.getDelegations(accountFixture.stake_address)).rejects.toBeInstanceOf(
+        ValidationError
+      );
+    });
+
+    it("throws a typed ValidationError when controlled_amount is negative", async () => {
+      const rpcClient = makeRpcClient({ account: { controlled_amount: "-10000000" } });
+      const service = createStakingService(rpcClient as any);
+
+      await expect(service.getDelegations(accountFixture.stake_address)).rejects.toBeInstanceOf(
+        ValidationError
+      );
+    });
+
+    it("throws a typed ValidationError when controlled_amount is scientific notation", async () => {
+      const rpcClient = makeRpcClient({ account: { controlled_amount: "1e21" } });
+      const service = createStakingService(rpcClient as any);
+
+      await expect(service.getDelegations(accountFixture.stake_address)).rejects.toBeInstanceOf(
+        ValidationError
+      );
+    });
+
+    it("throws a typed ValidationError when network stake.live is malformed", async () => {
+      const rpcClient = makeRpcClient({
+        network: {
+          ...(networkFixture as BlockfrostNetwork),
+          stake: { ...(networkFixture as BlockfrostNetwork).stake, live: "NaN" },
+        },
+      });
+      const service = createStakingService(rpcClient as any);
+
+      await expect(service.getDelegations(accountFixture.stake_address)).rejects.toBeInstanceOf(
+        ValidationError
+      );
+    });
+  });
+
+  describe("M-CARDANO-2: APY inputs never propagate NaN/Infinity", () => {
+    it("throws a typed ValidationError (not NaN propagation) when a pool's active_stake is a malformed string", async () => {
+      const malformedPool: BlockfrostPoolExtended = { ...POOLS[0], active_stake: "not-a-number" };
+      const rpcClient = makeRpcClient({ pools: [malformedPool] });
+      const service = createStakingService(rpcClient as any);
+
+      await expect(service.getValidators()).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("throws a typed ValidationError (not Infinity/NaN propagation) when declared_pledge is malformed", async () => {
+      const malformedPool: BlockfrostPoolExtended = { ...POOLS[0], declared_pledge: "abc" };
+      const rpcClient = makeRpcClient({ pools: [malformedPool] });
+      const service = createStakingService(rpcClient as any);
+
+      await expect(service.getValidators()).rejects.toBeInstanceOf(ValidationError);
+    });
+
+    it("apy is a finite, non-negative number for the well-formed fixture (no behavior change on the valid path)", async () => {
+      const service = createStakingService(makeRpcClient() as any);
+
+      const { data } = await service.getValidators();
+
+      for (const validator of data) {
+        expect(Number.isFinite(validator.apy)).toBe(true);
+        expect(validator.apy).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it("throws a typed ValidationError when the network reserves field is malformed (never NaN propagation)", async () => {
+      const rpcClient = makeRpcClient({
+        network: {
+          ...(networkFixture as BlockfrostNetwork),
+          supply: { ...(networkFixture as BlockfrostNetwork).supply, reserves: "not-a-number" },
+        },
+      });
+      const service = createStakingService(rpcClient as any);
+
+      await expect(service.getDelegations(accountFixture.stake_address)).rejects.toBeInstanceOf(
+        ValidationError
+      );
     });
   });
 });

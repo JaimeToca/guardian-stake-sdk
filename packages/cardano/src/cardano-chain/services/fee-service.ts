@@ -10,6 +10,7 @@ import {
   checkIfPaymentAddressIsValid,
   getBaseAddressCredentials,
   parseLovelaceString,
+  parseNonNegativeInteger,
 } from "../validations";
 
 /**
@@ -100,7 +101,9 @@ export function createFeeService(
   }
 
   function calculateFee(txSizeBytes: number, params: BlockfrostProtocolParams): bigint {
-    return BigInt(params.min_fee_a) * BigInt(txSizeBytes) + BigInt(params.min_fee_b);
+    const minFeeA = parseNonNegativeInteger(params.min_fee_a, "min_fee_a");
+    const minFeeB = parseNonNegativeInteger(params.min_fee_b, "min_fee_b");
+    return BigInt(minFeeA) * BigInt(txSizeBytes) + BigInt(minFeeB);
   }
 
   return {
@@ -145,7 +148,7 @@ export function createFeeService(
           ? parseLovelaceString(existingAccount?.withdrawable_amount ?? "0", "withdrawable_amount")
           : 0n;
 
-      const feePlaceholder = BigInt(protocolParams.min_fee_b);
+      const feePlaceholder = BigInt(parseNonNegativeInteger(protocolParams.min_fee_b, "min_fee_b"));
       const { target } = computeSelectionTarget(
         transaction,
         feePlaceholder,
