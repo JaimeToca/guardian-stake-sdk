@@ -135,7 +135,7 @@ Delegate (seed N)
 | Closed (zeroed) | omitted from list | — | — |
 
 **Minimum path to get SOL back after an active stake:**  
-`Undelegate` → wait until status is `Claimable` → `ClaimDelegate`. Two user transactions, two epochs of wall time at least in the happy path (often ~2–5 days depending when you land in the epoch).
+`Undelegate` → wait until status is `Claimable` → `ClaimDelegate`. Two user transactions, and one or more epoch boundaries of wall time before the stake is fully inactive (often ~2–5 days depending when you land in the epoch).
 
 ### Epochs, activation, and cooldown
 
@@ -511,12 +511,12 @@ interface SolanaFee {
   type: "SolanaFee";
   computeUnits: bigint;       // static budget per op class (v1)
   computeUnitPrice: bigint;   // microlamports per CU (from config / fee)
-  total: bigint;              // lamports — from getFeeForMessage on the built message
+  total: bigint;              // lamports — base fee (getFeeForMessage) + priority fee
 }
 ```
 
 - Message includes optional compute-budget ixs when `computeUnitPrice > 0`.  
-- `total` comes from **`getFeeForMessage`** (already includes prioritization when CU price ixs are present — do not double-count).  
+- `total` = **base fee** (`getFeeForMessage`) **+ priority fee** (`floor(computeUnits × computeUnitPrice / 1e6)`). `getFeeForMessage` returns only the base signature fee, so the prioritization fee is added explicitly; with `computeUnitPrice == 0` it contributes 0.  
 - Sign rejects non-`SolanaFee` with `INVALID_FEE_TYPE`.
 - **`estimateFee` does not require a funded wallet.** For `Delegate` it builds the message (fee size is independent of balance) but skips the funding sufficiency check that `sign()` enforces — so you can quote a fee before funding. `sign()` still rejects an under-funded `Delegate` with `INVALID_AMOUNT`.
 

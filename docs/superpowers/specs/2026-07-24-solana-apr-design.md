@@ -26,7 +26,7 @@ Solana v1 hardcodes `Validator.apy` and `stakingSummary.maxApy` to `0` (see `.cl
 
 `getInflationRate` returns an **annual** rate; the only extra math is per-epoch compounding, using `epochsPerYear` derived from `getEpochInfo().slotsInEpoch`.
 
-```
+```text
 totalActivatedStake = Σ activatedStake over current + delinquent vote accounts   (lamports)
 totalSupply         = getSupply().total                                          (lamports)
 stakedFraction      = totalActivatedStake / totalSupply                          (0 < f ≤ 1)

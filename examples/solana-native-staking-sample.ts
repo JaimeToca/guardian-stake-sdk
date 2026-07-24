@@ -11,11 +11,14 @@ import type { DelegateTransaction, SigningWithPrivateKey, Transaction } from "@g
 
 const { solanaMainnet } = chains;
 
+// Single injected logger — used by the SDK and for all sample output (no direct console calls).
+const logger = new ConsoleLogger("debug");
+
 // JSON-RPC endpoint (public mainnet-beta, Helius, Triton, etc.).
 const sdk = new GuardianSDK([
   solana({
     rpcUrl: process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com",
-    logger: new ConsoleLogger("debug"),
+    logger,
   }),
 ]);
 
@@ -49,7 +52,7 @@ export async function stake(amountLamports: bigint, voteAccount: string): Promis
     account: ADDRESS,
   };
   const txHash = await submit(tx);
-  console.log(`Delegated! https://explorer.solana.com/tx/${txHash}`);
+  logger.info(`Delegated! https://explorer.solana.com/tx/${txHash}`);
   return txHash;
 }
 
@@ -66,7 +69,7 @@ export async function undelegate(stakeAccount: string): Promise<string> {
     account: ADDRESS,
   };
   const txHash = await submit(tx);
-  console.log(`Deactivated! https://explorer.solana.com/tx/${txHash}`);
+  logger.info(`Deactivated! https://explorer.solana.com/tx/${txHash}`);
   return txHash;
 }
 
@@ -82,18 +85,20 @@ export async function claimDelegate(stakeAccount: string): Promise<string> {
     account: ADDRESS,
   };
   const txHash = await submit(tx);
-  console.log(`Withdrawn! https://explorer.solana.com/tx/${txHash}`);
+  logger.info(`Withdrawn! https://explorer.solana.com/tx/${txHash}`);
   return txHash;
 }
 
 // ── READS ─────────────────────────────────────────────────────────────────────────────────────
 export async function showValidators(): Promise<string> {
   const { data } = await sdk.getValidators(solanaMainnet, { page: 1, pageSize: 5 });
-  console.log(
-    "Validators (vote accounts):",
-    data.map((v) => ({ id: v.id, status: v.status, apy: v.apy }))
-  );
-  const chosen = VOTE_ACCOUNT ?? data.find((v) => v.status === "Active")?.operatorAddress ?? data[0]?.operatorAddress;
+  logger.info("Validators (vote accounts)", {
+    validators: data.map((v) => ({ id: v.id, status: v.status, apy: v.apy })),
+  });
+  const chosen =
+    VOTE_ACCOUNT ??
+    data.find((v) => v.status === "Active")?.operatorAddress ??
+    data[0]?.operatorAddress;
   if (!chosen) {
     throw new Error("No validators returned — check RPC URL");
   }
@@ -102,23 +107,23 @@ export async function showValidators(): Promise<string> {
 
 export async function showDelegations(label: string): Promise<void> {
   const { delegations } = await sdk.getDelegations(solanaMainnet, ADDRESS);
-  console.log(
-    `${label}:`,
-    delegations.map((d) => ({
+  // Stringify bigint fields — the logger JSON-stringifies context and bigints throw.
+  logger.info(label, {
+    delegations: delegations.map((d) => ({
       stakeAccount: d.id,
       status: d.status,
-      amount: d.amount,
+      amount: d.amount.toString(),
       seed: d.delegationIndex,
       validator: d.validator.id,
-      pendingUntil: d.pendingUntil,
-    }))
-  );
+      pendingUntil: d.pendingUntil.toString(),
+    })),
+  });
 }
 
 export async function showBalances(): Promise<void> {
   const balances = await sdk.getBalances(solanaMainnet, ADDRESS);
   for (const b of balances) {
-    console.log(b.type, Number(b.amount) / Number(LAMPORTS_PER_SOL), "SOL");
+    logger.info(`${b.type}: ${Number(b.amount) / Number(LAMPORTS_PER_SOL)} SOL`);
   }
 }
 
@@ -127,7 +132,9 @@ export async function showBalances(): Promise<void> {
 // ClaimDelegate needs the stake to become fully inactive after deactivation (epoch wait).
 export async function runFullLifecycle(): Promise<void> {
   if (!PRIVATE_KEY || ADDRESS.startsWith("<")) {
-    console.error("Set SOLANA_PRIVATE_KEY and SOLANA_ADDRESS (and optionally SOLANA_RPC_URL / SOLANA_VOTE_ACCOUNT).");
+    logger.error(
+      "Set SOLANA_PRIVATE_KEY and SOLANA_ADDRESS (and optionally SOLANA_RPC_URL / SOLANA_VOTE_ACCOUNT)."
+    );
     process.exitCode = 1;
     return;
   }
@@ -155,7 +162,7 @@ export async function runFullLifecycle(): Promise<void> {
   //   await claimDelegate(position.id);
   //
   // Rewards auto-compound into the stake account — there is no separate ClaimRewards op.
-  console.log(
+  logger.info(
     [
       "Waiting for inactive stake before ClaimDelegate is not automated in this sample.",
       `When status is Claimable, call claimDelegate("${position.id}").`,
@@ -180,15 +187,15 @@ export async function sampleMpcDelegate(voteAccount: string): Promise<void> {
   const signArgs = { transaction: delegate, fee, nonce };
 
   const { serializedTransaction } = await sdk.preHash(signArgs);
-  console.log("Message bytes (base64) — sign externally with Ed25519:", serializedTransaction);
+  logger.info("Message bytes (base64) — sign externally with Ed25519", { serializedTransaction });
 
   const externalSignatureBase64 = "<base64-64-byte-ed25519-signature>";
   const rawTx = await sdk.compile({ signArgs, signature: externalSignatureBase64 });
   const txHash = await sdk.broadcast(solanaMainnet, rawTx);
-  console.log(`Submitted: https://explorer.solana.com/tx/${txHash}`);
+  logger.info(`Submitted: https://explorer.solana.com/tx/${txHash}`);
 }
 
 runFullLifecycle().catch((err) => {
-  console.error("Lifecycle failed:", err);
+  logger.error(`Lifecycle failed: ${err instanceof Error ? err.message : String(err)}`);
   process.exitCode = 1;
 });

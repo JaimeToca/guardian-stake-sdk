@@ -64,11 +64,11 @@ export function priorityFeeLamports(computeUnits: bigint, computeUnitPrice: bigi
 
 /**
  * Builds the same message as sign (static CU budget + config priority price), then:
- * `total = getFeeForMessage` alone.
+ * `total = getFeeForMessage + priorityFeeLamports`.
  *
- * When the message already includes SetComputeUnitLimit/Price, getFeeForMessage
- * returns signature fee + prioritization fee — do NOT add priority again.
- * `computeUnits` / `computeUnitPrice` are still returned for the SolanaFee shape.
+ * `getFeeForMessage` returns only the base signature fee — it does NOT include the
+ * prioritization fee even when the message carries SetComputeUnitLimit/Price. So the
+ * priority fee is added explicitly; with `computeUnitPrice == 0` it contributes 0.
  */
 export function createFeeService(
   rpc: SolanaRpcClientContract,
@@ -117,12 +117,14 @@ export function createFeeService(
         );
       }
 
-      // getFeeForMessage already includes prioritization when CU price ixs are present.
-      const total = feeFromRpc;
+      // getFeeForMessage returns the base fee only; add the prioritization fee explicitly.
+      const priorityFee = priorityFeeLamports(computeUnits, computeUnitPrice);
+      const total = feeFromRpc + priorityFee;
 
       logger.debug("FeeService: fee estimated", {
         type: tx.type,
         feeFromRpc: feeFromRpc.toString(),
+        priorityFee: priorityFee.toString(),
         computeUnits: computeUnits.toString(),
         computeUnitPrice: computeUnitPrice.toString(),
         total: total.toString(),
