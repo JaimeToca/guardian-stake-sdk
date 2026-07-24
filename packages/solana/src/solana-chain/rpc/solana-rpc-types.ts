@@ -64,3 +64,17 @@ export interface VoteAccountsResult {
   current: VoteAccountInfo[];
   delinquent: VoteAccountInfo[];
 }
+
+/** Current-epoch inflation split (annual fractions) from `getInflationRate`. */
+export interface InflationRate {
+  total: number;
+  validator: number;
+  foundation: number;
+  epoch: bigint;
+}
+
+/** Circulating / total supply in lamports from `getSupply`. */
+export interface Supply {
+  total: bigint;
+  circulating: bigint;
+}

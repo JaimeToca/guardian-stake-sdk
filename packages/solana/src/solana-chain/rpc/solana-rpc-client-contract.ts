@@ -1,10 +1,12 @@
 import type {
   EpochInfo,
+  InflationRate,
   LatestBlockhash,
   SolanaAccountInfo,
   SolanaClock,
   SolanaStakeProgramAccount,
   StakeHistoryEntry,
+  Supply,
   VoteAccountsResult,
 } from "./solana-rpc-types";
 
@@ -27,4 +29,8 @@ export interface SolanaRpcClientContract {
   getClock(): Promise<SolanaClock>;
   /** Current epoch from the Clock sysvar. */
   getClockEpoch(): Promise<bigint>;
+  /** Current-epoch inflation rates (annual fractions). */
+  getInflationRate(): Promise<InflationRate>;
+  /** Circulating / total supply in lamports (non-circulating account list excluded). */
+  getSupply(): Promise<Supply>;
 }

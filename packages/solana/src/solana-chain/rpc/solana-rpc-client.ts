@@ -13,9 +13,11 @@ import { fetchSysvarClock, fetchSysvarStakeHistory } from "@solana/sysvars";
 import { STAKE_ACCOUNT_SPACE, STAKE_PROGRAM_ADDRESS } from "../state/constants";
 import type { SolanaRpcClientContract } from "./solana-rpc-client-contract";
 import type {
+  InflationRate,
   SolanaAccountInfo,
   SolanaStakeProgramAccount,
   StakeHistoryEntry,
+  Supply,
   VoteAccountInfo,
 } from "./solana-rpc-types";
 
@@ -253,6 +255,25 @@ export function createSolanaRpcClient(
       return rpcCall("getClockEpoch", logger, async () => {
         const clock = await fetchSysvarClock(rpc);
         return BigInt(clock.epoch);
+      });
+    },
+
+    getInflationRate(): Promise<InflationRate> {
+      return rpcCall("getInflationRate", logger, async () => {
+        const r = await rpc.getInflationRate().send();
+        return {
+          total: r.total,
+          validator: r.validator,
+          foundation: r.foundation,
+          epoch: r.epoch,
+        };
+      });
+    },
+
+    getSupply(): Promise<Supply> {
+      return rpcCall("getSupply", logger, async () => {
+        const { value } = await rpc.getSupply({ excludeNonCirculatingAccountsList: true }).send();
+        return { total: value.total, circulating: value.circulating };
       });
     },
   };

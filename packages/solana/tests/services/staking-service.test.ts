@@ -118,6 +118,8 @@ function mockRpc(overrides: Partial<SolanaRpcClientContract> = {}): SolanaRpcCli
     // epoch 200, no history → fully effective for activationEpoch << 200
     getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
     getClockEpoch: vi.fn().mockResolvedValue(200n),
+    getInflationRate: vi.fn(),
+    getSupply: vi.fn(),
     ...overrides,
   };
 }

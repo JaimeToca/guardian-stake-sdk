@@ -120,6 +120,8 @@ async function mockRpc(
     getStakeHistory: vi.fn().mockResolvedValue([]),
     getClock: vi.fn().mockResolvedValue({ epoch: 200n, unixTimestamp: 1_700_000_000n }),
     getClockEpoch: vi.fn().mockResolvedValue(200n),
+    getInflationRate: vi.fn(),
+    getSupply: vi.fn(),
     ...overrides,
   };
 }
