@@ -73,14 +73,14 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 
 ## Packages
 
-| Package | Chain | Status | Docs | Audit |
-|---|---|---|---|---|
-| [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) | None |
-| [`@guardian-sdk/cardano`](https://www.npmjs.com/package/@guardian-sdk/cardano) | Cardano | Available | [README](./packages/cardano/README.md) | None |
-| [`@guardian-sdk/tron`](https://www.npmjs.com/package/@guardian-sdk/tron) | Tron | Available | [README](./packages/tron/README.md) | None |
-| [`@guardian-sdk/solana`](https://www.npmjs.com/package/@guardian-sdk/solana) | Solana | Available | [README](./packages/solana/README.md) | None |
-| `@guardian-sdk/ethereum` | Ethereum | Planned | — | — |
-| `@guardian-sdk/sui` | SUI | Planned | — | — |
+| Package | Chain | Status | Docs |
+|---|---|---|---|
+| [`@guardian-sdk/bsc`](https://www.npmjs.com/package/@guardian-sdk/bsc) | BNB Smart Chain | Available | [README](./packages/bsc/README.md) |
+| [`@guardian-sdk/cardano`](https://www.npmjs.com/package/@guardian-sdk/cardano) | Cardano | Available | [README](./packages/cardano/README.md) |
+| [`@guardian-sdk/tron`](https://www.npmjs.com/package/@guardian-sdk/tron) | Tron | Available | [README](./packages/tron/README.md) |
+| [`@guardian-sdk/solana`](https://www.npmjs.com/package/@guardian-sdk/solana) | Solana | Available | [README](./packages/solana/README.md) |
+| `@guardian-sdk/ethereum` | Ethereum | Planned | — |
+| `@guardian-sdk/sui` | SUI | Planned | — |
 
 
 > **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
