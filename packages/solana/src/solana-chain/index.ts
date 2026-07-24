@@ -8,6 +8,7 @@ import { createBroadcastService } from "./services/broadcast-service";
 import { createFeeService } from "./services/fee-service";
 import { createSignService } from "./services/sign-service";
 import { createStakingService } from "./services/staking-service";
+import type { SolanaSendTransactionOptions } from "./tx/solana-types";
 
 export interface SolanaConfig {
   rpcUrl: string;
@@ -19,6 +20,8 @@ export interface SolanaConfig {
   stakeCacheTtlMs?: number;
   validatorsCacheTtlMs?: number;
   enableGpaFallback?: boolean;
+  /** JSON-RPC options forwarded to every `sendTransaction` (broadcast) call. */
+  broadcastOptions?: SolanaSendTransactionOptions;
 }
 
 /**
@@ -46,7 +49,7 @@ export function solana(config: SolanaConfig): GuardianServiceContract {
   const balance = createBalanceService(rpc, stakeCache, serviceConfig, logger);
   const fee = createFeeService(rpc, serviceConfig, logger);
   const sign = createSignService(rpc, serviceConfig, logger);
-  const broadcast = createBroadcastService(rpc, logger);
+  const broadcast = createBroadcastService(rpc, config.broadcastOptions, logger);
 
   return {
     getChainInfo: () => solanaMainnet,

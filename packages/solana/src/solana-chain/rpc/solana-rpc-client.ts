@@ -1,5 +1,5 @@
 import type { Logger } from "@guardian-sdk/sdk";
-import { ApiError, ApiErrorType, NoopLogger } from "@guardian-sdk/sdk";
+import { ApiError, ApiErrorType, BroadcastError, NoopLogger } from "@guardian-sdk/sdk";
 import {
   address,
   createSolanaRpc,
@@ -7,6 +7,8 @@ import {
   type Address,
   type Base58EncodedBytes,
   type Base64EncodedWireTransaction,
+  type Commitment,
+  type Slot,
   type TransactionMessageBytesBase64,
 } from "@solana/kit";
 import { fetchSysvarClock, fetchSysvarStakeHistory } from "@solana/sysvars";
@@ -30,11 +32,30 @@ const STAKE_STAKER_MEMCMP_OFFSET = 12n;
 /** Kit: base64 string → bytes. */
 const base64Encoder = getBase64Encoder();
 
+/**
+ * Best-effort detection of an expired-blockhash RPC failure from the error text.
+ * Matched substrings cover the common node/preflight phrasings.
+ */
+export function isBlockhashExpiredMessage(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("blockhash not found") ||
+    m.includes("blockhashnotfound") ||
+    m.includes("block height exceeded")
+  );
+}
+
 function mapRpcError(err: unknown, operation: string): never {
-  if (err instanceof ApiError) {
+  if (err instanceof ApiError || err instanceof BroadcastError) {
     throw err;
   }
   const message = err instanceof Error ? err.message : String(err);
+  if (isBlockhashExpiredMessage(message)) {
+    throw new BroadcastError(
+      "BLOCKHASH_EXPIRED",
+      `Solana ${operation} failed: recent blockhash expired — re-sign to embed a fresh blockhash and rebroadcast. (${message})`
+    );
+  }
   throw new ApiError(`Solana RPC ${operation} failed: ${message}`, {
     type: ApiErrorType.ServerResponseError,
     data: err,
@@ -218,10 +239,21 @@ export function createSolanaRpcClient(
       });
     },
 
-    sendTransaction(wireTransactionBase64) {
+    sendTransaction(wireTransactionBase64, options) {
       return rpcCall("sendTransaction", logger, async () => {
         const wire = wireTransactionBase64 as Base64EncodedWireTransaction;
-        const signature = await rpc.sendTransaction(wire, { encoding: "base64" }).send();
+        const config = {
+          encoding: "base64" as const,
+          ...(options?.skipPreflight !== undefined && { skipPreflight: options.skipPreflight }),
+          ...(options?.preflightCommitment !== undefined && {
+            preflightCommitment: options.preflightCommitment as Commitment,
+          }),
+          ...(options?.maxRetries !== undefined && { maxRetries: BigInt(options.maxRetries) }),
+          ...(options?.minContextSlot !== undefined && {
+            minContextSlot: options.minContextSlot as Slot,
+          }),
+        };
+        const signature = await rpc.sendTransaction(wire, config).send();
         return signature;
       });
     },

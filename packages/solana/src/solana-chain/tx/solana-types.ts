@@ -8,6 +8,22 @@ import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract"
 /** 1 SOL = 1_000_000_000 lamports. Re-exported for package consumers. */
 export { LAMPORTS_PER_SOL } from "../state/constants";
 
+/**
+ * JSON-RPC options forwarded to `sendTransaction`. Set via `SolanaConfig.broadcastOptions`.
+ * With `skipPreflight: true` the node will not surface an expired blockhash synchronously,
+ * so the caller must run their own confirm-and-retry loop instead of catching BLOCKHASH_EXPIRED.
+ */
+export interface SolanaSendTransactionOptions {
+  /** Skip the preflight simulation/checks (default false). */
+  skipPreflight?: boolean;
+  /** Commitment used for preflight. */
+  preflightCommitment?: "processed" | "confirmed" | "finalized";
+  /** Max node-side resend attempts before the tx is dropped. */
+  maxRetries?: number;
+  /** Minimum slot the request should be evaluated at. */
+  minContextSlot?: bigint;
+}
+
 export interface SolanaUndelegateTransaction extends UndelegateTransaction {
   /** Base58 stake account pubkey to deactivate. */
   stakeAccount: string;

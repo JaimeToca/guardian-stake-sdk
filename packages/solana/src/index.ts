@@ -5,6 +5,7 @@ export type { SolanaConfig } from "./solana-chain";
 export type {
   SolanaUndelegateTransaction,
   SolanaClaimDelegateTransaction,
+  SolanaSendTransactionOptions,
   SolanaSignArgs,
   BuildTxResult,
   BuildTxDeps,

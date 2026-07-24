@@ -103,7 +103,7 @@ Ed25519 over compiled transaction **message bytes** (Kit: compile → `messageBy
 - **`sign`** — build message (latest blockhash, fee payer = authority) → sign → return **base64 wire transaction**.
 - **`prehash`** — same build; `serializedTransaction` = **base64-encoded message bytes** (digest for external Ed25519 signer — **not** the wire tx). Thread state in `SolanaSignArgs` (`_messageBytes`, `_wireTransaction`) so `compile` does not rebuild.
 - **`compile`** — `signature` = **base64 of 64-byte Ed25519 signature**; return base64 wire tx.
-- **`broadcast`** — `sendTransaction` base64 wire.
+- **`broadcast`** — `sendTransaction` base64 wire. JSON-RPC options (`skipPreflight`, `preflightCommitment`, `maxRetries`, `minContextSlot`) come from `SolanaConfig.broadcastOptions` (config-only — the shared `broadcast(rawTx)` signature is chain-agnostic, so they can't be per-call). An expired blockhash maps to a `BroadcastError` with code `BLOCKHASH_EXPIRED` (detected via `isBlockhashExpiredMessage` in the RPC client) **when preflight is on**; the SDK does NOT auto-retry — the caller catches it, re-`sign()`s (fresh blockhash), and rebroadcasts. With `skipPreflight: true` the node won't surface expiration synchronously, so the caller owns a confirm-and-retry loop.
 
 **Private key (v1):** **32-byte Ed25519 seed** as **64-char hex**. Full 64-byte solana-keygen secret-key arrays are out of scope. Single key: fee payer = staker = withdrawer. Do not use the SDK’s secp256k1 `privateKey()` helper for Solana.
 

@@ -23,6 +23,7 @@ import {
   chains,
   solana,
   ConsoleLogger,
+  BroadcastError,
   LAMPORTS_PER_SOL,
   type SolanaUndelegateTransaction,
   type SolanaClaimDelegateTransaction,
@@ -71,6 +72,16 @@ const sdk = new GuardianSDK([
     // (e.g. accounts created by the Solana CLI with random keypairs). Heavier RPC call, default
     // false. Enable it if you must surface pre-existing stake this SDK did not create.
     enableGpaFallback: true,
+
+    // JSON-RPC options forwarded to every broadcast (sendTransaction). Config-only — they can't
+    // ride the chain-agnostic broadcast(chain, rawTx) signature. With skipPreflight: true the node
+    // won't report an expired blockhash synchronously (see submitWithBlockhashRetry below).
+    broadcastOptions: {
+      skipPreflight: false,
+      preflightCommitment: "confirmed",
+      maxRetries: 5,
+      minContextSlot: 0n,
+    },
   }),
 ]);
 
@@ -92,6 +103,37 @@ async function submit(transaction: Transaction): Promise<string> {
   const signArgs: SigningWithPrivateKey = { transaction, fee, nonce, privateKey: PRIVATE_KEY };
   const rawTx = await sdk.sign(signArgs);
   return sdk.broadcast(solanaMainnet, rawTx);
+}
+
+/**
+ * Same as submit(), but resilient to blockhash expiration. A signed tx embeds a recent blockhash
+ * that expires in ~60–90s; if broadcasting an expired tx (with preflight ON) the SDK throws a
+ * BroadcastError { code: "BLOCKHASH_EXPIRED" }. The SDK does NOT auto-retry — we catch it here,
+ * re-sign() (fetches a fresh blockhash + re-signs), and rebroadcast. For MPC, re-run the
+ * preHash → external-sign → compile steps in the catch instead. NOTE: with skipPreflight: true the
+ * node won't report expiration synchronously — use getSignatureStatuses to confirm and retry.
+ */
+export async function submitWithBlockhashRetry(
+  transaction: Transaction,
+  maxAttempts = 3
+): Promise<string> {
+  const fee = await sdk.estimateFee(transaction);
+  const nonce = await sdk.getNonce(solanaMainnet, ADDRESS);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const signArgs: SigningWithPrivateKey = { transaction, fee, nonce, privateKey: PRIVATE_KEY };
+    const rawTx = await sdk.sign(signArgs); // fresh blockhash each attempt
+    try {
+      return await sdk.broadcast(solanaMainnet, rawTx);
+    } catch (err) {
+      const expired = err instanceof BroadcastError && err.code === "BLOCKHASH_EXPIRED";
+      if (expired && attempt < maxAttempts) {
+        logger.info(`Blockhash expired (attempt ${attempt}) — re-signing and retrying`);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("exhausted blockhash retries");
 }
 
 /** Solana charges ceil(CU × microlamports-per-CU / 1e6) lamports for priority fees. */

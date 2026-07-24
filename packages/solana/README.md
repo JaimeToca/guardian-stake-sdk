@@ -365,6 +365,15 @@ interface SolanaConfig {
   validatorsCacheTtlMs?: number;
   /** getProgramAccounts by staker — heavy; default false. */
   enableGpaFallback?: boolean;
+  /** JSON-RPC options forwarded to every sendTransaction (broadcast) call. */
+  broadcastOptions?: SolanaSendTransactionOptions;
+}
+
+interface SolanaSendTransactionOptions {
+  skipPreflight?: boolean; // default false
+  preflightCommitment?: "processed" | "confirmed" | "finalized";
+  maxRetries?: number; // node-side resend attempts
+  minContextSlot?: bigint;
 }
 ```
 
@@ -574,6 +583,50 @@ await sdk.broadcast(chains.solanaMainnet, rawTx);
 const signature = await sdk.broadcast(chains.solanaMainnet, rawTx);
 // signature is base58 transaction signature for explorers
 ```
+
+**Configuring the send.** The JSON-RPC `sendTransaction` parameters are set once on the factory via
+`broadcastOptions` (they can't ride on the chain-agnostic `broadcast(chain, rawTx)` signature):
+
+```typescript
+solana({
+  rpcUrl: "…",
+  broadcastOptions: {
+    skipPreflight: false, // default false
+    preflightCommitment: "confirmed", // "processed" | "confirmed" | "finalized"
+    maxRetries: 5, // node-side resend attempts
+    minContextSlot: 0n,
+  },
+});
+```
+
+**Handling blockhash expiration.** A signed transaction embeds a recent blockhash that expires after
+~150 slots (~60–90s). When preflight is **on** (default), broadcasting an expired transaction throws
+a `BroadcastError` with `code === "BLOCKHASH_EXPIRED"`. The SDK does not auto-retry — catch it,
+re-`sign()` (which fetches a fresh blockhash and re-signs), and rebroadcast:
+
+```typescript
+import { BroadcastError } from "@guardian-sdk/solana";
+
+async function submitWithBlockhashRetry(args, maxAttempts = 3): Promise<string> {
+  let rawTx = await sdk.sign(args);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await sdk.broadcast(chains.solanaMainnet, rawTx);
+    } catch (err) {
+      if (err instanceof BroadcastError && err.code === "BLOCKHASH_EXPIRED" && attempt < maxAttempts) {
+        rawTx = await sdk.sign(args); // fresh blockhash, re-signed (MPC: re-run preHash → compile)
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("exhausted blockhash retries");
+}
+```
+
+With `skipPreflight: true` (or aggressive `maxRetries`), the node will **not** surface an expired
+blockhash synchronously — in that mode run your own confirm-and-retry loop
+(`getSignatureStatuses`) instead of catching `BLOCKHASH_EXPIRED`.
 
 ---
 

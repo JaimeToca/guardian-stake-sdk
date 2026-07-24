@@ -1,3 +1,4 @@
+import type { SolanaSendTransactionOptions } from "../tx/solana-types";
 import type {
   EpochInfo,
   InflationRate,
@@ -22,7 +23,10 @@ export interface SolanaRpcClientContract {
   /** Optional heavy path — only called when `enableGpaFallback` is set. */
   getProgramAccountsStakeByStaker(staker: string): Promise<SolanaStakeProgramAccount[]>;
   /** Submit a base64 wire transaction; returns the transaction signature (base58). */
-  sendTransaction(wireTransactionBase64: string): Promise<string>;
+  sendTransaction(
+    wireTransactionBase64: string,
+    options?: SolanaSendTransactionOptions
+  ): Promise<string>;
   /** StakeHistory sysvar rows, newest epoch first. */
   getStakeHistory(): Promise<StakeHistoryEntry[]>;
   /** Clock sysvar — epoch + wall-clock unix timestamp (for lockup checks). */
