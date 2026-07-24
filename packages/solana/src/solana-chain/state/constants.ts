@@ -60,3 +60,9 @@ export const DEFAULT_SEED_SCAN_MAX = 50;
 
 /** Default TTL for authority → stake positions cache (ms). */
 export const DEFAULT_STAKE_CACHE_TTL_MS = 30_000;
+
+/**
+ * Solana protocol slots-per-year (2.5 ideal slots/sec × seconds/year) — the basis
+ * the runtime uses to annualize per-epoch rewards. `epochsPerYear = SLOTS_PER_YEAR / slotsInEpoch`.
+ */
+export const SLOTS_PER_YEAR = 78_894_000;
