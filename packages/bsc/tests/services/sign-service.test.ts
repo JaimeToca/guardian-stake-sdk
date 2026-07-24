@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { parseEther, getAddress, parseTransaction } from "viem";
+import { parseEther, getAddress, parseTransaction, keccak256 } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { createSignService } from "../../src/smartchain/services/sign-service";
-import { ValidationError } from "@guardian-sdk/sdk";
+import { SigningError, ValidationError } from "@guardian-sdk/sdk";
 import { bscMainnet } from "../../src/chain";
 import { STAKING_CONTRACT } from "../../src/smartchain/abi/multicall-stake-abi";
 import type { StakingRpcClientContract } from "../../src/smartchain/rpc/staking-rpc-client-contract";
@@ -187,31 +188,197 @@ describe("SignService", () => {
       expect(result.serializedTransaction).toEqual(
         "0xf8710585012a05f200825208940000000000000000000000000000000000002002880de0b6b3a7640000b844982ef0a7000000000000000000000000773760b0708a5cc369c346993a0c225d8e4043b10000000000000000000000000000000000000000000000000000000000000000388080"
       );
-      expect(result.signArgs).toEqual(signArgs);
+      // signArgs echoes the caller-supplied fields verbatim, plus the threaded internal field.
+      expect(result.signArgs).toMatchObject(signArgs);
     });
   });
 
   describe("compile", () => {
-    it("produces a signed tx from a raw signature", async () => {
+    // Account derived from TEST_PRIVATE_KEY (Hardhat/Anvil account #0).
+    const SIGNER_ACCOUNT = getAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+
+    const buildTransaction = (overrides: Partial<Record<string, unknown>> = {}) => ({
+      type: "Delegate" as const,
+      chain: bscMainnet,
+      amount: parseEther("1"),
+      isMaxAmount: false,
+      validator: OPERATOR,
+      account: SIGNER_ACCOUNT,
+      ...overrides,
+    });
+
+    async function prehashAndSignExternally(transaction: unknown, nonce = 1) {
+      const preHashArgs = { transaction, fee: mockFee, nonce };
+      const prehashResult = await service.prehash(preHashArgs as any);
+
+      const account = privateKeyToAccount(TEST_PRIVATE_KEY);
+      const hash = keccak256(prehashResult.serializedTransaction as `0x${string}`);
+      const signature = await account.sign({ hash });
+
+      return { prehashResult, signature };
+    }
+
+    it("valid prehash -> compile round-trip is byte-identical to sign()", async () => {
+      const transaction = buildTransaction();
+      const { prehashResult, signature } = await prehashAndSignExternally(transaction, 1);
+
+      const compiled = await service.compile({
+        signArgs: prehashResult.signArgs,
+        signature,
+      });
+
+      const directlySigned = await service.sign({
+        transaction: transaction as any,
+        fee: mockFee,
+        nonce: 1,
+        privateKey: TEST_PRIVATE_KEY,
+      });
+
+      expect(compiled).toBe(directlySigned);
+    });
+
+    // Once _unsignedTx is threaded from prehash(), compile() reuses it VERBATIM — it never
+    // rebuilds calldata from signArgs.transaction. So mutating signArgs.transaction.amount or
+    // .validator between prehash and compile has NO EFFECT on the assembled/broadcast tx: the
+    // bytes that get signed-and-compiled are exactly the bytes returned by prehash(), not a
+    // fresh (possibly divergent) rebuild from the mutated fields. This mirrors Cardano's
+    // _txBodyCbor / Tron's _rawTx precedent, where compile() only reads signArgs.transaction
+    // for `.account`.
+    it("ignores transaction.amount mutated after prehash — compiled tx is unaffected", async () => {
+      const transaction = buildTransaction();
+      const { prehashResult, signature } = await prehashAndSignExternally(transaction, 1);
+
+      const untamperedCompiled = await service.compile({
+        signArgs: prehashResult.signArgs,
+        signature,
+      });
+
+      const tamperedSignArgs = {
+        ...prehashResult.signArgs,
+        transaction: { ...prehashResult.signArgs.transaction, amount: parseEther("2") },
+      };
+
+      const tamperedCompiled = await service.compile({ signArgs: tamperedSignArgs, signature });
+
+      expect(tamperedCompiled).toBe(untamperedCompiled);
+    });
+
+    it("ignores transaction.validator mutated after prehash — compiled tx is unaffected", async () => {
+      const transaction = buildTransaction();
+      const { prehashResult, signature } = await prehashAndSignExternally(transaction, 1);
+
+      const untamperedCompiled = await service.compile({
+        signArgs: prehashResult.signArgs,
+        signature,
+      });
+
+      const tamperedSignArgs = {
+        ...prehashResult.signArgs,
+        transaction: { ...prehashResult.signArgs.transaction, validator: FROM_OPERATOR },
+      };
+
+      const tamperedCompiled = await service.compile({ signArgs: tamperedSignArgs, signature });
+
+      expect(tamperedCompiled).toBe(untamperedCompiled);
+    });
+
+    it("throws SIGNATURE_MISMATCH if transaction.account is mutated after prehash", async () => {
+      const transaction = buildTransaction();
+      const { prehashResult, signature } = await prehashAndSignExternally(transaction, 1);
+
+      const tamperedSignArgs = {
+        ...prehashResult.signArgs,
+        transaction: { ...prehashResult.signArgs.transaction, account: FROM_OPERATOR },
+      };
+
+      await expect(service.compile({ signArgs: tamperedSignArgs, signature })).rejects.toSatisfy(
+        (err: unknown) => {
+          expect(err).toBeInstanceOf(SigningError);
+          expect((err as SigningError).code).toBe("SIGNATURE_MISMATCH");
+          // Must never leak the signature or key material in the error message.
+          expect((err as SigningError).message).not.toContain(signature);
+          expect((err as SigningError).message).not.toContain(TEST_PRIVATE_KEY);
+          return true;
+        }
+      );
+    });
+
+    it("rejects a signature that recovers to a different account, before any RPC call", async () => {
+      const transaction = buildTransaction();
+      const { prehashResult } = await prehashAndSignExternally(transaction, 1);
+
+      // Sign the SAME digest with an unrelated private key — a valid signature, but for
+      // the wrong signer relative to transaction.account.
+      const OTHER_PRIVATE_KEY =
+        "0x94a3490ff125e8ddf073875661cbbe3ee235a1d9a326dedcd7fec87ad3ccc71c" as const;
+      const otherAccount = privateKeyToAccount(OTHER_PRIVATE_KEY);
+      const hash = keccak256(prehashResult.serializedTransaction as `0x${string}`);
+      const wrongSignature = await otherAccount.sign({ hash });
+
+      const rpcClient = {
+        ...mockStakingRpcClient,
+        getSharesByPooledBNBData: vi.fn().mockResolvedValue(MOCK_SHARES),
+        getShareBalance: vi.fn().mockResolvedValue(MOCK_SHARES),
+      };
+      const rpcAwareService = createSignService(rpcClient);
+
+      await expect(
+        rpcAwareService.compile({ signArgs: prehashResult.signArgs, signature: wrongSignature })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("SIGNATURE_MISMATCH");
+        expect((err as SigningError).message).not.toContain(wrongSignature);
+        expect((err as SigningError).message).not.toContain(OTHER_PRIVATE_KEY);
+        return true;
+      });
+
+      // Undelegate/Redelegate no longer re-run bnbToShares()/live RPC in compile() at all —
+      // confirm no RPC call happened on this Delegate case (which never called RPC to begin
+      // with) as a baseline, then explicitly cover Undelegate below.
+      expect(rpcClient.getSharesByPooledBNBData).not.toHaveBeenCalled();
+      expect(rpcClient.getShareBalance).not.toHaveBeenCalled();
+    });
+
+    it("does not re-run live RPC (bnbToShares) for Undelegate in compile()", async () => {
+      const rpcClient = {
+        ...mockStakingRpcClient,
+        getSharesByPooledBNBData: vi.fn().mockResolvedValue(MOCK_SHARES),
+        getShareBalance: vi.fn().mockResolvedValue(MOCK_SHARES),
+      };
+      const rpcAwareService = createSignService(rpcClient);
+
+      const transaction = buildTransaction({ type: "Undelegate" as const, validator: VALIDATOR });
+      const preHashArgs = { transaction, fee: mockFee, nonce: 1 };
+      const prehashResult = await rpcAwareService.prehash(preHashArgs as any);
+
+      // prehash() legitimately calls bnbToShares() once to build the unsigned tx.
+      expect(rpcClient.getSharesByPooledBNBData).toHaveBeenCalledTimes(1);
+
+      const account = privateKeyToAccount(TEST_PRIVATE_KEY);
+      const hash = keccak256(prehashResult.serializedTransaction as `0x${string}`);
+      const signature = await account.sign({ hash });
+
+      await rpcAwareService.compile({ signArgs: prehashResult.signArgs, signature });
+
+      // compile() must reuse the prehash bytes verbatim — no additional RPC call.
+      expect(rpcClient.getSharesByPooledBNBData).toHaveBeenCalledTimes(1);
+    });
+
+    it("throws if compile() is called without signArgs produced by prehash()", async () => {
       const signArgs = {
-        transaction: {
-          type: "Delegate" as const,
-          chain: bscMainnet,
-          amount: parseEther("1"),
-          isMaxAmount: false,
-          validator: OPERATOR,
-        },
+        transaction: buildTransaction(),
         fee: mockFee,
         nonce: 1,
       };
 
-      // 65-byte secp256k1 signature: r (32 bytes) + s (32 bytes) + v (1 byte = 0x1b for 27)
       const signature =
         `0x${"1234567890123456789012345678901234567890123456789012345678901234"}${"1234567890123456789012345678901234567890123456789012345678901234"}1b` as `0x${string}`;
 
-      const compiled = await service.compile({ signArgs, signature });
-
-      expect(compiled).toMatch(/^0x/);
+      await expect(service.compile({ signArgs, signature })).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("INVALID_SIGNING_ARGS");
+        return true;
+      });
     });
   });
 });

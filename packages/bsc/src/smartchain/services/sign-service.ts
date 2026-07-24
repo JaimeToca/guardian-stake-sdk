@@ -1,5 +1,13 @@
 import type { Address, Hex, TransactionSerializable } from "viem";
-import { serializeTransaction, parseEther, formatEther, parseSignature } from "viem";
+import {
+  serializeTransaction,
+  parseTransaction,
+  parseEther,
+  formatEther,
+  parseSignature,
+  recoverTransactionAddress,
+  getAddress,
+} from "viem";
 import {
   encodeClaim,
   encodeDelegate,
@@ -29,7 +37,12 @@ import {
   assertValidator,
 } from "@guardian-sdk/sdk";
 import type { StakingRpcClientContract } from "../rpc/staking-rpc-client-contract";
-import type { BscSignServiceContract, CallData, SigningWithAccount } from "../sign-types";
+import type {
+  BscSignArgs,
+  BscSignServiceContract,
+  CallData,
+  SigningWithAccount,
+} from "../sign-types";
 import { isSigningWithAccount, isSigningWithPrivateKey } from "../sign-types";
 import { parseEvmAddress } from "../validations";
 
@@ -218,32 +231,73 @@ export function createSignService(
         preHashArgs.nonce
       );
 
+      const serializedTransaction = serializeTransaction(unsignedTx);
+
       logger.info("SignService: prehash complete — send serializedTransaction to external signer");
+      // Thread the exact serialized unsigned tx through `_unsignedTx` (a BSC-only extension,
+      // mirroring Cardano's `_txBodyCbor` / Tron's `_rawTx`) so compile() can reassemble the
+      // signed transaction without rebuilding it — and without re-running bnbToShares()/live
+      // RPC a second time for Undelegate/Redelegate.
+      const signArgs: BscSignArgs = {
+        transaction: preHashArgs.transaction,
+        fee: preHashArgs.fee,
+        nonce: preHashArgs.nonce,
+        _unsignedTx: serializedTransaction,
+      };
+
       return {
-        serializedTransaction: serializeTransaction(unsignedTx),
-        signArgs: {
-          transaction: preHashArgs.transaction,
-          fee: preHashArgs.fee,
-          nonce: preHashArgs.nonce,
-        },
+        serializedTransaction,
+        signArgs,
       };
     },
 
     async compile(compileArgs: CompileArgs): Promise<Hex> {
       logger.info("SignService: compiling signed transaction");
 
-      const unsignedTx = await buildUnsignedTransaction(
-        compileArgs.signArgs.transaction,
-        compileArgs.signArgs.fee,
-        compileArgs.signArgs.nonce
-      );
+      const unsignedTx = (compileArgs.signArgs as BscSignArgs)._unsignedTx;
+      if (!unsignedTx) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "compile() requires signArgs._unsignedTx from prehash()."
+        );
+      }
 
-      const compiled = serializeTransaction(
-        unsignedTx,
-        parseSignature(compileArgs.signature as Hex)
-      );
+      const signature = parseSignature(compileArgs.signature as Hex);
+      const compiled = serializeTransaction(parseTransactionSafely(unsignedTx), signature);
+
+      // Verify the signature actually recovers to the expected signer over the exact bytes
+      // that were serialized — never re-derive the tx from (mutable) signArgs.transaction.
+      // This closes the gap where a caller could mutate signArgs between prehash() and
+      // compile() (or supply an unrelated signature) and have it silently assembled into a
+      // broadcastable-looking tx, deferring the only real check to the destination node.
+      const expectedAccount = compileArgs.signArgs.transaction.account;
+      if (expectedAccount !== undefined) {
+        const recovered = await recoverTransactionAddress({
+          serializedTransaction: compiled,
+        });
+        if (getAddress(recovered) !== getAddress(parseEvmAddress(expectedAccount))) {
+          throw new SigningError(
+            "SIGNATURE_MISMATCH",
+            "compile() produced a transaction whose signature does not recover to transaction.account. " +
+              "This can mean signArgs was mutated after prehash(), or the supplied signature belongs " +
+              "to a different signer/transaction."
+          );
+        }
+      }
+
       logger.info("SignService: transaction compiled");
       return compiled;
     },
   };
+}
+
+function parseTransactionSafely(serializedTransaction: Hex): TransactionSerializable {
+  try {
+    return parseTransaction(serializedTransaction) as TransactionSerializable;
+  } catch {
+    throw new SigningError(
+      "INVALID_SIGNING_ARGS",
+      "compile() could not parse signArgs._unsignedTx — it must be the unmodified value returned by prehash()."
+    );
+  }
 }
