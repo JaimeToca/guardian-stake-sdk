@@ -151,6 +151,21 @@ describe("createTronRpcClient.broadcast", () => {
     );
   });
 
+  it("preserves int64 precision beyond Number.MAX_SAFE_INTEGER when parsing the signed tx to broadcast", async () => {
+    resolveWith({ result: true, txid: "deadbeef" });
+    const rpc = createTronRpcClient("https://node.example");
+    const signedTxJson = `{"txID":"deadbeef","signature":["sig"],"someInt64Field":9007199254740993}`;
+
+    await rpc.broadcast(signedTxJson);
+
+    // The broadcast body sent to fetchOrError must carry the exact bigint, not a rounded number —
+    // this is only true if the signed tx JSON is parsed with the same jsonBig instance used for
+    // RPC responses, instead of native JSON.parse (which loses precision above MAX_SAFE_INTEGER).
+    const lastCall = mockedFetch.mock.calls.at(-1)?.[0] as { data: unknown };
+    const data = lastCall.data as { someInt64Field: unknown };
+    expect(data.someInt64Field).toBe(9007199254740993n);
+  });
+
   it("throws the node's real code and decoded hex message on rejection", async () => {
     // "434f4e5452414354...": hex-encoded reason returned by the FullNode.
     const hexReason = Buffer.from("Validate error", "utf8").toString("hex");

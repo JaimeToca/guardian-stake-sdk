@@ -8,6 +8,8 @@ import {
 } from "../../src/tron-chain/services/staking-service";
 import type { TronRpcClientContract } from "../../src/tron-chain/rpc/tron-rpc-client-contract";
 
+const TEST_ADDRESS = "TMVQGm1qAQYVdetCeGRRkTWYYrLXuHK2HC";
+
 const witnesses = [
   { address: "TSR", voteCount: 1_000_000_000n, url: "https://sr.example", isSr: true },
 ];
@@ -32,6 +34,17 @@ function rpc(over: Partial<TronRpcClientContract> = {}): TronRpcClientContract {
 const tronWeb = { address: { fromHex: (a: string) => a } } as any;
 
 describe("getDelegations", () => {
+  it("throws ValidationError(INVALID_ADDRESS) for a malformed address, before hitting the RPC", async () => {
+    const getAccount = vi.fn();
+    const svc = createStakingService(rpc({ getAccount }), () => tronWeb);
+
+    await expect(svc.getDelegations("TWallet")).rejects.toMatchObject({
+      code: "INVALID_ADDRESS",
+    });
+    await expect(svc.getDelegations("TWallet")).rejects.toBeInstanceOf(ValidationError);
+    expect(getAccount).not.toHaveBeenCalled();
+  });
+
   it("freeze-only -> one Frozen delegation carrying the unstakeable amount", async () => {
     const svc = createStakingService(
       rpc({
@@ -44,7 +57,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     expect(delegations).toHaveLength(1);
     expect(delegations[0].status).toBe("Frozen");
     expect(delegations[0].amount).toBe(100_000_000n);
@@ -66,7 +79,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     // Must NOT collapse into one 180 TRX Frozen blob mislabeled as a single resource.
     expect(delegations).toHaveLength(2);
     const byResource = Object.fromEntries(delegations.map((d) => [d.validator.id, d.amount]));
@@ -88,7 +101,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     const active = delegations.find((d) => d.status === "Active");
     expect(active?.amount).toBe(100_000_000n);
     // Carries the SR address through — NOT the "vote to earn rewards" Frozen placeholder.
@@ -113,7 +126,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     expect(delegations).toHaveLength(1);
     expect(delegations[0].amount).toBe(40_000_000n);
   });
@@ -130,7 +143,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     const active = delegations.filter((d) => d.status === "Active");
     expect(active).toHaveLength(1);
     expect(active[0].amount).toBe(100_000_000n);
@@ -150,7 +163,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
 
     const active = delegations.filter((d) => d.status === "Active");
     const activeTotal = active.reduce((s, d) => s + d.amount, 0n);
@@ -178,7 +191,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
 
     const active = delegations.filter((d) => d.status === "Active");
     expect(active).toHaveLength(3);
@@ -204,7 +217,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
 
     // Stale votes must NOT surface as 0-amount Active positions.
     expect(delegations.filter((d) => d.status === "Active")).toHaveLength(0);
@@ -232,7 +245,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     expect(delegations.find((d) => d.status === "Pending")?.amount).toBe(40_000_000n);
     expect(delegations.find((d) => d.status === "Claimable")?.amount).toBe(10_000_000n);
   });
@@ -254,15 +267,15 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     const pending = delegations.find((d) => d.status === "Pending");
     const claimable = delegations.find((d) => d.status === "Claimable");
     // An ENERGY unfreeze must not be mislabeled as BANDWIDTH.
     expect(pending?.validator.id).toBe("tron-frozen-energy");
     expect(claimable?.validator.id).toBe("tron-frozen-bandwidth");
     // Distinct ids per resource keep concurrent unfreezes from colliding.
-    expect(pending?.id).toBe("TWallet:unfreeze-ENERGY-" + future);
-    expect(claimable?.id).toBe("TWallet:unfreeze-BANDWIDTH-" + past);
+    expect(pending?.id).toBe(TEST_ADDRESS + ":unfreeze-ENERGY-" + future);
+    expect(claimable?.id).toBe(TEST_ADDRESS + ":unfreeze-BANDWIDTH-" + past);
   });
 
   // README scenario 3: froze + voted the full amount across several SRs (clean, no scaling).
@@ -282,7 +295,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     const active = delegations.filter((d) => d.status === "Active");
     expect(active).toHaveLength(3);
     expect(active.every((d) => d.amount === 15_017_000_000n)).toBe(true);
@@ -302,7 +315,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     const active = delegations.find((d) => d.status === "Active");
     const frozen = delegations.find((d) => d.status === "Frozen");
     expect(active?.amount).toBe(40_000_000n);
@@ -336,7 +349,7 @@ describe("getDelegations", () => {
       }),
       () => tronWeb
     );
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
     const sum = (st: string) =>
       delegations.filter((d) => d.status === st).reduce((s, d) => s + d.amount, 0n);
 
@@ -465,7 +478,7 @@ describe("concurrent witness cache loads", () => {
     });
     const svc = createStakingService(client, () => tronWeb);
 
-    await Promise.all([svc.getDelegations("TWallet"), svc.getDelegations("TWallet")]);
+    await Promise.all([svc.getDelegations(TEST_ADDRESS), svc.getDelegations(TEST_ADDRESS)]);
 
     expect(client.listWitnesses).toHaveBeenCalledTimes(1);
   });
@@ -483,7 +496,7 @@ describe("chain-parameters caching", () => {
     });
     const svc = createStakingService(client, () => tronWeb);
 
-    await svc.getDelegations("TWallet");
+    await svc.getDelegations(TEST_ADDRESS);
 
     expect(client.getChainParameters).toHaveBeenCalledTimes(1);
   });
@@ -590,7 +603,7 @@ describe("scoped APR fetching", () => {
     });
     const svc = createStakingService(client, () => tronWeb);
 
-    const { delegations } = await svc.getDelegations("TWallet");
+    const { delegations } = await svc.getDelegations(TEST_ADDRESS);
 
     expect(client.getBrokerage).toHaveBeenCalledTimes(3);
     const active = delegations.filter((d) => d.status === "Active");
@@ -617,7 +630,7 @@ describe("scoped APR fetching", () => {
     });
     const svc = createStakingService(client, () => tronWeb);
 
-    await svc.getDelegations("TWallet");
+    await svc.getDelegations(TEST_ADDRESS);
 
     expect(client.getBrokerage).toHaveBeenCalledTimes(1);
   });
@@ -635,7 +648,7 @@ describe("scoped APR fetching", () => {
     });
     const svc = createStakingService(client, () => tronWeb);
 
-    const { stakingSummary } = await svc.getDelegations("TWallet");
+    const { stakingSummary } = await svc.getDelegations(TEST_ADDRESS);
 
     expect(Number.isFinite(stakingSummary.maxApy)).toBe(true);
     expect(stakingSummary.maxApy).toBeGreaterThanOrEqual(0);
@@ -690,7 +703,7 @@ describe("per-SR brokerage in-flight dedup (Fix 2)", () => {
     const svc = createStakingService(client, () => tronWeb);
 
     const validatorsPromise = svc.getValidators();
-    const delegationsPromise = svc.getDelegations("TWallet");
+    const delegationsPromise = svc.getDelegations(TEST_ADDRESS);
 
     // Let both operations reach the getBrokerage call before resolving it.
     await vi.waitFor(() => {

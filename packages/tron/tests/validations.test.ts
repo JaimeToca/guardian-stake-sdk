@@ -5,6 +5,7 @@ import {
   assertFreeze,
   assertUnfreeze,
   assertResource,
+  assertValidAddress,
 } from "../src/tron-chain/validations";
 import type { TronAccount, TronWitness } from "../src/tron-chain/rpc/tron-rpc-types";
 import { ValidationError } from "@guardian-sdk/sdk";
@@ -61,6 +62,33 @@ describe("validations", () => {
     } catch (err) {
       expect(err).toBeInstanceOf(ValidationError);
       expect((err as ValidationError).code).toBe("INVALID_RESOURCE");
+    }
+  });
+  it("assertValidAddress accepts a well-formed base58 address", () => {
+    expect(() => assertValidAddress("TMVQGm1qAQYVdetCeGRRkTWYYrLXuHK2HC")).not.toThrow();
+  });
+  it("assertValidAddress accepts a well-formed hex address", () => {
+    expect(() => assertValidAddress("417e5f4552091a69125d5dfcb7b8c2659029395bdf")).not.toThrow();
+  });
+  it("assertValidAddress rejects a malformed/placeholder address with INVALID_ADDRESS", () => {
+    expect(() => assertValidAddress("not-a-tron-address")).toThrow(ValidationError);
+    expect(() => assertValidAddress("TWallet")).toThrow(ValidationError);
+    try {
+      assertValidAddress("TWallet");
+      throw new Error("expected assertValidAddress to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ValidationError);
+      expect((err as ValidationError).code).toBe("INVALID_ADDRESS");
+    }
+  });
+  it("assertValidAddress rejects an empty address with INVALID_ADDRESS", () => {
+    expect(() => assertValidAddress("")).toThrow(ValidationError);
+    try {
+      assertValidAddress("");
+      throw new Error("expected assertValidAddress to throw");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ValidationError);
+      expect((err as ValidationError).code).toBe("INVALID_ADDRESS");
     }
   });
 });

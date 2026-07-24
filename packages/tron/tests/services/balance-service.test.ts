@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { createBalanceService } from "../../src/tron-chain/services/balance-service";
+import { ValidationError } from "@guardian-sdk/sdk";
+
+const TEST_ADDRESS = "TMVQGm1qAQYVdetCeGRRkTWYYrLXuHK2HC";
 
 describe("getBalances", () => {
   it("maps to Available/Staked/Pending/Claimable/Rewards without double counting", async () => {
@@ -19,12 +22,27 @@ describe("getBalances", () => {
       }),
       getReward: vi.fn().mockResolvedValue(7_000_000n),
     } as any;
-    const balances = await createBalanceService(rpc).getBalances("TWallet");
+    const balances = await createBalanceService(rpc).getBalances(TEST_ADDRESS);
     const by = (t: string) => balances.find((b) => b.type === t)?.amount;
     expect(by("Available")).toBe(5_000_000n);
     expect(by("Staked")).toBe(150_000_000n);
     expect(by("Pending")).toBe(40_000_000n);
     expect(by("Claimable")).toBe(10_000_000n);
     expect(by("Rewards")).toBe(7_000_000n);
+  });
+
+  it("throws ValidationError(INVALID_ADDRESS) for a malformed address, before hitting the RPC", async () => {
+    const getAccount = vi.fn();
+    const getReward = vi.fn();
+    const rpc = { getAccount, getReward } as any;
+
+    await expect(createBalanceService(rpc).getBalances("TWallet")).rejects.toMatchObject({
+      code: "INVALID_ADDRESS",
+    });
+    await expect(createBalanceService(rpc).getBalances("TWallet")).rejects.toBeInstanceOf(
+      ValidationError
+    );
+    expect(getAccount).not.toHaveBeenCalled();
+    expect(getReward).not.toHaveBeenCalled();
   });
 });

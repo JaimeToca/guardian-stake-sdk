@@ -137,7 +137,10 @@ export function createTronRpcClient(
     async broadcast(signedTxJson) {
       let parsed: unknown;
       try {
-        parsed = JSON.parse(signedTxJson);
+        // Parse with the same jsonBig instance used for RPC responses (not native JSON.parse):
+        // the signed tx being broadcast can carry int64 SUN fields beyond Number.MAX_SAFE_INTEGER,
+        // and native JSON.parse would silently round them before they're sent to the FullNode.
+        parsed = jsonBig.parse(signedTxJson);
       } catch {
         throw new ApiError("Invalid signed transaction JSON", { type: "ServerResponseError" });
       }

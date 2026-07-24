@@ -11,6 +11,7 @@ import { utils as tronUtils } from "tronweb";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import type { TronSignArgs, UnsignedTronTx } from "../tx/tron-types";
+import { assertValidAddress } from "../validations";
 
 /** Narrow shape of a `raw_data.contract[].parameter.value` that carries `owner_address` — every
  * Tron contract type used here (FreezeBalanceV2, UnfreezeBalanceV2, Vote, WithdrawExpireUnfreeze,
@@ -81,6 +82,9 @@ export function createSignService(
           "INVALID_SIGNING_ARGS",
           "Tron prehash() requires transaction.account (the owner address)."
         );
+      // Non-empty but malformed addresses are a distinct concern (ValidationError, not a
+      // signing-args-shape issue) — checked after confirming the account is present.
+      assertValidAddress(owner);
       const unsigned = await buildUnsignedTx(tronWeb, args.transaction, owner);
       // Thread the fully-built unsigned tx through `_rawTx` (a Tron-only extension) so compile()
       // can reattach the external signature without rebuilding or re-hitting the FullNode — mirrors

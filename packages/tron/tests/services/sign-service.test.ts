@@ -416,6 +416,20 @@ describe("prehash", () => {
     );
   });
 
+  it("throws ValidationError(INVALID_ADDRESS) when transaction.account is malformed", async () => {
+    const { factory } = realSetup();
+    const svc = createSignService(factory);
+    const txWithMalformedAccount = {
+      ...delegateTx,
+      account: "TWallet",
+    } as unknown as Transaction;
+    await expectSdkError(
+      svc.prehash({ transaction: txWithMalformedAccount, fee, nonce: 0 } as never),
+      ValidationError,
+      "INVALID_ADDRESS"
+    );
+  });
+
   it("returns serializedTransaction === real txID and threads the raw tx into signArgs._rawTx", async () => {
     const { factory } = realSetup();
     const svc = createSignService(factory);

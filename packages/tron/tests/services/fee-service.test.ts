@@ -7,6 +7,8 @@ import type { TronStakingServiceContract } from "../../src/tron-chain/services/s
 import type { Transaction, Validator } from "@guardian-sdk/sdk";
 import type { TronAccountResources } from "../../src/tron-chain/rpc/tron-rpc-types";
 
+const TEST_ADDRESS = "TMVQGm1qAQYVdetCeGRRkTWYYrLXuHK2HC";
+
 const SR: Validator = {
   id: "TSR",
   status: "Active",
@@ -65,7 +67,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Delegate",
       chain: {} as Transaction["chain"],
       amount: 200_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     await expect(fee.estimateFee(tx)).rejects.toThrow();
@@ -78,7 +80,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Delegate",
       chain: {} as Transaction["chain"],
       amount: 500_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     await expect(fee.estimateFee(tx)).rejects.toThrow();
@@ -91,7 +93,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Delegate",
       chain: {} as Transaction["chain"],
       amount: 50_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     const result = await fee.estimateFee(tx);
@@ -105,7 +107,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Undelegate",
       chain: {} as Transaction["chain"],
       amount: 10_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     await expect(fee.estimateFee(tx)).rejects.toMatchObject({ code: "INVALID_RESOURCE" });
@@ -118,7 +120,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Undelegate",
       chain: {} as Transaction["chain"],
       amount: 10_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
       resource: "STAKED",
     };
@@ -132,7 +134,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Undelegate",
       chain: {} as Transaction["chain"],
       amount: 999_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
       resource: "BANDWIDTH",
     };
@@ -146,7 +148,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Undelegate",
       chain: {} as Transaction["chain"],
       amount: 10_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
       resource: "BANDWIDTH",
     };
@@ -161,7 +163,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Vote",
       chain: {} as Transaction["chain"],
       amount: 50_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       validator: "TSR",
     };
     await expect(fee.estimateFee(tx)).rejects.toThrow();
@@ -174,7 +176,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Vote",
       chain: {} as Transaction["chain"],
       amount: 10_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       validator: "TUNKNOWN",
     };
     await expect(fee.estimateFee(tx)).rejects.toThrow();
@@ -187,7 +189,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Vote",
       chain: {} as Transaction["chain"],
       amount: 10_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       validator: "TSR",
     };
     const result = await fee.estimateFee(tx);
@@ -201,7 +203,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "Vote",
       chain: {} as Transaction["chain"],
       amount: 10_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       validator: SR,
     };
     const result = await fee.estimateFee(tx);
@@ -218,7 +220,7 @@ describe("createFeeService — balance-aware validation", () => {
       type: "ClaimRewards",
       chain: {} as Transaction["chain"],
       amount: 0n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       validator: "TSR",
     };
     const result = await fee.estimateFee(tx);
@@ -238,6 +240,21 @@ describe("createFeeService — balance-aware validation", () => {
     };
     await expect(fee.estimateFee(tx)).rejects.toThrow();
   });
+
+  it("Delegate: malformed account throws ValidationError(INVALID_ADDRESS), before hitting the RPC", async () => {
+    const rpc = makeRpc(baseAccount);
+    const getAccount = rpc.getAccount as Mock;
+    const fee = createFeeService(rpc, makeStaking());
+    const tx: Transaction = {
+      type: "Delegate",
+      chain: {} as Transaction["chain"],
+      amount: 10_000_000n,
+      account: "TWallet",
+      isMaxAmount: false,
+    };
+    await expect(fee.estimateFee(tx)).rejects.toMatchObject({ code: "INVALID_ADDRESS" });
+    expect(getAccount).not.toHaveBeenCalled();
+  });
 });
 
 describe("createFeeService — resource-aware fee", () => {
@@ -248,7 +265,7 @@ describe("createFeeService — resource-aware fee", () => {
       type: "Delegate",
       chain: {} as Transaction["chain"],
       amount: 50_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     const result = await fee.estimateFee(tx);
@@ -263,7 +280,7 @@ describe("createFeeService — resource-aware fee", () => {
       type: "Delegate",
       chain: {} as Transaction["chain"],
       amount: 50_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     const result = await fee.estimateFee(tx);
@@ -278,7 +295,7 @@ describe("createFeeService — resource-aware fee", () => {
       type: "Delegate",
       chain: {} as Transaction["chain"],
       amount: 50_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     const result = await fee.estimateFee(tx);
@@ -294,13 +311,13 @@ describe("createFeeService — resource-aware fee", () => {
       type: "ClaimRewards",
       chain: {} as Transaction["chain"],
       amount: 0n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       validator: "TSR",
     };
     const result = await fee.estimateFee(tx);
     expect(result.type).toBe("ResourceFee");
     expect(result.total).toBe(0n);
-    expect(getAccountResources).toHaveBeenCalledWith("TOwner");
+    expect(getAccountResources).toHaveBeenCalledWith(TEST_ADDRESS);
   });
 
   it("ClaimRewards WITHOUT account falls back to conservative full burn", async () => {
@@ -327,7 +344,7 @@ describe("createFeeService — resource-aware fee", () => {
       type: "Delegate",
       chain: {} as Transaction["chain"],
       amount: 50_000_000n,
-      account: "TOwner",
+      account: TEST_ADDRESS,
       isMaxAmount: false,
     };
     const result = await fee.estimateFee(tx);
