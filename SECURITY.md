@@ -23,6 +23,17 @@ Only the latest published version of each package receives security fixes.
 |---------|-----------|
 | `@guardian-sdk/sdk` | latest ✅ |
 | `@guardian-sdk/bsc` | latest ✅ |
+| `@guardian-sdk/cardano` | latest ✅ |
+| `@guardian-sdk/tron` | latest ✅ |
+| `@guardian-sdk/solana` | latest ✅ |
+
+---
+
+## Security posture
+
+- CI runs `pnpm audit --prod --audit-level high` on every pull request, failing the build on any high/critical vulnerability reachable through a shipped (runtime) dependency. Dev-only tooling advisories are triaged but do not gate.
+- The MPC `compile()` flow verifies the externally-supplied signature against the exact digest returned by `prehash()` on every chain (BSC, Cardano, Tron, Solana) before assembling the broadcast transaction — a tampered or mismatched signature is rejected locally.
+- `rpcUrl` must point at an operator-trusted endpoint; an opt-in `rejectPrivateRpcHosts` guard is available to reject loopback/private/link-local hosts.
 
 ---
 

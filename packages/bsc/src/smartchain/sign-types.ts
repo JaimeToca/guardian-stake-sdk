@@ -17,6 +17,20 @@ export interface BscSignServiceContract extends SignServiceContract {
   buildCallData(transaction: Transaction): Promise<CallData>;
 }
 
+/**
+ * Sign args carrying the exact serialized unsigned tx through prehash -> compile
+ * (mirrors Cardano's `_txBodyCbor` and Tron's `_rawTx`).
+ *
+ * `compile()` reuses `_unsignedTx` verbatim instead of rebuilding the transaction from
+ * `signArgs.transaction`/`signArgs.fee` — this guarantees the bytes an external signer
+ * signed are exactly the bytes that get assembled and broadcast, and avoids re-running
+ * `bnbToShares()`/live RPC a second time for Undelegate/Redelegate.
+ */
+export interface BscSignArgs extends BaseSignArgs {
+  /** @internal Populated by `prehash()` and forwarded through `PrehashResult.signArgs`. */
+  _unsignedTx?: `0x${string}`;
+}
+
 /** BSC-specific signing args that accept a viem `PrivateKeyAccount` instead of a raw private key. */
 export interface SigningWithAccount extends BaseSignArgs {
   account: PrivateKeyAccount;

@@ -14,11 +14,16 @@ import {
   getBase64Decoder,
   getBase64Encoder,
   getBase64EncodedWireTransaction,
+  getPublicKeyFromAddress,
   getTransactionDecoder,
   signTransaction,
   signatureBytes,
+  verifySignature,
+  type Address,
+  type ReadonlyUint8Array,
   type Transaction as KitTransaction,
 } from "@solana/kit";
+import { timingSafeEqual } from "node:crypto";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import type { SolanaSignArgs } from "../tx/solana-types";
@@ -76,6 +81,18 @@ function bytesToBase64(bytes: Uint8Array): string {
   return base64Decoder.decode(bytes);
 }
 
+/**
+ * Constant-time byte-array equality. Compares full length first (a length mismatch is not
+ * secret-dependent), then compares every byte via `crypto.timingSafeEqual` — never short-circuits
+ * on the first differing byte — so the comparison time doesn't leak *where* two buffers diverge.
+ */
+function constantTimeBytesEqual(a: ReadonlyUint8Array, b: ReadonlyUint8Array): boolean {
+  if (a.byteLength !== b.byteLength) {
+    return false;
+  }
+  return timingSafeEqual(Uint8Array.from(a), Uint8Array.from(b));
+}
+
 function attachFeePayerSignature(
   unsigned: KitTransaction,
   feePayer: string,
@@ -125,37 +142,49 @@ export function createSignService(
       logger.info("SignService: signing transaction", { type: args.transaction.type });
       assertSolanaFee(args.fee);
 
-      const seed = parseEd25519SeedHex(args.privateKey);
-      const [keypair, keypairSigner] = await Promise.all([
-        createKeyPairFromPrivateKeyBytes(seed),
-        createKeyPairSignerFromPrivateKeyBytes(seed),
-      ]);
-      const authorityAddress = keypairSigner.address;
+      // M-SOLANA-1: authority is derived from the seed (privateKey), so we must parse the seed
+      // before the RPC-bound `buildUnsignedTx` call that needs `authorityAddress`. We still keep
+      // the seed in a single try/finally scope and zeroize it as soon as signing finishes so the
+      // in-process lifetime is bounded to this `sign()` invocation.
+      let seed: Uint8Array | undefined;
+      try {
+        seed = parseEd25519SeedHex(args.privateKey);
+        const [keypair, keypairSigner] = await Promise.all([
+          createKeyPairFromPrivateKeyBytes(seed),
+          createKeyPairSignerFromPrivateKeyBytes(seed),
+        ]);
+        const authorityAddress = keypairSigner.address;
 
-      if (args.transaction.account && args.transaction.account !== authorityAddress) {
-        throw new SigningError(
-          "INVALID_SIGNING_ARGS",
-          "transaction.account must match the address derived from privateKey."
+        if (args.transaction.account && args.transaction.account !== authorityAddress) {
+          throw new SigningError(
+            "INVALID_SIGNING_ARGS",
+            "transaction.account must match the address derived from privateKey."
+          );
+        }
+
+        const built = await buildUnsignedTx(
+          {
+            rpc,
+            authorityAddress,
+            config: buildConfig,
+            computeUnitPrice: args.fee.computeUnitPrice,
+          },
+          args.transaction,
+          args.fee
         );
+
+        const unsigned = decodeWireTransaction(built.wireTransactionBase64);
+        const signed = await signTransaction([keypair], unsigned);
+        const wire = getBase64EncodedWireTransaction(signed);
+
+        logger.info("SignService: transaction signed");
+        return wire;
+      } finally {
+        // Best-effort zeroization: once the keypair(s) are derived and the message signed, the raw
+        // seed bytes are no longer needed. Doesn't help if the JS engine already copied the bytes
+        // internally, but it does shorten this reference's exposure window in process memory.
+        seed?.fill(0);
       }
-
-      const built = await buildUnsignedTx(
-        {
-          rpc,
-          authorityAddress,
-          config: buildConfig,
-          computeUnitPrice: args.fee.computeUnitPrice,
-        },
-        args.transaction,
-        args.fee
-      );
-
-      const unsigned = decodeWireTransaction(built.wireTransactionBase64);
-      const signed = await signTransaction([keypair], unsigned);
-      const wire = getBase64EncodedWireTransaction(signed);
-
-      logger.info("SignService: transaction signed");
-      return wire;
     },
 
     async prehash(args: BaseSignArgs): Promise<PrehashResult> {
@@ -227,6 +256,53 @@ export function createSignService(
       }
 
       const unsigned = decodeWireTransaction(wire);
+
+      // SEC-SIGN-1d, check 1: bind compile() to the exact bytes prehash() returned (and that the
+      // external signer signed) instead of trusting `_wireTransaction` alone. If `_wireTransaction`
+      // was swapped or mutated for a different message after prehash(), `unsigned.messageBytes`
+      // will diverge from `_messageBytes` and this must throw before any signature is attached.
+      const expectedMessageBytes = solanaArgs._messageBytes;
+      if (!expectedMessageBytes) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "compile() requires signArgs._messageBytes from prehash()."
+        );
+      }
+      if (!constantTimeBytesEqual(unsigned.messageBytes, expectedMessageBytes)) {
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() detected that signArgs._wireTransaction's message does not match " +
+            "signArgs._messageBytes. This means _wireTransaction was mutated or swapped after prehash()."
+        );
+      }
+
+      // SEC-SIGN-1d, check 2: verify the supplied signature is a valid Ed25519 signature by the
+      // fee payer over the message bytes, before attaching it. Without this, a garbage/invalid
+      // signature — or a valid signature from an unrelated key — would be silently assembled into
+      // a wire transaction that only fails (or is rejected) at broadcast.
+      // Length is validated here (rather than relying solely on attachFeePayerSignature's later
+      // check) because `signatureBytes`/`verifySignature` require exactly 64 bytes.
+      if (sigBytes.byteLength !== 64) {
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          `compile() signature must decode to 64 Ed25519 bytes, got ${sigBytes.byteLength}.`
+        );
+      }
+      const feePayerPublicKey = await getPublicKeyFromAddress(feePayer as Address);
+      const isValidSignature = await verifySignature(
+        feePayerPublicKey,
+        signatureBytes(sigBytes),
+        expectedMessageBytes
+      );
+      if (!isValidSignature) {
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() produced a transaction whose signature does not verify against the fee " +
+            "payer's public key over the prehashed message. This can mean signArgs was mutated " +
+            "after prehash(), or the supplied signature belongs to a different signer/transaction."
+        );
+      }
+
       const signed = attachFeePayerSignature(unsigned, feePayer, sigBytes);
       const out = getBase64EncodedWireTransaction(signed);
 

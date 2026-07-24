@@ -61,6 +61,13 @@ const UNSIGNED_FIXTURE = {
 const REAL_SIGNATURE =
   "5de49a155795320bcf9580803148f9e951dfe558c0e6931a39f1895f8b8862591de5ff1d2105a4219b035f0500f19fdf28eb111d6aee6b602e3daf78b0e9ea721B";
 
+// Deterministic secp256k1 signature over UNSIGNED_FIXTURE.txID produced by a DIFFERENT throwaway
+// key (private key = 2, not TEST_PRIVATE_KEY). It is cryptographically valid (recovers to a real
+// address) but belongs to a different owner than TEST_ADDRESS — the exact "wrong signer" case
+// SEC-SIGN-1c must reject.
+const WRONG_OWNER_SIGNATURE =
+  "49ede7a60f4b7417dcb51ac2a05e70f79f3447e6320af2d1a4e0202a2838940329a48dd080a881cdfe9feba5635b73811af50d8c8243f2d8ebb49c76dc0634da1B";
+
 const fee = { type: "ResourceFee", bandwidth: 0n, energy: 0n, total: 0n } as const;
 
 const delegateTx = {
@@ -409,6 +416,20 @@ describe("prehash", () => {
     );
   });
 
+  it("throws ValidationError(INVALID_ADDRESS) when transaction.account is malformed", async () => {
+    const { factory } = realSetup();
+    const svc = createSignService(factory);
+    const txWithMalformedAccount = {
+      ...delegateTx,
+      account: "TWallet",
+    } as unknown as Transaction;
+    await expectSdkError(
+      svc.prehash({ transaction: txWithMalformedAccount, fee, nonce: 0 } as never),
+      ValidationError,
+      "INVALID_ADDRESS"
+    );
+  });
+
   it("returns serializedTransaction === real txID and threads the raw tx into signArgs._rawTx", async () => {
     const { factory } = realSetup();
     const svc = createSignService(factory);
@@ -476,6 +497,30 @@ describe("compile", () => {
     expect(parsed.raw_data_hex).toBe(UNSIGNED_FIXTURE.raw_data_hex);
   });
 
+  describe("valid prehash -> compile round-trip stays byte-identical (SEC-SIGN-1c)", () => {
+    it.each([
+      { name: "Delegate", tx: delegateTx },
+      { name: "Undelegate", tx: undelegateTx },
+      { name: "Vote", tx: voteTx },
+      { name: "ClaimDelegate", tx: claimDelegateTx },
+      { name: "ClaimRewards", tx: claimRewardsTx },
+    ])("$name", async ({ tx }) => {
+      const { factory } = realSetup();
+      const svc = createSignService(factory);
+
+      const prehashResult = await svc.prehash({ transaction: tx, fee, nonce: 0 } as never);
+      const raw = await svc.compile({
+        signArgs: prehashResult.signArgs,
+        signature: REAL_SIGNATURE,
+      });
+
+      const parsed = JSON.parse(raw);
+      expect(parsed.signature).toEqual([REAL_SIGNATURE]);
+      expect(parsed.txID).toBe(UNSIGNED_FIXTURE.txID);
+      expect(parsed.raw_data_hex).toBe(UNSIGNED_FIXTURE.raw_data_hex);
+    });
+  });
+
   it("throws SigningError on compile with non-string signature", async () => {
     const { factory } = realSetup();
     const svc = createSignService(factory);
@@ -486,6 +531,82 @@ describe("compile", () => {
       }),
       SigningError,
       "INVALID_SIGNING_ARGS"
+    );
+  });
+
+  it("(SEC-SIGN-1c) throws SIGNATURE_MISMATCH when _rawTx.raw_data_hex was mutated after prehash (stale txID)", async () => {
+    const { factory } = realSetup();
+    const svc = createSignService(factory);
+
+    const prehashResult = await svc.prehash({ transaction: delegateTx, fee, nonce: 0 } as never);
+    const tamperedRawTx = {
+      ...(prehashResult.signArgs as { _rawTx: typeof UNSIGNED_FIXTURE })._rawTx,
+      // Flip a byte in raw_data_hex — txID no longer matches SHA256(raw_data_hex).
+      raw_data_hex: UNSIGNED_FIXTURE.raw_data_hex.replace(/^0a02/, "0a03"),
+    };
+
+    await expectSdkError(
+      svc.compile({
+        signArgs: { ...prehashResult.signArgs, _rawTx: tamperedRawTx } as never,
+        signature: REAL_SIGNATURE,
+      }),
+      SigningError,
+      "SIGNATURE_MISMATCH"
+    );
+  });
+
+  it("(SEC-SIGN-1c) throws SIGNATURE_MISMATCH when the signature recovers to a different owner", async () => {
+    const { factory } = realSetup();
+    const svc = createSignService(factory);
+
+    const prehashResult = await svc.prehash({ transaction: delegateTx, fee, nonce: 0 } as never);
+
+    // WRONG_OWNER_SIGNATURE is a genuinely valid secp256k1 signature over the same txID, but
+    // produced by a different private key — it must be rejected because it doesn't recover to
+    // TEST_ADDRESS (the tx owner), not because it's malformed.
+    await expectSdkError(
+      svc.compile({
+        signArgs: prehashResult.signArgs,
+        signature: WRONG_OWNER_SIGNATURE,
+      }),
+      SigningError,
+      "SIGNATURE_MISMATCH"
+    );
+  });
+
+  it("(SEC-SIGN-1c) throws SIGNATURE_MISMATCH when raw_data is mutated while raw_data_hex and signature stay intact", async () => {
+    const { factory } = realSetup();
+    const svc = createSignService(factory);
+
+    const prehashResult = await svc.prehash({ transaction: delegateTx, fee, nonce: 0 } as never);
+    const originalRaw = (prehashResult.signArgs as { _rawTx: typeof UNSIGNED_FIXTURE })._rawTx;
+    // Diverge structured raw_data (e.g. amount) while leaving the signed hex/txID/signature alone.
+    const tamperedRawTx = {
+      ...originalRaw,
+      raw_data: {
+        ...originalRaw.raw_data,
+        contract: [
+          {
+            ...originalRaw.raw_data.contract[0],
+            parameter: {
+              ...originalRaw.raw_data.contract[0].parameter,
+              value: {
+                ...originalRaw.raw_data.contract[0].parameter.value,
+                frozen_balance: 9_999_999,
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    await expectSdkError(
+      svc.compile({
+        signArgs: { ...prehashResult.signArgs, _rawTx: tamperedRawTx } as never,
+        signature: REAL_SIGNATURE,
+      }),
+      SigningError,
+      "SIGNATURE_MISMATCH"
     );
   });
 });

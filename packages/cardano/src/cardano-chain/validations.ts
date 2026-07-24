@@ -158,13 +158,36 @@ export function parseCardanoPublicKey(value: string): string {
  * Throws ValidationError("INVALID_AMOUNT") for negative, fractional, or non-numeric strings.
  */
 export function parseLovelaceString(value: string, fieldName: string): bigint {
-  if (!/^\d+$/.test(value)) {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) {
     throw new ValidationError(
       "INVALID_AMOUNT",
-      `${fieldName} must be a non-negative integer string, got "${value}".`
+      `${fieldName} must be a non-negative integer string, got "${String(value)}".`
     );
   }
   return BigInt(value);
+}
+
+/**
+ * Validates a non-negative, finite integer `number` field from a Blockfrost
+ * response (e.g. protocol parameters like `min_fee_a`/`min_fee_b`) before it is
+ * used in fee arithmetic. Throws ValidationError("INVALID_AMOUNT") for negative,
+ * fractional, NaN, or Infinity values rather than letting them silently
+ * propagate into `BigInt()` (which throws an untyped RangeError/SyntaxError) or
+ * into downstream fee math as NaN/Infinity.
+ */
+export function parseNonNegativeInteger(value: number, fieldName: string): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    !Number.isInteger(value) ||
+    value < 0
+  ) {
+    throw new ValidationError(
+      "INVALID_AMOUNT",
+      `${fieldName} must be a non-negative integer, got "${String(value)}".`
+    );
+  }
+  return value;
 }
 
 /**

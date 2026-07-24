@@ -367,6 +367,8 @@ interface SolanaConfig {
   enableGpaFallback?: boolean;
   /** JSON-RPC options forwarded to every sendTransaction (broadcast) call. */
   broadcastOptions?: SolanaSendTransactionOptions;
+  /** Opt-in SSRF guard: reject rpcUrl hosts that are loopback/private/link-local/metadata. Default false. */
+  rejectPrivateRpcHosts?: boolean;
 }
 
 interface SolanaSendTransactionOptions {
@@ -376,6 +378,8 @@ interface SolanaSendTransactionOptions {
   minContextSlot?: bigint;
 }
 ```
+
+> **`rpcUrl` must be operator-trusted configuration** — never accept it directly from untrusted end-user input. `rejectPrivateRpcHosts` is **opt-in** (default `false`, i.e. unchanged behavior); when `true`, it rejects `127.0.0.0/8`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` (incl. `169.254.169.254`), and `.local`/`localhost` hostnames.
 
 ```typescript
 const sdk = new GuardianSDK([solana({ rpcUrl: "https://api.mainnet-beta.solana.com" })]);
@@ -676,7 +680,10 @@ const tx = {
 ```
 
 - Rejects `isMaxAmount: true`, `amount ≤ 0`, below `getStakeMinimumDelegation`.  
-- Prefund check: wallet must cover `amount + rent + fee cushion`.  
+- Prefund check: wallet must cover `amount + rent + fee`, where the fee component is `fee.total`
+  when the caller supplied a non-zero quote, otherwise the real priority fee
+  (`priorityFeeLamports(fee.computeUnits, computeUnitPrice)`) plus a small base-fee cushion — not a
+  flat constant that ignores `computeUnitPrice`.  
 - Rent-exempt reserve is **not** delegated; only lamports above reserve are staked.
 
 ### Undelegate — deactivate a stake account

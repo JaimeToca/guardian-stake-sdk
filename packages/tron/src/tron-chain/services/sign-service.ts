@@ -7,9 +7,30 @@ import type {
 } from "@guardian-sdk/sdk";
 import { NoopLogger, SigningError, privateKey as validatePrivateKey } from "@guardian-sdk/sdk";
 import type { TronWeb } from "tronweb";
+import { utils as tronUtils } from "tronweb";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import type { TronSignArgs, UnsignedTronTx } from "../tx/tron-types";
+import { assertValidAddress } from "../validations";
+
+/** Narrow shape of a `raw_data.contract[].parameter.value` that carries `owner_address` — every
+ * Tron contract type used here (FreezeBalanceV2, UnfreezeBalanceV2, Vote, WithdrawExpireUnfreeze,
+ * WithdrawBalance) has one. Kept structural/`unknown`-narrowed rather than `any`. */
+interface TronContractValue {
+  owner_address?: unknown;
+}
+interface TronContractEntry {
+  parameter?: { value?: TronContractValue };
+}
+interface TronRawData {
+  contract?: TronContractEntry[];
+}
+
+function extractOwnerAddressHex(rawTx: UnsignedTronTx): string | undefined {
+  const rawData = rawTx.raw_data as TronRawData | undefined;
+  const owner = rawData?.contract?.[0]?.parameter?.value?.owner_address;
+  return typeof owner === "string" ? owner : undefined;
+}
 
 /** `trx.sign` is generic over TronWeb's own concrete `Transaction`/`SignedTransaction` shape,
  * which isn't exported from the package's public entrypoint. Narrow our opaque `UnsignedTronTx`
@@ -61,6 +82,9 @@ export function createSignService(
           "INVALID_SIGNING_ARGS",
           "Tron prehash() requires transaction.account (the owner address)."
         );
+      // Non-empty but malformed addresses are a distinct concern (ValidationError, not a
+      // signing-args-shape issue) — checked after confirming the account is present.
+      assertValidAddress(owner);
       const unsigned = await buildUnsignedTx(tronWeb, args.transaction, owner);
       // Thread the fully-built unsigned tx through `_rawTx` (a Tron-only extension) so compile()
       // can reattach the external signature without rebuilding or re-hitting the FullNode — mirrors
@@ -89,6 +113,70 @@ export function createSignService(
         );
       if (typeof args.signature !== "string" || args.signature.length === 0)
         throw new SigningError("INVALID_SIGNING_ARGS", "compile() requires a non-empty signature.");
+      if (typeof rawTx.raw_data_hex !== "string" || rawTx.raw_data_hex.length === 0)
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "compile() requires signArgs._rawTx.raw_data_hex from prehash()."
+        );
+
+      // Integrity check: recompute SHA256(raw_data_hex) and assert it equals the txID that was
+      // returned to the external signer by prehash(). This catches a `_rawTx` swapped (or
+      // mutated) between prehash() and compile() before it ever reaches an "attach signature"
+      // step — without it, a tampered raw_data_hex would silently carry over the STALE txID and the
+      // signature would be attached to a transaction the signer never actually reviewed.
+      const recomputedTxId = Buffer.from(
+        tronUtils.crypto.SHA256(Array.from(Buffer.from(rawTx.raw_data_hex, "hex")))
+      ).toString("hex");
+      if (recomputedTxId !== rawTx.txID)
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() detected that signArgs._rawTx does not match its own txID " +
+            "(SHA256(raw_data_hex) != txID). This means _rawTx was mutated or swapped after prehash()."
+        );
+
+      // Bind structured `raw_data` to the same bytes as `raw_data_hex` / txID. `owner_address`
+      // (and every other field) is otherwise independently mutable on the JSON object; without
+      // this, a caller could pass a signature valid over raw_data_hex while shipping divergent
+      // raw_data for display/policy paths. TronWeb's txCheck re-encodes raw_data and compares.
+      let rawDataBoundToHex = false;
+      try {
+        rawDataBoundToHex = tronUtils.transaction.txCheck(rawTx as never);
+      } catch {
+        rawDataBoundToHex = false;
+      }
+      if (!rawDataBoundToHex)
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() detected that signArgs._rawTx.raw_data does not match raw_data_hex " +
+            "(structured raw_data was mutated after prehash() while hex/txID were left intact)."
+        );
+
+      // Signature check: recover the secp256k1 signer from the txID digest and confirm it equals
+      // the transaction's own owner_address (now known to match the signed raw_data_hex bytes).
+      // This catches a syntactically valid signature that simply belongs to the wrong key/tx.
+      const ownerAddressHex = extractOwnerAddressHex(rawTx);
+      if (!ownerAddressHex)
+        throw new SigningError(
+          "INVALID_SIGNING_ARGS",
+          "compile() could not find raw_data.contract[0].parameter.value.owner_address on signArgs._rawTx."
+        );
+      let recoveredAddressHex: string;
+      try {
+        recoveredAddressHex = tronUtils.crypto.ecRecover(rawTx.txID, args.signature);
+      } catch {
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() could not recover a secp256k1 signer from the supplied signature over txID."
+        );
+      }
+      if (recoveredAddressHex.toLowerCase() !== ownerAddressHex.toLowerCase())
+        throw new SigningError(
+          "SIGNATURE_MISMATCH",
+          "compile() produced a transaction whose signature does not recover to the transaction's " +
+            "owner_address. This can mean signArgs was mutated after prehash(), or the supplied " +
+            "signature belongs to a different signer/transaction."
+        );
+
       // Attach the external signature onto the prehash-built raw tx. Tron carries signatures in a
       // `signature[]` array; a single freeze/vote/unfreeze/withdraw tx has exactly one signer.
       const signed: UnsignedTronTx = { ...rawTx, signature: [args.signature] };

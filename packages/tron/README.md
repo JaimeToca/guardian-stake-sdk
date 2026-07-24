@@ -153,8 +153,12 @@ function tron(config: TronConfig): GuardianServiceContract
 interface TronConfig {
   rpcUrl: string;   // FullNode HTTP endpoint (no TronGrid)
   logger?: Logger;  // optional; defaults to NoopLogger
+  /** Opt-in SSRF guard: reject rpcUrl hosts that are loopback/private/link-local/metadata. Default false. */
+  rejectPrivateRpcHosts?: boolean;
 }
 ```
+
+> **`rpcUrl` must be operator-trusted configuration** — never accept it directly from untrusted end-user input. `rejectPrivateRpcHosts` is **opt-in** (default `false`, i.e. unchanged behavior); when `true`, it rejects `127.0.0.0/8`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` (incl. `169.254.169.254`), and `.local`/`localhost` hostnames.
 
 ---
 
@@ -396,6 +400,14 @@ const txHash = await sdk.broadcast(chains.tronMainnet, rawTx);
 
 `signArgs` from `prehash()` must be passed through unchanged to `compile()`.
 
+**`compile()` verifies before assembling**, rather than trusting the external signer completely: it
+recomputes `SHA256(raw_data_hex)` and asserts it equals `signArgs._rawTx.txID` (catching a `_rawTx`
+mutated or swapped after `prehash()`), then recovers the secp256k1 signer from `signature` over that
+`txID` and asserts it equals `raw_data.contract[0].parameter.value.owner_address` (catching a
+signature that belongs to a different key/transaction). Either check failing throws
+`SigningError("SIGNATURE_MISMATCH", ...)` before a broadcastable transaction is ever produced. A
+valid `prehash()` → `compile()` round-trip is unaffected — the output is byte-identical to before.
+
 ---
 
 ## Transaction Flows
@@ -491,7 +503,8 @@ Every error thrown by the SDK extends `GuardianError`. See the [main README Erro
 | `INVALID_AMOUNT` | Freeze below 1 TRX, `isMaxAmount: true` on `Delegate`/`Undelegate` (unsupported — pass an exact amount), vote not a whole number of TRX, over-voting, or unfreeze exceeding frozen balance |
 | `INVALID_RESOURCE` | `Undelegate`/fee estimation with a missing or invalid `resource` (must be `"BANDWIDTH"` or `"ENERGY"`) |
 | `UNSUPPORTED_OPERATION` | Voting for an unknown Super Representative |
-| `INVALID_SIGNING_ARGS` | Missing `privateKey`/`account`, or `compile()` called without `signArgs._rawTx` from `prehash()` |
+| `INVALID_SIGNING_ARGS` | Missing `privateKey`/`account`, or `compile()` called without `signArgs._rawTx`/`raw_data_hex`/a resolvable `owner_address` from `prehash()` |
+| `SIGNATURE_MISMATCH` | `compile()`'s recomputed `SHA256(raw_data_hex)` doesn't match `signArgs._rawTx.txID` (tampered/swapped `_rawTx`), or the supplied signature doesn't recover to the transaction's `owner_address` |
 
 ---
 

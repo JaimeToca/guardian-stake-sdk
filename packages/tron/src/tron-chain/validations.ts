@@ -1,6 +1,18 @@
 import { ValidationError } from "@guardian-sdk/sdk";
+import { TronWeb } from "tronweb";
 import type { TronAccount, TronResource, TronWitness } from "./rpc/tron-rpc-types";
 import { SUN_PER_TRX } from "./tx/tron-types";
+
+/**
+ * Runtime guard at every service boundary that takes an address/account string: `TronWeb.isAddress`
+ * accepts both base58 (`T...`) and hex (`41...`) forms, and rejects malformed or placeholder-style
+ * strings before they ever reach an RPC call or ownerAddress field.
+ */
+export function assertValidAddress(address: string): void {
+  if (!TronWeb.isAddress(address)) {
+    throw new ValidationError("INVALID_ADDRESS", "Malformed Tron address.");
+  }
+}
 
 export function availableTronPower(account: TronAccount): bigint {
   const frozen = account.frozen.reduce((s, f) => s + f.amount, 0n);

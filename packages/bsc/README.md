@@ -572,6 +572,7 @@ const { serializedTransaction, signArgs } = await sdk.preHash({
     amount: parseEther("1"),
     isMaxAmount: false,
     validator: validators[0],
+    account: "0xYourAddress", // required — must be the expected signer for compile() to verify the signature
   },
   fee,
   nonce,
@@ -581,6 +582,8 @@ const { serializedTransaction, signArgs } = await sdk.preHash({
 // It returns a hex-encoded ECDSA signature string.
 ```
 
+`signArgs` carries an internal `_unsignedTx` field — the exact serialized unsigned transaction produced by `preHash()`. Treat `signArgs` as opaque and pass it through to `compile()` unmodified; don't reconstruct or edit it by hand.
+
 **Step 2 — compile the final transaction:**
 
 ```typescript
@@ -588,6 +591,11 @@ const rawTx = await sdk.compile({
   signArgs,
   signature: "0x<hex-signature>", // raw hex signature from your external signer
 });
+```
+
+`compile()` reassembles the transaction from `signArgs._unsignedTx` verbatim — it never rebuilds calldata or re-queries the chain (no second `bnbToShares` RPC call for `Undelegate`/`Redelegate`). `serializedTransaction` from `preHash()` is the **unsigned** payload given to the external signer; `rawTx` returned by `compile()` is the **signed** payload for broadcast. The original unsigned bytes are preserved inside that assembled signed transaction (not rebuilt). It then recovers the signer from the assembled signature and throws `SigningError("SIGNATURE_MISMATCH", ...)` if the recovered address does not match `transaction.account` — catching a tampered `signArgs` or a signature from the wrong signer locally, instead of failing silently until the node rejects the broadcast.
+
+> `transaction.account` must be set to the expected signer's address on the `preHash()` transaction — on this MPC/external-signing path it is **required**: `compile()` throws `SigningError("MISSING_ACCOUNT", ...)` if it's missing, because without it the signature-recovery check has nothing to verify against.
 
 ---
 
@@ -670,7 +678,9 @@ import { ConfigError } from "@guardian-sdk/bsc";
 | Code | Thrown when |
 |---|---|
 | `UNSUPPORTED_CHAIN` | The chain passed to any method has no registered service — check that you passed `bsc(...)` to the `GuardianSDK` constructor |
-| `INVALID_RPC_URL` | The `rpcUrl` passed to `bsc()` is not a valid URL or uses an unsupported protocol (must be `http`, `https`, `ws`, or `wss`) |
+| `INVALID_RPC_URL` | The `rpcUrl` passed to `bsc()` is not a valid URL or uses an unsupported protocol (must be `http`, `https`, `ws`, or `wss`); or, when `rejectPrivateRpcHosts: true`, the URL resolves to a loopback/private/link-local/metadata host |
+
+> **`rpcUrl` must be operator-trusted configuration** — never accept it directly from untrusted end-user input. `bsc({ rpcUrl, rejectPrivateRpcHosts? })` accepts an **opt-in** (default `false`) `rejectPrivateRpcHosts` flag that rejects loopback/private/link-local/metadata hosts (`127.0.0.0/8`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` incl. `169.254.169.254`, and `.local`/`localhost`) as defense-in-depth against SSRF. Left off, behavior is unchanged from before — existing consumers pointing at a local/private BSC node keep working.
 
 ---
 
@@ -684,9 +694,11 @@ import { SigningError } from "@guardian-sdk/bsc";
 
 | Code | Thrown when |
 |---|---|
-| `INVALID_SIGNING_ARGS` | The object passed to `sign()` contains neither a `privateKey` nor an `account` field |
+| `INVALID_SIGNING_ARGS` | The object passed to `sign()` contains neither a `privateKey` nor an `account` field; or `compile()` is called with `signArgs` that did not come from `preHash()` (missing the internal `_unsignedTx`) |
 | `INVALID_FEE_TYPE` | A `UtxoFee` (or other non-gas fee) was passed to `sign()` — BSC requires a `GasFee` with `gasPrice` and `gasLimit`; use `sdk.estimateFee()` on a BSC transaction to obtain the correct fee |
 | `UNSUPPORTED_TRANSACTION_TYPE` | `buildCallData` is called with a `TransactionType` that has no ABI encoding defined |
+| `SIGNATURE_MISMATCH` | `compile()`'s assembled transaction does not recover to `transaction.account` — the supplied `signature` belongs to a different signer/transaction, or `transaction.account` was mutated on `signArgs` after `preHash()` |
+| `MISSING_ACCOUNT` | `compile()` is called on the MPC/external-signing path (`signArgs._unsignedTx` present, from `preHash()`) but `transaction.account` is missing — required so the signature-recovery check has an expected signer to verify against |
 
 ---
 

@@ -12,6 +12,7 @@ import type { TronResource } from "../rpc/tron-rpc-types";
 import type { TronWebFactory } from "../tronweb/tronweb-factory";
 import type { TronStakingServiceContract } from "./staking-service-contract";
 import { SUN_PER_TRX } from "../tx/tron-types";
+import { assertValidAddress } from "../validations";
 
 const CACHE_TTL_MS = 15 * 60 * 1000;
 const PARAMS_TTL_MS = 10 * 60 * 1000;
@@ -383,6 +384,7 @@ export function createStakingService(
     },
 
     async getDelegations(address: string): Promise<Delegations> {
+      assertValidAddress(address);
       const [account, { raw, totalVotes, params }] = await Promise.all([
         rpc.getAccount(address),
         load(),

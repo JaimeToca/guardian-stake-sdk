@@ -1,6 +1,7 @@
 import type { Balance, Logger } from "@guardian-sdk/sdk";
 import { NoopLogger } from "@guardian-sdk/sdk";
 import type { TronRpcClientContract } from "../rpc/tron-rpc-client-contract";
+import { assertValidAddress } from "../validations";
 
 /**
  * Tron balances, all in SUN (1 TRX = 1_000_000 SUN). `getBalances` reads `getAccount` +
@@ -24,6 +25,7 @@ export function createBalanceService(
 ) {
   return {
     async getBalances(address: string): Promise<Balance[]> {
+      assertValidAddress(address);
       logger.debug("BalanceService: fetching balances");
       const [account, rewards] = await Promise.all([
         rpc.getAccount(address),

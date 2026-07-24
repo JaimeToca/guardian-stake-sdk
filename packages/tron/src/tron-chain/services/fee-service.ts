@@ -4,7 +4,13 @@ import type { TronRpcClientContract } from "../rpc/tron-rpc-client-contract";
 import type { TronWitness } from "../rpc/tron-rpc-types";
 import type { TronUndelegateTransaction } from "../tx/tron-types";
 import type { TronStakingServiceContract } from "./staking-service-contract";
-import { assertFreeze, assertResource, assertUnfreeze, assertVote } from "../validations";
+import {
+  assertFreeze,
+  assertResource,
+  assertUnfreeze,
+  assertValidAddress,
+  assertVote,
+} from "../validations";
 
 function requireAccount(tx: Transaction): string {
   if (!tx.account)
@@ -12,6 +18,9 @@ function requireAccount(tx: Transaction): string {
       "INVALID_ADDRESS",
       "account is required to estimate/validate a Tron staking transaction"
     );
+  // Covers both empty and malformed (TronWeb.isAddress("") is also false, but the explicit
+  // missing-account check above keeps the two failure messages distinct).
+  assertValidAddress(tx.account);
   return tx.account;
 }
 
@@ -30,6 +39,19 @@ export function createFeeService(
   return {
     async estimateFee(tx: Transaction): Promise<Fee> {
       logger.debug("FeeService: estimating fee", { type: tx.type });
+
+      // Validate account shape for ops that require it *before* any RPC fan-out so a malformed
+      // address fails with INVALID_ADDRESS instead of a chain-parameters/account RPC error.
+      switch (tx.type) {
+        case "Delegate":
+        case "Undelegate":
+        case "Vote":
+          requireAccount(tx);
+          break;
+        default:
+          break;
+      }
+
       const params = await rpc.getChainParameters();
       const bandwidthPrice = BigInt(Math.max(1, params.getTransactionFee ?? 1000)); // SUN per bandwidth point
 

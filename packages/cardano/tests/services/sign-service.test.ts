@@ -9,6 +9,7 @@ import type {
   BlockfrostUtxo,
 } from "../../src/cardano-chain/rpc/blockfrost-rpc-types";
 import { Ed25519PrivateKey, Ed25519PrivateNormalKeyHex } from "@cardano-sdk/crypto";
+import { HexBlob } from "@cardano-sdk/util";
 
 /**
  * Real mainnet values, verified with @cardano-sdk/core.
@@ -509,7 +510,62 @@ describe("SignService", () => {
       });
     });
 
-    it("returns a signed CBOR hex string from external signatures", async () => {
+    it("returns a signed CBOR hex string from external signatures, byte-identical to sign()", async () => {
+      const service = createSignService(makeRpcClient() as any);
+
+      const tx = {
+        type: "Delegate" as const,
+        chain: cardanoMainnet,
+        amount: 5_000_000n,
+        isMaxAmount: false,
+        validator: POOL_ID,
+        account: PAYMENT_ADDRESS,
+      };
+
+      const prehashArgs = {
+        transaction: tx,
+        fee: CARDANO_FEE,
+        nonce: 0,
+        stakingPublicKey: STAKING_PUBLIC_KEY,
+      };
+
+      // compile() requires signArgs produced by prehash() — _txBodyCbor must be present
+      const { serializedTransaction, signArgs } = await service.prehash(prehashArgs as any);
+
+      // Real external signer: sign the exact body hash returned by prehash() with the
+      // real payment/staking Ed25519 seeds (mirrors what an MPC signer would produce).
+      const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(PAYMENT_KEY)
+      );
+      const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(STAKING_KEY)
+      );
+      const paymentSig = paymentPrivKey.sign(HexBlob(serializedTransaction)).hex();
+      const stakingSig = stakingPrivKey.sign(HexBlob(serializedTransaction)).hex();
+
+      // format: paymentSigHex:stakingVKeyHex:stakingSigHex:paymentVKeyHex
+      const stakingVKey = STAKING_PUBLIC_KEY; // must match prehash stakingPublicKey + address
+      const paymentVKey = PAYMENT_PUBLIC_KEY; // must match the address's payment credential
+      const signature = `${paymentSig}:${stakingVKey}:${stakingSig}:${paymentVKey}`;
+
+      const compiled = await service.compile({ signArgs, signature });
+
+      expect(typeof compiled).toBe("string");
+      expect(compiled).toMatch(/^[0-9a-f]+$/);
+
+      // Round-trip must be byte-identical to sign() with the same private keys.
+      const directlySigned = await service.sign({
+        transaction: tx,
+        fee: CARDANO_FEE,
+        nonce: 0,
+        paymentPrivateKey: PAYMENT_KEY,
+        stakingPrivateKey: STAKING_KEY,
+      } as any);
+
+      expect(compiled).toBe(directlySigned);
+    });
+
+    it("throws SigningError when stakingSigHex is corrupted (does not verify against the body hash)", async () => {
       const service = createSignService(makeRpcClient() as any);
 
       const prehashArgs = {
@@ -526,21 +582,148 @@ describe("SignService", () => {
         stakingPublicKey: STAKING_PUBLIC_KEY,
       };
 
-      // compile() requires signArgs produced by prehash() — _txBodyCbor must be present
-      const { signArgs } = await service.prehash(prehashArgs as any);
+      const { serializedTransaction, signArgs } = await service.prehash(prehashArgs as any);
 
-      // format: paymentSigHex:stakingVKeyHex:stakingSigHex:paymentVKeyHex
-      // stakingVKey must match the STAKING_PUBLIC_KEY used in prehash() — compile() verifies this
-      const paymentSig = "aa".repeat(64); // 64-byte signature
-      const stakingVKey = STAKING_PUBLIC_KEY; // must match prehash stakingPublicKey + address
-      const stakingSig = "dd".repeat(64); // 64-byte signature
-      const paymentVKey = PAYMENT_PUBLIC_KEY; // must match the address's payment credential
+      const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(PAYMENT_KEY)
+      );
+      const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(STAKING_KEY)
+      );
+      const paymentSig = paymentPrivKey.sign(HexBlob(serializedTransaction)).hex();
+      const validStakingSig = stakingPrivKey.sign(HexBlob(serializedTransaction)).hex();
+      // Corrupt one hex nibble in the middle of an otherwise-valid signature.
+      const corruptedStakingSig =
+        validStakingSig.slice(0, 10) +
+        (validStakingSig[10] === "0" ? "1" : "0") +
+        validStakingSig.slice(11);
+
+      const stakingVKey = STAKING_PUBLIC_KEY;
+      const paymentVKey = PAYMENT_PUBLIC_KEY;
+      const signature = `${paymentSig}:${stakingVKey}:${corruptedStakingSig}:${paymentVKey}`;
+
+      await expect(service.compile({ signArgs, signature })).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("SIGNATURE_MISMATCH");
+        // Must not leak signature or key material in the error message.
+        const message = (err as SigningError).message;
+        expect(message).not.toContain(corruptedStakingSig);
+        expect(message).not.toContain(STAKING_KEY);
+        return true;
+      });
+    });
+
+    it("throws SigningError when paymentSigHex is corrupted (does not verify against the body hash)", async () => {
+      const service = createSignService(makeRpcClient() as any);
+
+      const prehashArgs = {
+        transaction: {
+          type: "Delegate" as const,
+          chain: cardanoMainnet,
+          amount: 5_000_000n,
+          isMaxAmount: false,
+          validator: POOL_ID,
+          account: PAYMENT_ADDRESS,
+        },
+        fee: CARDANO_FEE,
+        nonce: 0,
+        stakingPublicKey: STAKING_PUBLIC_KEY,
+      };
+
+      const { serializedTransaction, signArgs } = await service.prehash(prehashArgs as any);
+
+      const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(PAYMENT_KEY)
+      );
+      const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(STAKING_KEY)
+      );
+      const validPaymentSig = paymentPrivKey.sign(HexBlob(serializedTransaction)).hex();
+      const stakingSig = stakingPrivKey.sign(HexBlob(serializedTransaction)).hex();
+      const corruptedPaymentSig =
+        validPaymentSig.slice(0, 10) +
+        (validPaymentSig[10] === "0" ? "1" : "0") +
+        validPaymentSig.slice(11);
+
+      const stakingVKey = STAKING_PUBLIC_KEY;
+      const paymentVKey = PAYMENT_PUBLIC_KEY;
+      const signature = `${corruptedPaymentSig}:${stakingVKey}:${stakingSig}:${paymentVKey}`;
+
+      await expect(service.compile({ signArgs, signature })).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("SIGNATURE_MISMATCH");
+        return true;
+      });
+    });
+
+    it("throws SigningError when _txBodyCbor is swapped between prehash and compile (stale signature no longer matches the new body hash)", async () => {
+      const service = createSignService(makeRpcClient() as any);
+
+      const prehashArgsA = {
+        transaction: {
+          type: "Delegate" as const,
+          chain: cardanoMainnet,
+          amount: 5_000_000n,
+          isMaxAmount: false,
+          validator: POOL_ID,
+          account: PAYMENT_ADDRESS,
+        },
+        fee: CARDANO_FEE,
+        nonce: 0,
+        stakingPublicKey: STAKING_PUBLIC_KEY,
+      };
+
+      // A second, distinct transaction (different fee, which IS embedded in the tx body
+      // unlike `amount` — Cardano Delegate always delegates the whole wallet, see
+      // L-CARDANO-2) produces a different body/hash.
+      const prehashArgsB = {
+        transaction: {
+          type: "Delegate" as const,
+          chain: cardanoMainnet,
+          amount: 5_000_000n,
+          isMaxAmount: false,
+          validator: POOL_ID,
+          account: PAYMENT_ADDRESS,
+        },
+        fee: { ...CARDANO_FEE, total: CARDANO_FEE.total + 12_345n },
+        nonce: 0,
+        stakingPublicKey: STAKING_PUBLIC_KEY,
+      };
+
+      const { serializedTransaction: bodyHashA, signArgs: signArgsA } = await service.prehash(
+        prehashArgsA as any
+      );
+      const { serializedTransaction: bodyHashB, signArgs: signArgsB } = await service.prehash(
+        prehashArgsB as any
+      );
+
+      // Distinct txs must produce distinct body hashes (not hash-vs-CBOR).
+      expect(bodyHashA).not.toBe(bodyHashB);
+
+      // Sign the digest for tx A (what the external signer actually saw)...
+      const paymentPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(PAYMENT_KEY)
+      );
+      const stakingPrivKey = Ed25519PrivateKey.fromNormalHex(
+        Ed25519PrivateNormalKeyHex(STAKING_KEY)
+      );
+      const paymentSig = paymentPrivKey.sign(HexBlob(bodyHashA)).hex();
+      const stakingSig = stakingPrivKey.sign(HexBlob(bodyHashA)).hex();
+
+      const stakingVKey = STAKING_PUBLIC_KEY;
+      const paymentVKey = PAYMENT_PUBLIC_KEY;
       const signature = `${paymentSig}:${stakingVKey}:${stakingSig}:${paymentVKey}`;
 
-      const result = await service.compile({ signArgs, signature });
+      // ...but swap in signArgs whose _txBodyCbor is for tx B (a different body/hash).
+      const swappedSignArgs = { ...signArgsA, _txBodyCbor: (signArgsB as any)._txBodyCbor };
 
-      expect(typeof result).toBe("string");
-      expect(result).toMatch(/^[0-9a-f]+$/);
+      await expect(
+        service.compile({ signArgs: swappedSignArgs as any, signature })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("SIGNATURE_MISMATCH");
+        return true;
+      });
     });
   });
 });

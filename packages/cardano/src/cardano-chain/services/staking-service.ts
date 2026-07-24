@@ -10,7 +10,7 @@ import type {
   ValidatorsPage,
 } from "@guardian-sdk/sdk";
 import type { BlockfrostRpcClientContract } from "../rpc/blockfrost-rpc-client-contract";
-import { resolveStakeAddress } from "../validations";
+import { parseLovelaceString, resolveStakeAddress } from "../validations";
 import type {
   BlockfrostNetwork,
   BlockfrostPoolExtended,
@@ -61,8 +61,8 @@ function buildEpochContext(
   networkInfo: BlockfrostNetwork
 ): EpochContext {
   const { rho, tau, a0, n_opt } = protocolParams;
-  const reserves = Number(networkInfo.supply.reserves);
-  const totalActiveStake = Number(networkInfo.stake.active);
+  const reserves = Number(parseLovelaceString(networkInfo.supply.reserves, "supply.reserves"));
+  const totalActiveStake = Number(parseLovelaceString(networkInfo.stake.active, "stake.active"));
   const epochPoolsReward = Math.floor(reserves * rho) * (1 - tau);
   return { epochPoolsReward, totalActiveStake, a0, z0: 1 / n_opt };
 }
@@ -103,9 +103,9 @@ export function createStakingService(
    */
   function estimateApy(pool: BlockfrostPoolExtended, ctx: EpochContext): number {
     const { epochPoolsReward, totalActiveStake, a0, z0 } = ctx;
-    const activeStake = Number(pool.active_stake);
-    const pledge = Number(pool.declared_pledge);
-    const fixedCost = Number(pool.fixed_cost);
+    const activeStake = Number(parseLovelaceString(pool.active_stake, "active_stake"));
+    const pledge = Number(parseLovelaceString(pool.declared_pledge, "declared_pledge"));
+    const fixedCost = Number(parseLovelaceString(pool.fixed_cost, "fixed_cost"));
 
     if (activeStake <= 0 || totalActiveStake <= 0 || epochPoolsReward <= 0) return 0;
 
@@ -119,7 +119,11 @@ export function createStakingService(
     const poolReward = (epochPoolsReward / (1 + a0)) * poolShare;
     const delegatorReward = Math.max(0, poolReward - fixedCost) * (1 - pool.margin_cost);
 
-    return Math.max(0, (delegatorReward / activeStake) * EPOCHS_PER_YEAR * 100);
+    const apy = Math.max(0, (delegatorReward / activeStake) * EPOCHS_PER_YEAR * 100);
+    // Guard against any residual non-finite result (e.g. a malformed margin_cost
+    // producing Infinity/NaN downstream of the parsed lovelace fields above) —
+    // never let apy propagate as anything but a finite, non-negative number.
+    return Number.isFinite(apy) ? apy : 0;
   }
 
   function toValidator(
@@ -213,14 +217,14 @@ export function createStakingService(
         delegations.push({
           id: `delegation_active_${account.pool_id}`,
           validator: toValidator(pool, metadata, ctx),
-          amount: BigInt(account.controlled_amount),
+          amount: parseLovelaceString(account.controlled_amount, "controlled_amount"),
           status: "Active",
           delegationIndex: 0n, // Not applicable in Cardano
           pendingUntil: 0, // No unbonding period
         });
       }
 
-      const totalStake = BigInt(networkInfo.stake.live);
+      const totalStake = parseLovelaceString(networkInfo.stake.live, "stake.live");
       const maxApy =
         pools.length > 0 ? pools.reduce((max, p) => Math.max(max, estimateApy(p, ctx)), 0) : 0;
 

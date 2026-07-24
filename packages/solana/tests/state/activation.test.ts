@@ -200,4 +200,88 @@ describe("computeStakeActivation", () => {
     expect(result.effective).toBe(0n);
     expect(result.activating).toBe(0n);
   });
+
+  describe("M-SOLANA-4: cluster-wide totals > Number.MAX_SAFE_INTEGER", () => {
+    const ABOVE_MAX_SAFE_INTEGER = 2n ** 60n; // ~1.15e18, far past 2^53 (~9.007e15)
+
+    it("warmup: per-position effective stays within [0, stake] with a >2^53 cluster history", () => {
+      const stake = 5_000_000_000n; // 5 SOL, ordinary position size
+      const d: DelegationInput = {
+        stake,
+        activationEpoch: 10n,
+        deactivationEpoch: U64_MAX,
+      };
+      const history = stakeHistoryFromEntries([
+        {
+          epoch: 10n,
+          entry: {
+            effective: ABOVE_MAX_SAFE_INTEGER,
+            activating: ABOVE_MAX_SAFE_INTEGER,
+            deactivating: 0n,
+          },
+        },
+      ]);
+      const result = computeStakeActivation(d, 11n, history, RATE);
+      expect(result.effective).toBeGreaterThanOrEqual(0n);
+      expect(result.effective).toBeLessThanOrEqual(stake);
+      expect(result.activating).toBeGreaterThanOrEqual(0n);
+      expect(result.activating).toBeLessThanOrEqual(stake);
+    });
+
+    it("cooldown: per-position effective stays within [0, stake] with a >2^53 cluster history", () => {
+      const stake = 5_000_000_000n;
+      const d: DelegationInput = {
+        stake,
+        activationEpoch: 1n,
+        deactivationEpoch: 20n,
+      };
+      const history = stakeHistoryFromEntries([
+        {
+          epoch: 20n,
+          entry: {
+            effective: ABOVE_MAX_SAFE_INTEGER,
+            activating: 0n,
+            deactivating: ABOVE_MAX_SAFE_INTEGER,
+          },
+        },
+      ]);
+      const result = computeStakeActivation(d, 21n, history, RATE);
+      expect(result.effective).toBeGreaterThanOrEqual(0n);
+      expect(result.effective).toBeLessThanOrEqual(stake);
+      expect(result.deactivating).toBeGreaterThanOrEqual(0n);
+      expect(result.deactivating).toBeLessThanOrEqual(stake);
+    });
+
+    it("cooldown: multi-epoch walk with skewed >2^53 cluster totals never escapes [0, stake]", () => {
+      const stake = 1_234_567_890n;
+      const d: DelegationInput = {
+        stake,
+        activationEpoch: 1n,
+        deactivationEpoch: 20n,
+      };
+      const history = stakeHistoryFromEntries([
+        {
+          epoch: 20n,
+          entry: {
+            effective: ABOVE_MAX_SAFE_INTEGER,
+            activating: 0n,
+            deactivating: ABOVE_MAX_SAFE_INTEGER * 3n,
+          },
+        },
+        {
+          epoch: 21n,
+          entry: {
+            effective: ABOVE_MAX_SAFE_INTEGER,
+            activating: 0n,
+            deactivating: ABOVE_MAX_SAFE_INTEGER + 1n,
+          },
+        },
+      ]);
+      for (const targetEpoch of [20n, 21n, 22n, 23n]) {
+        const result = computeStakeActivation(d, targetEpoch, history, RATE);
+        expect(result.effective, `epoch ${targetEpoch}`).toBeGreaterThanOrEqual(0n);
+        expect(result.effective, `epoch ${targetEpoch}`).toBeLessThanOrEqual(stake);
+      }
+    });
+  });
 });

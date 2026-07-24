@@ -83,4 +83,127 @@ describe("FeeService", () => {
       return true;
     });
   });
+
+  describe("gasPrice / gasLimit sanity bounds (M-BSC-1)", () => {
+    it("throws INVALID_FEE when RPC gasPrice exceeds the ceiling", async () => {
+      const outlierGasPrice = 10_000_000_000_000n; // 10,000 Gwei — absurd outlier
+      const service = createFeeService(
+        makePublicClient(outlierGasPrice) as any,
+        makeSignService() as any
+      );
+
+      await expect(
+        service.estimateFee({
+          type: "Delegate",
+          chain: bscMainnet,
+          amount: 1_000_000_000_000_000_000n,
+          isMaxAmount: false,
+          validator: VALIDATOR,
+          account: OPERATOR,
+        })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_FEE");
+        return true;
+      });
+    });
+
+    it("throws INVALID_FEE when RPC gasPrice is zero", async () => {
+      const service = createFeeService(makePublicClient(0n) as any, makeSignService() as any);
+
+      await expect(
+        service.estimateFee({
+          type: "Delegate",
+          chain: bscMainnet,
+          amount: 1_000_000_000_000_000_000n,
+          isMaxAmount: false,
+          validator: VALIDATOR,
+          account: OPERATOR,
+        })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_FEE");
+        return true;
+      });
+    });
+
+    it("floors gasPrice at the network minimum when RPC reports a positive but sub-minimum value", async () => {
+      const tooLowGasPrice = 1n; // 1 wei — below any sane BSC floor, but still > 0
+      const service = createFeeService(
+        makePublicClient(tooLowGasPrice) as any,
+        makeSignService() as any
+      );
+
+      const fee = await service.estimateFee({
+        type: "Delegate",
+        chain: bscMainnet,
+        amount: 1_000_000_000_000_000_000n,
+        isMaxAmount: false,
+        validator: VALIDATOR,
+        account: OPERATOR,
+      });
+
+      expect(fee.gasPrice).toBeGreaterThan(tooLowGasPrice);
+    });
+
+    it("throws INVALID_FEE when RPC gasLimit is zero", async () => {
+      const service = createFeeService(
+        makePublicClient(REAL_GAS_PRICE, 0n) as any,
+        makeSignService() as any
+      );
+
+      await expect(
+        service.estimateFee({
+          type: "Delegate",
+          chain: bscMainnet,
+          amount: 1_000_000_000_000_000_000n,
+          isMaxAmount: false,
+          validator: VALIDATOR,
+          account: OPERATOR,
+        })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_FEE");
+        return true;
+      });
+    });
+
+    it("throws INVALID_FEE when RPC gasLimit is absurdly large", async () => {
+      const absurdGasLimit = 1_000_000_000n; // 1 billion gas — far above any block gas limit
+      const service = createFeeService(
+        makePublicClient(REAL_GAS_PRICE, absurdGasLimit) as any,
+        makeSignService() as any
+      );
+
+      await expect(
+        service.estimateFee({
+          type: "Delegate",
+          chain: bscMainnet,
+          amount: 1_000_000_000_000_000_000n,
+          isMaxAmount: false,
+          validator: VALIDATOR,
+          account: OPERATOR,
+        })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(ValidationError);
+        expect((err as ValidationError).code).toBe("INVALID_FEE");
+        return true;
+      });
+    });
+
+    it("does not alter normal-range gasPrice/gasLimit", async () => {
+      const service = createFeeService(makePublicClient() as any, makeSignService() as any);
+
+      const fee = await service.estimateFee({
+        type: "Undelegate",
+        chain: bscMainnet,
+        amount: 1_000_000_000_000_000_000n,
+        isMaxAmount: false,
+        validator: VALIDATOR,
+        account: OPERATOR,
+      });
+
+      expect(fee.gasPrice).toBe(REAL_GAS_PRICE);
+    });
+  });
 });

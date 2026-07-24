@@ -29,6 +29,24 @@ export interface StakeActivation {
 }
 
 /**
+ * Clamp a per-position lamport amount derived from cluster-wide float math into the only range
+ * that is ever legitimate for a single position: `[0, delegation.stake]`. See M-SOLANA-4: the
+ * `StakeHistory` sysvar's cluster-wide `effective`/`activating`/`deactivating` totals routinely
+ * exceed `Number.MAX_SAFE_INTEGER` (~9.007e15 lamports; mainnet total supply is already in that
+ * range), so every `Number(bigint)` cast on those totals below is float-precision-lossy by
+ * construction. The per-epoch walk already saturates internally (activation caps at
+ * `delegation.stake`, deactivation floors at `0n`), so this clamp should never actually change a
+ * value in practice — it exists as an explicit, cheap (bigint-only) backstop so that any future
+ * change to the walk's internals can't silently let a float artifact escape `[0, stake]` and
+ * mislabel `DelegationStatus`/`BalanceType` for a position.
+ */
+function clampToStake(amount: bigint, stake: bigint): bigint {
+  if (amount < 0n) return 0n;
+  if (amount > stake) return stake;
+  return amount;
+}
+
+/**
  * Port of Solana `Delegation::stake_activating_and_deactivating`.
  *
  * @param rate Warmup/cooldown rate for every epoch in the walk (mainnet post-feature: 0.09).
@@ -99,10 +117,14 @@ export function computeStakeActivation(
     prevCluster = next;
   }
 
+  // M-SOLANA-4: `currentEffective` was derived from cluster-wide float division/multiplication
+  // above (`weight`, `newlyNotEffectiveCluster`) — clamp into the only legitimate range for a
+  // single position before returning.
+  const clampedEffective = clampToStake(currentEffective, delegation.stake);
   return withStatus({
-    effective: currentEffective,
+    effective: clampedEffective,
     activating: 0n,
-    deactivating: currentEffective,
+    deactivating: clampedEffective,
   });
 }
 
@@ -172,9 +194,14 @@ function stakeAndActivating(
     prevCluster = next;
   }
 
+  // M-SOLANA-4: `currentEffective` was derived from cluster-wide float division/multiplication
+  // above (`weight`, `newlyEffectiveCluster`) — clamp into the only legitimate range for a single
+  // position before returning. `activating` is then a bigint-exact complement of the clamped
+  // value, so it can never itself go negative or exceed `delegatedStake`.
+  const clampedEffective = clampToStake(currentEffective, delegatedStake);
   return {
-    effective: currentEffective,
-    activating: delegatedStake - currentEffective,
+    effective: clampedEffective,
+    activating: delegatedStake - clampedEffective,
   };
 }
 
