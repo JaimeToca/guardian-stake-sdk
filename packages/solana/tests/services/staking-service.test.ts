@@ -13,6 +13,7 @@ import { createStakePositionCache } from "../../src/solana-chain/state/stake-cac
 import { STAKE_PROGRAM_ADDRESS, U64_MAX } from "../../src/solana-chain/state/constants";
 import { deriveStakeAddress, seedString } from "../../src/solana-chain/state/seed";
 import type { StakePosition } from "../../src/solana-chain/state/stake-account";
+import { computeStakingApy } from "../../src/solana-chain/state/apr";
 
 const AUTHORITY = "So11111111111111111111111111111111111111112";
 const VOTE_A = "CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu";
@@ -81,12 +82,12 @@ async function stakeAccount(
   };
 }
 
-function voteInfo(votePubkey: string, activatedStake: bigint) {
+function voteInfo(votePubkey: string, activatedStake: bigint, commission = 5) {
   return {
     votePubkey,
     nodePubkey: votePubkey,
     activatedStake,
-    commission: 5,
+    commission,
     epochVoteAccount: true,
     lastVote: 1n,
     rootSlot: 1n,
@@ -359,5 +360,69 @@ describe("createStakingService", () => {
     const service = createStakingService(rpc, cache, { seedScanMax: 5, seedScanGapLimit: 5 });
     const { delegations } = await service.getDelegations(AUTHORITY);
     expect(delegations).toHaveLength(0);
+  });
+});
+
+describe("createStakingService — APY", () => {
+  const EPY = 78_894_000 / 432_000; // ≈ 182.625
+
+  // Healthy APY inputs: inflation 0.0373, supply.total 1000 → stakedFraction = Σstake/1000.
+  function apyRpc(
+    current: ReturnType<typeof voteInfo>[],
+    delinquent: ReturnType<typeof voteInfo>[] = []
+  ): SolanaRpcClientContract {
+    return mockRpc({
+      getVoteAccounts: vi.fn().mockResolvedValue({ current, delinquent }),
+      getInflationRate: vi
+        .fn()
+        .mockResolvedValue({ total: 0.0373, validator: 0.0373, foundation: 0, epoch: 1006n }),
+      getSupply: vi.fn().mockResolvedValue({ total: 1000n, circulating: 900n }),
+    });
+  }
+
+  it("getValidators returns compounded issuance APY (~5.65% at 0% commission)", async () => {
+    const rpc = apyRpc([voteInfo(VOTE_A, 678n, 0)]);
+    const svc = createStakingService(rpc, createStakePositionCache());
+    const page = await svc.getValidators();
+    expect(page.data[0]!.apy).toBeCloseTo(5.65, 1); // stakedFraction 0.678
+  });
+
+  it("delinquent validators report apy 0 even with valid inputs", async () => {
+    const rpc = apyRpc([voteInfo(VOTE_A, 678n, 0)], [voteInfo(VOTE_B, 10n, 0)]);
+    const svc = createStakingService(rpc, createStakePositionCache());
+    const page = await svc.getValidators({ pageSize: 50 });
+    const delinquent = page.data.find((v) => v.id === VOTE_B)!;
+    expect(delinquent.status).toBe("Inactive");
+    expect(delinquent.apy).toBe(0);
+  });
+
+  it("maxApy uses the lowest-commission current validator", async () => {
+    const rpc = apyRpc([voteInfo(VOTE_A, 400n, 10), voteInfo(VOTE_B, 278n, 5)]);
+    const svc = createStakingService(rpc, createStakePositionCache());
+    const { stakingSummary } = await svc.getDelegations(AUTHORITY);
+    const expected = computeStakingApy({
+      inflationValidatorRate: 0.0373,
+      stakedFraction: 0.678, // (400 + 278) / 1000
+      commissionPercent: 5,
+      epochsPerYear: EPY,
+    });
+    expect(stakingSummary.maxApy).toBeCloseTo(expected, 6);
+    expect(stakingSummary.maxApy).toBeGreaterThan(0);
+  });
+
+  it("degrades to apy 0 and warns when inflation inputs fail", async () => {
+    const warn = vi.fn();
+    const logger = { debug: vi.fn(), info: vi.fn(), warn, error: vi.fn() };
+    const rpc = mockRpc({
+      getVoteAccounts: vi
+        .fn()
+        .mockResolvedValue({ current: [voteInfo(VOTE_A, 678n, 0)], delinquent: [] }),
+      getInflationRate: vi.fn().mockRejectedValue(new Error("rpc down")),
+      getSupply: vi.fn().mockResolvedValue({ total: 1000n, circulating: 900n }),
+    });
+    const svc = createStakingService(rpc, createStakePositionCache(), {}, logger);
+    const page = await svc.getValidators();
+    expect(page.data[0]!.apy).toBe(0);
+    expect(warn).toHaveBeenCalledOnce();
   });
 });

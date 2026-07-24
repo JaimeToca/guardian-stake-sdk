@@ -11,6 +11,8 @@ import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract"
 import type { VoteAccountInfo, VoteAccountsResult } from "../rpc/solana-rpc-types";
 import type { StakePosition } from "../state/stake-account";
 import type { StakePositionCache } from "../state/stake-cache";
+import { computeStakingApy } from "../state/apr";
+import { SLOTS_PER_YEAR } from "../state/constants";
 import { loadPositions, type LoadPositionsConfig } from "./load-positions";
 
 /** Default page size for `getValidators` (1-based pagination). */
@@ -74,13 +76,44 @@ function unknownVoteValidator(votePubkey: string): Validator {
   });
 }
 
-function mapVoteToValidator(vote: VoteAccountInfo, status: "Active" | "Inactive"): Validator {
+/** Network-wide inputs for the issuance-APY estimate (per cache load). */
+interface ApyInputs {
+  inflationValidatorRate: number;
+  stakedFraction: number;
+  epochsPerYear: number;
+}
+
+/** Combined validators + APY inputs cached under one key. `apy` is undefined when degraded. */
+interface ValidatorInputs {
+  voteAccounts: VoteAccountsResult;
+  apy: ApyInputs | undefined;
+}
+
+function computeValidatorApy(
+  vote: VoteAccountInfo,
+  status: "Active" | "Inactive",
+  apy: ApyInputs | undefined
+): number {
+  if (status !== "Active" || !apy) return 0;
+  return computeStakingApy({
+    inflationValidatorRate: apy.inflationValidatorRate,
+    stakedFraction: apy.stakedFraction,
+    epochsPerYear: apy.epochsPerYear,
+    commissionPercent: vote.commission,
+  });
+}
+
+function mapVoteToValidator(
+  vote: VoteAccountInfo,
+  status: "Active" | "Inactive",
+  apy: ApyInputs | undefined
+): Validator {
   return buildValidator({
     id: vote.votePubkey,
     status,
     name: vote.votePubkey,
     operatorAddress: vote.votePubkey,
-    apy: 0,
+    apy: computeValidatorApy(vote, status, apy),
   });
 }
 
@@ -147,34 +180,78 @@ export function createStakingService(
   logger: Logger = new NoopLogger()
 ) {
   const validatorsTtl = config.validatorsCacheTtlMs ?? DEFAULT_VALIDATORS_CACHE_TTL_MS;
-  const voteCache = createInMemoryCache<string, VoteAccountsResult>(validatorsTtl);
+  const voteCache = createInMemoryCache<string, ValidatorInputs>(validatorsTtl);
 
-  async function loadVoteAccounts(): Promise<VoteAccountsResult> {
+  async function loadValidatorInputs(): Promise<ValidatorInputs> {
     const cached = voteCache.get(VALIDATORS_CACHE_KEY);
     if (cached) {
-      logger.debug("StakingService: vote accounts cache hit", {
-        current: cached.current.length,
-        delinquent: cached.delinquent.length,
+      logger.debug("StakingService: validator inputs cache hit", {
+        current: cached.voteAccounts.current.length,
+        delinquent: cached.voteAccounts.delinquent.length,
+        apy: cached.apy !== undefined,
       });
       return cached;
     }
-    logger.debug("StakingService: vote accounts cache miss — fetching");
-    const result = await rpc.getVoteAccounts();
+    logger.debug("StakingService: validator inputs cache miss — fetching");
+    const voteAccounts = await rpc.getVoteAccounts();
+    const apy = await loadApyInputs(voteAccounts);
+    const result: ValidatorInputs = { voteAccounts, apy };
     voteCache.set(VALIDATORS_CACHE_KEY, result, validatorsTtl);
     return result;
   }
 
-  function validatorMap(votes: VoteAccountsResult): Map<string, Validator> {
-    const map = new Map<string, Validator>();
-    for (const v of votes.current) {
-      map.set(v.votePubkey, mapVoteToValidator(v, "Active"));
+  async function loadApyInputs(voteAccounts: VoteAccountsResult): Promise<ApyInputs | undefined> {
+    try {
+      const [inflation, supply, epochInfo] = await Promise.all([
+        rpc.getInflationRate(),
+        rpc.getSupply(),
+        rpc.getEpochInfo(),
+      ]);
+      const totalActivatedStake = [...voteAccounts.current, ...voteAccounts.delinquent].reduce(
+        (sum, v) => sum + v.activatedStake,
+        0n
+      );
+      const stakedFraction = Number(totalActivatedStake) / Number(supply.total);
+      const epochsPerYear =
+        epochInfo.slotsInEpoch > 0n ? SLOTS_PER_YEAR / Number(epochInfo.slotsInEpoch) : 1;
+      return {
+        inflationValidatorRate: inflation.validator,
+        stakedFraction,
+        epochsPerYear,
+      };
+    } catch (err) {
+      logger.warn("StakingService: APY inputs unavailable — reporting apy 0", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return undefined;
     }
-    for (const v of votes.delinquent) {
+  }
+
+  function validatorMap(inputs: ValidatorInputs): Map<string, Validator> {
+    const map = new Map<string, Validator>();
+    for (const v of inputs.voteAccounts.current) {
+      map.set(v.votePubkey, mapVoteToValidator(v, "Active", inputs.apy));
+    }
+    for (const v of inputs.voteAccounts.delinquent) {
       if (!map.has(v.votePubkey)) {
-        map.set(v.votePubkey, mapVoteToValidator(v, "Inactive"));
+        map.set(v.votePubkey, mapVoteToValidator(v, "Inactive", inputs.apy));
       }
     }
     return map;
+  }
+
+  function computeMaxApy(current: VoteAccountInfo[], apy: ApyInputs | undefined): number {
+    if (!apy || current.length === 0) return 0;
+    const minCommission = current.reduce(
+      (min, v) => (v.commission < min ? v.commission : min),
+      100
+    );
+    return computeStakingApy({
+      inflationValidatorRate: apy.inflationValidatorRate,
+      stakedFraction: apy.stakedFraction,
+      epochsPerYear: apy.epochsPerYear,
+      commissionPercent: minCommission,
+    });
   }
 
   function resolveValidator(position: StakePosition, byVote: Map<string, Validator>): Validator {
@@ -190,10 +267,11 @@ export function createStakingService(
       const page = params.page ?? 1;
       const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
 
-      const votes = await loadVoteAccounts();
+      const inputs = await loadValidatorInputs();
+      const votes = inputs.voteAccounts;
       const all: Validator[] = [
-        ...votes.current.map((v) => mapVoteToValidator(v, "Active")),
-        ...votes.delinquent.map((v) => mapVoteToValidator(v, "Inactive")),
+        ...votes.current.map((v) => mapVoteToValidator(v, "Active", inputs.apy)),
+        ...votes.delinquent.map((v) => mapVoteToValidator(v, "Inactive", inputs.apy)),
       ];
 
       const start = (page - 1) * pageSize;
@@ -216,14 +294,14 @@ export function createStakingService(
     async getDelegations(address: string): Promise<Delegations> {
       logger.debug("StakingService: getDelegations", { address });
 
-      const [positions, votes, minDelegation, epochInfo] = await Promise.all([
+      const [positions, inputs, minDelegation, epochInfo] = await Promise.all([
         loadPositions({ rpc, cache, config, logger }, address),
-        loadVoteAccounts(),
+        loadValidatorInputs(),
         rpc.getStakeMinimumDelegation(),
         rpc.getEpochInfo(),
       ]);
-
-      const byVote = validatorMap(votes);
+      const votes = inputs.voteAccounts;
+      const byVote = validatorMap(inputs);
       const nowMs = Date.now();
       const epochBoundaryMs = estimateEpochBoundaryMs(
         epochInfo.slotIndex,
@@ -258,7 +336,7 @@ export function createStakingService(
         delegations,
         stakingSummary: {
           totalProtocolStake,
-          maxApy: 0,
+          maxApy: computeMaxApy(votes.current, inputs.apy),
           minAmountToStake: minDelegation,
           unboundPeriodInMillis: estimateUnboundPeriodMs(epochInfo.slotsInEpoch),
           redelegateFeeRate: 0,
