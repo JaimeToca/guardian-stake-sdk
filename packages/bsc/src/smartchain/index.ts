@@ -27,8 +27,18 @@ import { broadcast } from "./services/broadcast-service";
  * ]);
  * ```
  */
-export function bsc(config: { rpcUrl: string; logger?: Logger }): GuardianServiceContract {
-  validateRpcUrl(config.rpcUrl);
+export function bsc(config: {
+  rpcUrl: string;
+  logger?: Logger;
+  /**
+   * When `true`, rejects an `rpcUrl` that resolves to a loopback/private/
+   * link-local/metadata host. Defaults to `false` (off) so existing consumers
+   * pointing at a local/private BSC node are unaffected. See
+   * `ValidateRpcUrlOptions` in `@guardian-sdk/sdk`.
+   */
+  rejectPrivateRpcHosts?: boolean;
+}): GuardianServiceContract {
+  validateRpcUrl(config.rpcUrl, { rejectPrivateHosts: config.rejectPrivateRpcHosts });
   const logger = config.logger ?? new NoopLogger();
 
   const client = createPublicClient({

@@ -678,7 +678,9 @@ import { ConfigError } from "@guardian-sdk/bsc";
 | Code | Thrown when |
 |---|---|
 | `UNSUPPORTED_CHAIN` | The chain passed to any method has no registered service — check that you passed `bsc(...)` to the `GuardianSDK` constructor |
-| `INVALID_RPC_URL` | The `rpcUrl` passed to `bsc()` is not a valid URL or uses an unsupported protocol (must be `http`, `https`, `ws`, or `wss`) |
+| `INVALID_RPC_URL` | The `rpcUrl` passed to `bsc()` is not a valid URL or uses an unsupported protocol (must be `http`, `https`, `ws`, or `wss`); or, when `rejectPrivateRpcHosts: true`, the URL resolves to a loopback/private/link-local/metadata host |
+
+> **`rpcUrl` must be operator-trusted configuration** — never accept it directly from untrusted end-user input. `bsc({ rpcUrl, rejectPrivateRpcHosts? })` accepts an **opt-in** (default `false`) `rejectPrivateRpcHosts` flag that rejects loopback/private/link-local/metadata hosts (`127.0.0.0/8`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` incl. `169.254.169.254`, and `.local`/`localhost`) as defense-in-depth against SSRF. Left off, behavior is unchanged from before — existing consumers pointing at a local/private BSC node keep working.
 
 ---
 

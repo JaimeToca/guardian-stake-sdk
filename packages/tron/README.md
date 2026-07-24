@@ -153,8 +153,12 @@ function tron(config: TronConfig): GuardianServiceContract
 interface TronConfig {
   rpcUrl: string;   // FullNode HTTP endpoint (no TronGrid)
   logger?: Logger;  // optional; defaults to NoopLogger
+  /** Opt-in SSRF guard: reject rpcUrl hosts that are loopback/private/link-local/metadata. Default false. */
+  rejectPrivateRpcHosts?: boolean;
 }
 ```
+
+> **`rpcUrl` must be operator-trusted configuration** — never accept it directly from untrusted end-user input. `rejectPrivateRpcHosts` is **opt-in** (default `false`, i.e. unchanged behavior); when `true`, it rejects `127.0.0.0/8`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` (incl. `169.254.169.254`), and `.local`/`localhost` hostnames.
 
 ---
 

@@ -22,6 +22,13 @@ export interface SolanaConfig {
   enableGpaFallback?: boolean;
   /** JSON-RPC options forwarded to every `sendTransaction` (broadcast) call. */
   broadcastOptions?: SolanaSendTransactionOptions;
+  /**
+   * When `true`, rejects an `rpcUrl` that resolves to a loopback/private/
+   * link-local/metadata host. Defaults to `false` (off) so existing consumers
+   * pointing at a local/private validator are unaffected. See
+   * `ValidateRpcUrlOptions` in `@guardian-sdk/sdk`.
+   */
+  rejectPrivateRpcHosts?: boolean;
 }
 
 /**
@@ -31,7 +38,7 @@ export interface SolanaConfig {
  * const sdk = new GuardianSDK([solana({ rpcUrl: "https://api.mainnet-beta.solana.com" })]);
  */
 export function solana(config: SolanaConfig): GuardianServiceContract {
-  validateRpcUrl(config.rpcUrl);
+  validateRpcUrl(config.rpcUrl, { rejectPrivateHosts: config.rejectPrivateRpcHosts });
   const logger = config.logger ?? new NoopLogger();
 
   const rpc = createSolanaRpcClient(config.rpcUrl, logger);

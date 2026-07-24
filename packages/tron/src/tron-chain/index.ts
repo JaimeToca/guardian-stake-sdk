@@ -12,6 +12,13 @@ import { createBroadcastService } from "./services/broadcast-service";
 export interface TronConfig {
   rpcUrl: string;
   logger?: Logger;
+  /**
+   * When `true`, rejects an `rpcUrl` that resolves to a loopback/private/
+   * link-local/metadata host. Defaults to `false` (off) so existing consumers
+   * pointing at a local/private FullNode are unaffected. See
+   * `ValidateRpcUrlOptions` in `@guardian-sdk/sdk`.
+   */
+  rejectPrivateRpcHosts?: boolean;
 }
 
 /**
@@ -21,7 +28,7 @@ export interface TronConfig {
  * const sdk = new GuardianSDK([tron({ rpcUrl: "https://<your-tron-fullnode>" })]);
  */
 export function tron(config: TronConfig): GuardianServiceContract {
-  validateRpcUrl(config.rpcUrl);
+  validateRpcUrl(config.rpcUrl, { rejectPrivateHosts: config.rejectPrivateRpcHosts });
   const logger = config.logger ?? new NoopLogger();
 
   const rpc = createTronRpcClient(config.rpcUrl, logger);

@@ -18,6 +18,10 @@ export async function fetchOrError<T>(requestConfig: AxiosRequestConfig): Promis
       maxContentLength: 10 * 1024 * 1024, // 10 MB
       maxBodyLength: 10 * 1024 * 1024, // 10 MB
       ...requestConfig,
+      // RPC/JSON endpoints should never redirect. A redirect could be used to
+      // steer a request at an allowed host into an internal/private one
+      // (SSRF via 3xx). Not overridable by callers — always enforced last.
+      maxRedirects: 0,
     });
     return response.data;
   } catch (error: unknown) {
