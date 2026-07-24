@@ -380,5 +380,26 @@ describe("SignService", () => {
         return true;
       });
     });
+
+    // The MPC/external-signing path is identified by the presence of `_unsignedTx` (threaded
+    // from prehash()). On that path `transaction.account` is REQUIRED — without it the
+    // signature-recovery check has nothing to verify against, and the original SEC-SIGN-1a fix
+    // would silently no-op for exactly the integrator who follows the documented prehash/compile
+    // flow. This must throw, not skip verification.
+    it("throws MISSING_ACCOUNT if compile() is called on the MPC path with transaction.account omitted", async () => {
+      const transaction = buildTransaction({ account: undefined });
+      const { prehashResult, signature } = await prehashAndSignExternally(transaction, 1);
+
+      await expect(
+        service.compile({ signArgs: prehashResult.signArgs, signature })
+      ).rejects.toSatisfy((err: unknown) => {
+        expect(err).toBeInstanceOf(SigningError);
+        expect((err as SigningError).code).toBe("MISSING_ACCOUNT");
+        // Must never leak the signature or key material in the error message.
+        expect((err as SigningError).message).not.toContain(signature);
+        expect((err as SigningError).message).not.toContain(TEST_PRIVATE_KEY);
+        return true;
+      });
+    });
   });
 });

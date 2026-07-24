@@ -572,6 +572,7 @@ const { serializedTransaction, signArgs } = await sdk.preHash({
     amount: parseEther("1"),
     isMaxAmount: false,
     validator: validators[0],
+    account: "0xYourAddress", // required — must be the expected signer for compile() to verify the signature
   },
   fee,
   nonce,
@@ -593,6 +594,8 @@ const rawTx = await sdk.compile({
 ```
 
 `compile()` reassembles the transaction from `signArgs._unsignedTx` verbatim — it never rebuilds calldata or re-queries the chain (no second `bnbToShares` RPC call for `Undelegate`/`Redelegate`), so the bytes that get signed and the bytes that get broadcast are always identical. It then recovers the signer from the assembled signature and throws `SigningError("SIGNATURE_MISMATCH", ...)` if the recovered address does not match `transaction.account` — catching a tampered `signArgs` or a signature from the wrong signer locally, instead of failing silently until the node rejects the broadcast.
+
+> `transaction.account` must be set to the expected signer's address on the `preHash()` transaction — on this MPC/external-signing path it is **required**: `compile()` throws `SigningError("MISSING_ACCOUNT", ...)` if it's missing, because without it the signature-recovery check has nothing to verify against.
 
 ---
 
@@ -693,6 +696,7 @@ import { SigningError } from "@guardian-sdk/bsc";
 | `INVALID_FEE_TYPE` | A `UtxoFee` (or other non-gas fee) was passed to `sign()` — BSC requires a `GasFee` with `gasPrice` and `gasLimit`; use `sdk.estimateFee()` on a BSC transaction to obtain the correct fee |
 | `UNSUPPORTED_TRANSACTION_TYPE` | `buildCallData` is called with a `TransactionType` that has no ABI encoding defined |
 | `SIGNATURE_MISMATCH` | `compile()`'s assembled transaction does not recover to `transaction.account` — the supplied `signature` belongs to a different signer/transaction, or `transaction.account` was mutated on `signArgs` after `prehash()` |
+| `MISSING_ACCOUNT` | `compile()` is called on the MPC/external-signing path (`signArgs._unsignedTx` present, from `prehash()`) but `transaction.account` is missing — required so the signature-recovery check has an expected signer to verify against |
 
 ---
 

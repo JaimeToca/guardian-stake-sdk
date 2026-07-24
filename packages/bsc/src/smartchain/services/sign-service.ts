@@ -270,7 +270,19 @@ export function createSignService(
       // This closes the gap where a caller could mutate signArgs between prehash() and
       // compile() (or supply an unrelated signature) and have it silently assembled into a
       // broadcastable-looking tx, deferring the only real check to the destination node.
+      //
+      // On the MPC/external-signing path (identified by the presence of `_unsignedTx`,
+      // threaded from prehash()), `transaction.account` is REQUIRED for this check to be
+      // meaningful — skipping verification here would defeat the fix for exactly the
+      // integrator this check exists to protect. Only a direct sign()-less caller of
+      // compile() without any prehash() (no `_unsignedTx` at all) can omit `account`.
       const expectedAccount = compileArgs.signArgs.transaction.account;
+      if (unsignedTx && !expectedAccount) {
+        throw new SigningError(
+          "MISSING_ACCOUNT",
+          "compile() requires transaction.account (the expected signer address) to verify the external signature."
+        );
+      }
       if (expectedAccount !== undefined) {
         const recovered = await recoverTransactionAddress({
           serializedTransaction: compiled,

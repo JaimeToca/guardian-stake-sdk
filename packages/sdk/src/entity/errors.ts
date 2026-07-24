@@ -35,7 +35,8 @@ export type SigningErrorCode =
   | "INVALID_SIGNING_ARGS"
   | "INVALID_FEE_TYPE"
   | "UNSUPPORTED_TRANSACTION_TYPE"
-  | "SIGNATURE_MISMATCH";
+  | "SIGNATURE_MISMATCH"
+  | "MISSING_ACCOUNT";
 
 /**
  * Broadcast-time failures. `BLOCKHASH_EXPIRED` is Solana-specific (the recent
