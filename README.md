@@ -18,8 +18,8 @@
   <a href="https://www.npmjs.com/package/@guardian-sdk/solana">
     <img src="https://img.shields.io/npm/v/@guardian-sdk/solana?label=%40guardian-sdk%2Fsolana&color=0d9488" alt="npm @guardian-sdk/solana" />
   </a>
-<a href="https://www.npmjs.com/package/@guardian-sdk/bsc">
-    <img src="https://img.shields.io/npm/dm/@guardian-sdk/bsc?color=0d9488" alt="npm downloads" />
+<a href="https://www.npmjs.com/package/@guardian-sdk/sdk">
+    <img src="https://img.shields.io/npm/dm/@guardian-sdk/sdk?label=downloads&color=0d9488" alt="npm downloads" />
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="License" />
