@@ -85,7 +85,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/). 
 <type>(<scope>): <short summary>
 
 Types:  feat | fix | perf | refactor | docs | test | chore | ci | build
-Scope:  sdk | bsc | cardano | deps | release  (optional but recommended)
+Scope:  sdk | bsc | cardano | tron | solana | deps | release  (optional but recommended)
 
 Examples:
   feat(bsc): add claimable balance to BalanceService
@@ -169,7 +169,7 @@ The release workflow:
 1. Analyzes commits since the last release tag (scoped by package where possible).
 2. Determines the next version (major/minor/patch) **independently per package**.
 3. Updates each package's `CHANGELOG.md`.
-4. Publishes `@guardian-sdk/sdk`, `@guardian-sdk/bsc`, and `@guardian-sdk/cardano` to npm (all on the `latest` dist-tag).
+4. Publishes `@guardian-sdk/sdk`, `@guardian-sdk/bsc`, `@guardian-sdk/cardano`, `@guardian-sdk/tron`, and `@guardian-sdk/solana` to npm (all on the `latest` dist-tag).
 5. Creates GitHub releases with release notes and version tags (e.g. `sdk@0.3.0`, `bsc@2.1.0`).
 
-All three packages are released the same way. Cardano no longer requires special manual steps.
+All packages are released the same way — no per-package manual steps, no changesets. `multi-semantic-release` reads the Conventional Commit history directly; the only thing a contributor does is write well-scoped commit messages.

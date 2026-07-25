@@ -313,32 +313,21 @@ cardano({ apiKey: "mainnetXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" })
 ## Installation
 
 ```bash
-npm install @guardian-sdk/cardano \
-  @guardian-sdk/sdk \
-  @cardano-sdk/core@0.46.12 \
-  @cardano-sdk/crypto@0.4.5 \
-  @cardano-sdk/util@0.17.1
+npm install @guardian-sdk/cardano @guardian-sdk/sdk
 ```
 
-If you already have `@guardian-sdk/bsc` installed, `@guardian-sdk/sdk` is already present — you only need to add the Cardano-specific peers:
-
-```bash
-npm install @guardian-sdk/cardano \
-  @cardano-sdk/core@0.46.12 \
-  @cardano-sdk/crypto@0.4.5 \
-  @cardano-sdk/util@0.17.1
-```
+The `@cardano-sdk/*` libraries are bundled — they install automatically with the exact versions this package was tested against, so there is nothing else to add. `@guardian-sdk/sdk` is the only peer dependency; if you already have another `@guardian-sdk/*` chain package installed, it is already present.
 
 ### Dependencies
 
 | Package | Version | Role |
 |---|---|---|
 | [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | `workspace:^` | Peer — chain-agnostic core, shared types and interfaces |
-| `@cardano-sdk/core` | `0.46.12` | Peer — Cardano primitives: addresses, transactions, certificates |
-| `@cardano-sdk/crypto` | `0.4.5` | Peer — Ed25519 key operations and Blake2b hashing |
-| `@cardano-sdk/util` | `0.17.1` | Peer — shared utilities for the Cardano SDK family |
+| `@cardano-sdk/core` | `0.46.12` | Bundled dependency — Cardano primitives: addresses, transactions, certificates |
+| `@cardano-sdk/crypto` | `0.4.5` | Bundled dependency — Ed25519 key operations and Blake2b hashing |
+| `@cardano-sdk/util` | `0.17.1` | Bundled dependency — shared utilities for the Cardano SDK family |
 
-> **Why exact peer versions?** The `@cardano-sdk` family has no stability guarantees between minor versions and CBOR serialisation is sensitive to the exact release. The versions above are the ones this package was built and tested against. These pins will be loosened to `^` in a future release.
+> **Why exact pinned versions?** The `@cardano-sdk` family has no stability guarantees between minor versions and CBOR serialisation is sensitive to the exact release. These are pinned as regular dependencies so consumers get the exact tested versions automatically and cannot accidentally mismatch them — no manual install required.
 
 ---
 

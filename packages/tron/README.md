@@ -89,13 +89,15 @@ APR values are in percent (e.g. `2.48` means 2.48%). The formula accounts for th
 ## Installation
 
 ```bash
-npm install @guardian-sdk/tron @guardian-sdk/sdk tronweb@6.1.0
+npm install @guardian-sdk/tron @guardian-sdk/sdk
 ```
+
+`@guardian-sdk/sdk` is the only peer dependency you install; `tronweb` is bundled and installs automatically at the exact tested version.
 
 | Package | Version | Role |
 |---|---|---|
 | [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | `workspace:^` | Peer — chain-agnostic core, shared types and interfaces |
-| `tronweb` | `6.1.0` | Dependency — transaction building, signing, and FullNode communication |
+| `tronweb` | `6.1.0` | Bundled dependency — transaction building, signing, and FullNode communication |
 
 ---
 
