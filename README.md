@@ -85,7 +85,18 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 
 > **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
 
-Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use. `@guardian-sdk/sdk` is included automatically as a dependency of each chain package.
+Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use.
+
+**Install rule:** every chain package needs `@guardian-sdk/sdk` alongside it (it is a shared peer dependency — the common `Transaction`/`Fee`/`Balance` contract, kept as a single copy so multiple chain packages compose cleanly). Only **bsc** requires one more peer, `viem`. Everything else each chain needs (`@cardano-sdk/*`, `tronweb`, `@solana/*`) is bundled and installs automatically at pinned, tested versions.
+
+| Install | Command |
+|---|---|
+| BSC | `npm install @guardian-sdk/bsc @guardian-sdk/sdk viem` |
+| Cardano | `npm install @guardian-sdk/cardano @guardian-sdk/sdk` |
+| Tron | `npm install @guardian-sdk/tron @guardian-sdk/sdk` |
+| Solana | `npm install @guardian-sdk/solana @guardian-sdk/sdk` |
+
+If you already have one `@guardian-sdk/*` chain installed, `@guardian-sdk/sdk` is already present and shared — you only add the new chain package (plus `viem` for bsc).
 
 ---
 

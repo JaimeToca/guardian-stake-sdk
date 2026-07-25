@@ -134,5 +134,5 @@ pnpm run format:check
 
 - The scaffold patches `eslint.config.mjs` and the root `package.json` build script automatically.
 - Pass `--no-viem` for non-EVM chains (UTxO-based, no account model).
-- Never add the new package to `.changeset/config.json` `ignore` unless it is intentionally pre-release.
+- Releases are driven by Conventional Commits via `multi-semantic-release` — a new package is picked up automatically once it lands on `main` with a `feat`/`fix` commit; there is no changeset or ignore-list to maintain.
 - Do not add `viem` or `@cardano-sdk/*` to a new package unless it targets those ecosystems.

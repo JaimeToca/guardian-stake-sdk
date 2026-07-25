@@ -14,4 +14,4 @@
 - [ ] `pnpm run test` passes
 - [ ] `pnpm run format:check` passes
 - [ ] `pnpm run lint` passes
-- [ ] Changeset added (`pnpm changeset`) if this affects a published package
+- [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org/) — releases are automated from commit messages (`feat`/`fix`/`BREAKING CHANGE`), no manual version bump or changelog needed

@@ -11,9 +11,6 @@
     "lint:fix": "eslint packages/*/src packages/*/tests --fix",
     "format": "prettier --write packages/*/src packages/*/tests",
     "format:check": "prettier --check packages/*/src packages/*/tests",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "publish": "pnpm build && changeset publish",
     "release": "multi-semantic-release",
     "prepare": "sh scripts/install-hooks.sh"
   },
@@ -37,7 +34,6 @@
   "license": "MIT",
   "devDependencies": {
     "@cardano-sdk/crypto": "^0.4.5",
-    "@changesets/cli": "^2.30.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.0",
     "@semantic-release/git": "^10.0.1",
