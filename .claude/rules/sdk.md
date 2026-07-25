@@ -21,4 +21,6 @@ Chain-agnostic interfaces, types, cache utilities, and RPC error helpers. No vie
 - `@guardian-sdk/tron`: `@guardian-sdk/sdk` (peer); `tronweb`, `json-bigint` (bundled)
 - `@guardian-sdk/solana`: `@guardian-sdk/sdk` (peer); `@solana/*`, `@solana-program/*` (bundled)
 
+> The exact tested pin for every bundled dependency lives in each package's `package.json` — treat those manifests as the source of truth. Cardano's pins are shown inline above only because they're deliberately frozen (CBOR-sensitive); the tron/solana pins are omitted here to avoid drift, not because they're unpinned.
+
 **Peer vs bundled rule**: a library is a *peer* only if its objects cross the SDK's public API or it must be a shared singleton across chain packages (`viem`, `@guardian-sdk/sdk`). Everything else is a *bundled* `dependency`, pinned to the tested version — best consumer DX (`npm install @guardian-sdk/<chain> @guardian-sdk/sdk`, plus `viem` for bsc only).
