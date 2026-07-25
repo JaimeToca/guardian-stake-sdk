@@ -82,11 +82,11 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
 | [`@guardian-sdk/cardano`](https://www.npmjs.com/package/@guardian-sdk/cardano) | Cardano | Available | [README](./packages/cardano/README.md) |
 | [`@guardian-sdk/tron`](https://www.npmjs.com/package/@guardian-sdk/tron) | Tron | Available | [README](./packages/tron/README.md) |
 | [`@guardian-sdk/solana`](https://www.npmjs.com/package/@guardian-sdk/solana) | Solana | Available | [README](./packages/solana/README.md) |
-| `@guardian-sdk/ethereum` | Ethereum | Planned | — |
 | `@guardian-sdk/sui` | SUI | Planned | — |
+| `@guardian-sdk/ethereum` | Ethereum | Planned | — |
 
 
-> **No package in this repository has undergone a security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.**
+> **No package in this repository has undergone a formal third-party security audit. Use at your own risk. Do not use in production environments handling real funds without conducting your own independent security review.** A Claude-assisted source audit has been performed and its findings are documented in [`docs/superpowers/findings/2026-07-24-source-audit.md`](./docs/superpowers/findings/2026-07-24-source-audit.md); it is not a substitute for a professional audit.
 
 Each chain ships as an independent package — install only what you need, your bundle never pays for chains you don't use.
 
