@@ -71,6 +71,7 @@ Beyond the code itself, the Guardian SDK is designed to serve as both a referenc
   - [SigningError](#signingerror)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
+- [Support](#support)
 
 ---
 
@@ -776,4 +777,14 @@ Contributions are welcome — bug fixes, new chain integrations, documentation i
 - **General contributions** — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for setup instructions, commit conventions, and the pull request process.
 - **Bug reports & feature requests** — open an issue using the templates in `.github/ISSUE_TEMPLATE/`.
 - **Security vulnerabilities** — see [`SECURITY.md`](./SECURITY.md). Do not open a public issue.
+
+---
+
+## Support
+
+Guardian SDK is free and open source. If it saves you time or you'd like to support continued development, you can buy me a coffee — it's genuinely appreciated. ☕
+
+<a href="https://buymeacoffee.com/jaimetoca">
+  <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-jaimetoca-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy Me A Coffee" />
+</a>
 
