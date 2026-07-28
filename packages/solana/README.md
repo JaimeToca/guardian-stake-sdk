@@ -23,6 +23,7 @@ Abstracts Solana Kit transaction construction, stake-account discovery, client-s
   - [APR / APY](#apr--apy)
 - [Installation](#installation)
   - [Dependencies](#dependencies)
+- [Browser / frontend usage](#browser--frontend-usage)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
   - [solana()](#solana)
@@ -253,6 +254,16 @@ pnpm add @guardian-sdk/solana @guardian-sdk/sdk
 | `@solana-program/system` | `CreateAccountWithSeed` and system instructions |
 
 No `@solana/web3.js` — this package is Kit-native.
+
+---
+
+## Browser / frontend usage
+
+`@guardian-sdk/solana` runs in the browser **as-is — no polyfills required**. `@solana/kit` is browser-first and this package pulls in no Node built-ins.
+
+> **Note (browser safety):** an earlier version imported `timingSafeEqual` from `node:crypto` in the `compile()` path, which threw at runtime in browsers. That has been replaced with a pure-JS constant-time comparison, so the package is now fully browser-clean — you do **not** need to alias or shim `crypto`.
+
+For a **wallet frontend**, prefer the external-signer flow (`prehash` → your keystore / hardware / MPC signs the message bytes → `compile`) over `sign(privateKey)`, so raw keys never pass through application JavaScript. See [Signing Flows](#signing-flows).
 
 ---
 

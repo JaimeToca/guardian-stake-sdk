@@ -16,6 +16,7 @@ Abstracts TronWeb transaction construction and FullNode REST calls behind a clea
   - [Partial Unstaking](#partial-unstaking)
   - [APR](#apr)
 - [Installation](#installation)
+- [Browser / frontend usage](#browser--frontend-usage)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
   - [tron()](#tron)
@@ -98,6 +99,37 @@ npm install @guardian-sdk/tron @guardian-sdk/sdk
 |---|---|---|
 | [`@guardian-sdk/sdk`](https://www.npmjs.com/package/@guardian-sdk/sdk) | `workspace:^` | Peer — chain-agnostic core, shared types and interfaces |
 | `tronweb` | `6.1.0` | Bundled dependency — transaction building, signing, and FullNode communication |
+
+---
+
+## Browser / frontend usage
+
+`@guardian-sdk/tron` runs in the browser, but `tronweb` and this package's SHA-256 hex handling reference the Node `Buffer` global, so you must **supply a `Buffer` polyfill**. No other Node built-ins are needed.
+
+With Vite, the simplest setup is [`vite-plugin-node-polyfills`](https://www.npmjs.com/package/vite-plugin-node-polyfills):
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+
+export default defineConfig({
+  plugins: [
+    nodePolyfills({ include: ["buffer"], globals: { Buffer: true } }),
+  ],
+});
+```
+
+Or without the plugin — set the global yourself, imported **before** any `@guardian-sdk/tron` import:
+
+```ts
+import { Buffer } from "buffer";
+globalThis.Buffer = globalThis.Buffer ?? Buffer;
+```
+
+> **pnpm + `vite build` caveat:** the polyfill plugin rewrites globals to `vite-plugin-node-polyfills/shims/*` imports that Rollup can't resolve from inside a bundled dependency (pnpm doesn't hoist the plugin). If `vite build` fails with `Failed to resolve import "vite-plugin-node-polyfills/shims/buffer"`, alias the shim to its absolute path — see the [Cardano README](../cardano/README.md#browser--frontend-usage) for the full recipe.
+
+For a **wallet frontend**, prefer the external-signer flow (`prehash` → external signer → `compile`) over `sign(privateKey)`. See [Signing Flows](#signing-flows).
 
 ---
 
