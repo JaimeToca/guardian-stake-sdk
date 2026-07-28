@@ -110,6 +110,7 @@ With Vite, the simplest setup is [`vite-plugin-node-polyfills`](https://www.npmj
 
 ```ts
 // vite.config.ts
+import { defineConfig } from "vite";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({

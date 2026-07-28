@@ -378,6 +378,8 @@ export default defineConfig({
 ```ts
 // app code — await libsodium before the first Cardano crypto call
 import { ready } from "@cardano-sdk/crypto";
+import { deriveCardanoKeys } from "@guardian-sdk/cardano";
+
 await ready();
 const keys = deriveCardanoKeys(rootKeyHex); // now safe
 ```
@@ -403,7 +405,10 @@ const STAKE_ADDRESS   = "stake1ux3g2c9dx2nhhehyrezy4uvtyvgmndp3v4kplasjan2fcgfv7
 
 // Derive your payment and staking keys from a BIP32 root key (192 hex chars).
 // See deriveCardanoKeys() — never hardcode or log these values.
+// await ready() is required before any crypto call (derive / sign / prehash).
+import { ready } from "@cardano-sdk/crypto";
 import { deriveCardanoKeys } from "@guardian-sdk/cardano";
+await ready();
 const { paymentPrivateKey: PAYMENT_KEY, stakingPrivateKey: STAKING_KEY } =
   deriveCardanoKeys(process.env.CARDANO_ROOT_KEY!);
 
