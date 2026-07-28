@@ -340,7 +340,22 @@ Cardano is the **heaviest** of the four chains to run in a browser and needs the
 
 **2. libsodium WASM init.** `@cardano-sdk/crypto` uses `libsodium-wrappers-sumo`, a ~1 MB WASM module that initialises **asynchronously**. You must `await ready()` (from `@cardano-sdk/crypto`) **before** the first crypto call — key derivation (`deriveCardanoKeys`), `sign`, or `prehash` — or it throws.
 
-**3. Never ship the Blockfrost key.** The `apiKey` cannot live in a browser bundle. Point `cardano({ baseUrl })` at your own proxy that injects the key server-side (see [Blockfrost Setup](#blockfrost-setup)). Route RPC through the proxy to sidestep CORS too.
+**3. Never ship the Blockfrost key — put it behind a backend proxy.** The `apiKey` **must not** live in a browser bundle; anything shipped to the client is public and would leak your key. The correct pattern for browser use is a thin backend proxy that holds the key and forwards requests to Blockfrost, with the SDK pointed at the proxy.
+
+Because `apiKey` is **optional**, the same package works in both environments with no code fork — you choose auth by which field you pass:
+
+```ts
+// Backend (Node) — key held server-side, talks to Blockfrost directly
+const sdk = new GuardianSDK([cardano({ apiKey: process.env.BLOCKFROST_KEY })]);
+
+// Frontend (browser) — NO apiKey; point baseUrl at your own proxy, which
+// injects `project_id` server-side. The key never enters the bundle.
+const sdk = new GuardianSDK([cardano({ baseUrl: "https://your-app.com/api/blockfrost" })]);
+```
+
+When `apiKey` is omitted the SDK sends **no** `project_id` header, so your proxy is responsible for adding it. Routing through your own origin also sidesteps CORS. See [Blockfrost Setup](#blockfrost-setup).
+
+> A minimal proxy is just a pass-through that prepends the Blockfrost base URL and sets the `project_id` header from a server-side secret — e.g. `GET /api/blockfrost/* → https://cardano-mainnet.blockfrost.io/api/v0/*` with the header injected. Add rate-limiting/auth on the proxy as needed.
 
 **Bundle size:** the Cardano chunk is ~1.1 MB (libsodium + `@cardano-sdk`). Lazy-load it with a dynamic `import()` so it doesn't bloat your app's initial load.
 
