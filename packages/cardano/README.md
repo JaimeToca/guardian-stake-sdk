@@ -354,10 +354,12 @@ import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 const require = createRequire(import.meta.url);
 // pnpm: the plugin rewrites globals to `vite-plugin-node-polyfills/shims/*` imports that
-// Rollup can't resolve from inside a bundled dependency. Alias them to absolute paths.
+// Rollup can't resolve from inside a bundled dependency. Alias them to absolute paths —
+// but ONLY for `vite build`; applying the alias in dev triggers a temporal-dead-zone
+// init error (`Cannot access '__vite__cjsImport0_...shims_buffer' before initialization`).
 const shim = (n: string) => require.resolve(`vite-plugin-node-polyfills/shims/${n}`);
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     nodePolyfills({
       include: ["buffer", "process", "stream", "util", "events", "string_decoder"],
@@ -365,14 +367,17 @@ export default defineConfig({
       protocolImports: true,
     }),
   ],
-  resolve: {
-    alias: {
-      "vite-plugin-node-polyfills/shims/buffer": shim("buffer"),
-      "vite-plugin-node-polyfills/shims/global": shim("global"),
-      "vite-plugin-node-polyfills/shims/process": shim("process"),
-    },
-  },
-});
+  resolve:
+    command === "build"
+      ? {
+          alias: {
+            "vite-plugin-node-polyfills/shims/buffer": shim("buffer"),
+            "vite-plugin-node-polyfills/shims/global": shim("global"),
+            "vite-plugin-node-polyfills/shims/process": shim("process"),
+          },
+        }
+      : {},
+}));
 ```
 
 ```ts
@@ -384,7 +389,7 @@ await ready();
 const keys = deriveCardanoKeys(rootKeyHex); // now safe
 ```
 
-> The `resolve.alias` block is only needed under **pnpm** (npm/yarn hoist the plugin so its shims resolve normally). Without it, `vite build` fails with `Failed to resolve import "vite-plugin-node-polyfills/shims/buffer"` even though the dev server works.
+> The `resolve.alias` block is only needed under **pnpm**, and only for `vite build` (npm/yarn hoist the plugin so its shims resolve normally). Without it, `vite build` fails with `Failed to resolve import "vite-plugin-node-polyfills/shims/buffer"`. Gating it on `command === "build"` is important: applying the alias in dev breaks the dev server with a temporal-dead-zone error instead.
 
 For a **wallet frontend**, prefer the external-signer flow (`preHash` → your keystore / hardware / MPC signs the digest → `compile`) over `sign(paymentPrivateKey, stakingPrivateKey)`, so raw keys never pass through application JavaScript. See [Signing Flows](#signing-flows).
 
