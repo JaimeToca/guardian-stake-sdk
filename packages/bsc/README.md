@@ -9,6 +9,7 @@ Abstracts low-level contract calls and RPC interactions behind a clean, type-saf
 - [How BNB Native Staking Works](#how-bnb-native-staking-works)
 - [Installation](#installation)
   - [Dependencies](#dependencies)
+- [Browser / frontend usage](#browser--frontend-usage)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
   - [getValidators](#getvalidators)
@@ -196,6 +197,16 @@ npm install @guardian-sdk/bsc @guardian-sdk/sdk viem
 | [`viem`](https://www.npmjs.com/package/viem) | Peer dependency — EVM client library for encoding, signing, and RPC |
 
 If your project already uses `@guardian-sdk/sdk` or `viem`, the same instances will be shared — no duplicate copies.
+
+---
+
+## Browser / frontend usage
+
+`@guardian-sdk/bsc` runs in the browser **as-is — no polyfills required**. `viem` is browser-first and this package pulls in no Node built-ins, so any modern bundler (Vite, webpack, Next.js) resolves it with zero extra config. This is the lightest of the four chains to ship in a frontend.
+
+For a **wallet frontend**, prefer the external-signer flow (`preHash` → your keystore / hardware / MPC signs the digest → `compile`) over `sign(privateKey)`, so raw private keys never pass through application JavaScript. See [Signing Flows](#signing-flows).
+
+**CORS**: browser RPC calls need the endpoint to send CORS headers. The public RPC works, but validator metadata is fetched from BNB Chain's REST API (`api.bnbchain.org`), which does **not** always send them — route RPC/metadata through your own proxy if you hit CORS walls.
 
 ---
 

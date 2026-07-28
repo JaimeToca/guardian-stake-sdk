@@ -21,6 +21,7 @@ Abstracts Blockfrost API calls and CBOR transaction construction behind a clean,
 - [Blockfrost Setup](#blockfrost-setup)
 - [Installation](#installation)
   - [Dependencies](#dependencies)
+- [Browser / frontend usage](#browser--frontend-usage)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
   - [cardano()](#cardano)
@@ -328,6 +329,62 @@ The `@cardano-sdk/*` libraries are bundled — they install automatically with t
 | `@cardano-sdk/util` | `0.17.1` | Bundled dependency — shared utilities for the Cardano SDK family |
 
 > **Why exact pinned versions?** The `@cardano-sdk` family has no stability guarantees between minor versions and CBOR serialisation is sensitive to the exact release. These are pinned as regular dependencies so consumers get the exact tested versions automatically and cannot accidentally mismatch them — no manual install required.
+
+---
+
+## Browser / frontend usage
+
+Cardano is the **heaviest** of the four chains to run in a browser and needs the most setup — budget time for it. Three things must be handled:
+
+**1. Node polyfills.** The crypto stack (`@cardano-sdk/crypto` → `pbkdf2` → `hash-base` → `readable-stream`) references several Node globals at module-load time. Supplying only `Buffer` is **not** enough — without `process` you get `ReferenceError: process is not defined`. The full set is `buffer`, `process`, `stream`, `util`, `events`, `string_decoder`.
+
+**2. libsodium WASM init.** `@cardano-sdk/crypto` uses `libsodium-wrappers-sumo`, a ~1 MB WASM module that initialises **asynchronously**. You must `await ready()` (from `@cardano-sdk/crypto`) **before** the first crypto call — key derivation (`deriveCardanoKeys`), `sign`, or `prehash` — or it throws.
+
+**3. Never ship the Blockfrost key.** The `apiKey` cannot live in a browser bundle. Point `cardano({ baseUrl })` at your own proxy that injects the key server-side (see [Blockfrost Setup](#blockfrost-setup)). Route RPC through the proxy to sidestep CORS too.
+
+**Bundle size:** the Cardano chunk is ~1.1 MB (libsodium + `@cardano-sdk`). Lazy-load it with a dynamic `import()` so it doesn't bloat your app's initial load.
+
+### Vite recipe (verified working, dev + `vite build`)
+
+```ts
+// vite.config.ts
+import { createRequire } from "node:module";
+import { defineConfig } from "vite";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+
+const require = createRequire(import.meta.url);
+// pnpm: the plugin rewrites globals to `vite-plugin-node-polyfills/shims/*` imports that
+// Rollup can't resolve from inside a bundled dependency. Alias them to absolute paths.
+const shim = (n: string) => require.resolve(`vite-plugin-node-polyfills/shims/${n}`);
+
+export default defineConfig({
+  plugins: [
+    nodePolyfills({
+      include: ["buffer", "process", "stream", "util", "events", "string_decoder"],
+      globals: { Buffer: true, global: true, process: true },
+      protocolImports: true,
+    }),
+  ],
+  resolve: {
+    alias: {
+      "vite-plugin-node-polyfills/shims/buffer": shim("buffer"),
+      "vite-plugin-node-polyfills/shims/global": shim("global"),
+      "vite-plugin-node-polyfills/shims/process": shim("process"),
+    },
+  },
+});
+```
+
+```ts
+// app code — await libsodium before the first Cardano crypto call
+import { ready } from "@cardano-sdk/crypto";
+await ready();
+const keys = deriveCardanoKeys(rootKeyHex); // now safe
+```
+
+> The `resolve.alias` block is only needed under **pnpm** (npm/yarn hoist the plugin so its shims resolve normally). Without it, `vite build` fails with `Failed to resolve import "vite-plugin-node-polyfills/shims/buffer"` even though the dev server works.
+
+For a **wallet frontend**, prefer the external-signer flow (`preHash` → your keystore / hardware / MPC signs the digest → `compile`) over `sign(paymentPrivateKey, stakingPrivateKey)`, so raw keys never pass through application JavaScript. See [Signing Flows](#signing-flows).
 
 ---
 
