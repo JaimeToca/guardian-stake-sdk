@@ -23,7 +23,6 @@ import {
   type ReadonlyUint8Array,
   type Transaction as KitTransaction,
 } from "@solana/kit";
-import { timingSafeEqual } from "node:crypto";
 import type { SolanaRpcClientContract } from "../rpc/solana-rpc-client-contract";
 import { buildUnsignedTx } from "../tx/tx-builder";
 import type { SolanaSignArgs } from "../tx/solana-types";
@@ -83,14 +82,21 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 /**
  * Constant-time byte-array equality. Compares full length first (a length mismatch is not
- * secret-dependent), then compares every byte via `crypto.timingSafeEqual` — never short-circuits
- * on the first differing byte — so the comparison time doesn't leak *where* two buffers diverge.
+ * secret-dependent), then XOR-accumulates every byte pair — never short-circuits on the first
+ * differing byte — so the comparison time doesn't leak *where* two buffers diverge.
+ *
+ * Pure JS (no `node:crypto`) so the package stays browser-safe — the same approach audited
+ * libraries such as tweetnacl and `@noble/hashes` use.
  */
-function constantTimeBytesEqual(a: ReadonlyUint8Array, b: ReadonlyUint8Array): boolean {
+export function constantTimeBytesEqual(a: ReadonlyUint8Array, b: ReadonlyUint8Array): boolean {
   if (a.byteLength !== b.byteLength) {
     return false;
   }
-  return timingSafeEqual(Uint8Array.from(a), Uint8Array.from(b));
+  let diff = 0;
+  for (let i = 0; i < a.byteLength; i++) {
+    diff |= a[i] ^ b[i];
+  }
+  return diff === 0;
 }
 
 function attachFeePayerSignature(

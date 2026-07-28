@@ -24,6 +24,7 @@ import { getStakeStateAccountEncoder, stakeStateV2 } from "@solana-program/stake
 import type { GuardianChain, SolanaFee, Transaction } from "@guardian-sdk/sdk";
 import { SigningError } from "@guardian-sdk/sdk";
 import {
+  constantTimeBytesEqual,
   createSignService,
   parseEd25519SeedHex,
 } from "../../src/solana-chain/services/sign-service";
@@ -162,6 +163,31 @@ describe("parseEd25519SeedHex", () => {
     expect(() => parseEd25519SeedHex("aa")).toThrow(SigningError);
     expect(() => parseEd25519SeedHex("A".repeat(64))).toThrow(SigningError); // uppercase rejected
     expect(() => parseEd25519SeedHex("g".repeat(64))).toThrow(SigningError);
+  });
+});
+
+describe("constantTimeBytesEqual", () => {
+  it("returns true for byte-identical buffers", () => {
+    const a = Uint8Array.from([0, 1, 2, 253, 254, 255]);
+    const b = Uint8Array.from([0, 1, 2, 253, 254, 255]);
+    expect(constantTimeBytesEqual(a, b)).toBe(true);
+  });
+
+  it("returns false when any byte differs, including the last", () => {
+    const base = Uint8Array.from([10, 20, 30, 40]);
+    expect(constantTimeBytesEqual(base, Uint8Array.from([99, 20, 30, 40]))).toBe(false); // first
+    expect(constantTimeBytesEqual(base, Uint8Array.from([10, 20, 30, 41]))).toBe(false); // last
+  });
+
+  it("returns false for length mismatch (no crash on prefix match)", () => {
+    const a = Uint8Array.from([1, 2, 3]);
+    const b = Uint8Array.from([1, 2, 3, 4]);
+    expect(constantTimeBytesEqual(a, b)).toBe(false);
+    expect(constantTimeBytesEqual(b, a)).toBe(false);
+  });
+
+  it("treats two empty buffers as equal", () => {
+    expect(constantTimeBytesEqual(new Uint8Array(0), new Uint8Array(0))).toBe(true);
   });
 });
 
